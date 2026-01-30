@@ -1,0 +1,3182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta name="theme-color" content="#1f1f1f" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="color-scheme" content="dark">
+
+    <meta name="theme-color" content="#1f1f1f">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NovochebGram</title>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #121212;
+            color: #eee;
+            margin: 0;
+            display: flex;
+            height: 100dvh;
+            overflow: hidden;
+            overscroll-behavior-y: none;
+        }
+
+        /* Авторизация */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #121212;
+            z-index: 6000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-box {
+            width: 300px;
+            padding: 25px;
+            background: #2d2d2d;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #444;
+        }
+
+            .auth-box input {
+                width: 100%;
+                padding: 12px;
+                margin: 8px 0;
+                background: #444;
+                border: 1px solid #555;
+                color: white;
+                border-radius: 6px;
+            }
+
+            .auth-box button {
+                width: 100%;
+                padding: 12px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+                margin-top: 10px;
+            }
+
+        /* Сайдбар */
+        .sidebar {
+            width: 320px;
+            background: #1f1f1f;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .profile-bar {
+            padding: 15px;
+            background: #252525;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #252525;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: #888;
+            font-size: 14px;
+            position: relative;
+        }
+
+            .tab.active {
+                border-bottom: 2px solid #007bff;
+                color: white;
+            }
+
+        .tab-badge {
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            position: absolute;
+            top: 5px;
+            right: 10px;
+        }
+
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Элемент списка чатов (НОВЫЙ ДИЗАЙН) */
+        /* Элемент списка чатов */
+        .user-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #333;
+            display: grid;
+            grid-template-columns: 55px 1fr auto; /* Аватар | Имя+Текст | Мета (время, галочки, счетчик) */
+            grid-template-rows: auto auto;
+            column-gap: 10px;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+            min-height: 72px;
+        }
+
+            .user-item:hover {
+                background: #2a2a2a;
+            }
+
+        .user-item-avatar {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-name {
+            grid-column: 2;
+            grid-row: 1;
+            font-weight: 600;
+            font-size: 16px;
+            color: white;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            align-self: end;
+        }
+
+        .last-msg-row {
+            grid-column: 2;
+            grid-row: 2;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            align-self: start;
+        }
+
+        .last-msg {
+            font-size: 14px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        /* Правая колонка: Время (сверху) и Галочки/Счетчик (снизу) */
+        .meta-column {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; /* Все прижато вправо */
+            justify-content: center;
+            gap: 5px;
+            min-width: 65px;
+        }
+
+        .last-msg-date {
+            font-size: 13px;
+            color: #888;
+        }
+
+        /* Контейнер для нижней части правой колонки (Галочки ИЛИ Счетчик) */
+        .meta-bottom-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            height: 20px; /* Фиксированная высота */
+        }
+
+        /* Галочки - теперь белые и в правом углу */
+        .list-ticks {
+            display: inline-flex;
+            font-size: 14px; /* Чуть крупнее */
+            color: white !important; /* Принудительно белые */
+        }
+
+            .list-ticks span {
+                color: white !important;
+            }
+
+        .badge-count {
+            background: #736AF0;
+            color: white;
+            font-size: 12px;
+            padding: 2px 9px;
+            border-radius: 12px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+            line-height: 1.2;
+            display: none;
+        }
+
+            .badge-count:not(.hidden) {
+                display: block;
+            }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+            position: relative;
+            z-index: 1;
+        }
+
+
+
+        /* Фон с паттерном для пустого экрана "Выберите чат" */
+        #noChat {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #noChat {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            position: relative;
+            overflow: hidden;
+            background-color: #0a0c10;
+        }
+
+            #noChat > div {
+                position: relative;
+                z-index: 2;
+                font-size: 18px;
+                font-weight: 500;
+            }
+
+
+        @keyframes scrollPattern {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(-10%, -10%);
+            }
+        }
+
+
+        .chat-header {
+            padding: 10px 15px;
+            background: #1f1f1f;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 60px;
+        }
+
+        .back-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #007bff;
+            font-size: 24px;
+            cursor: pointer;
+            padding-right: 15px;
+        }
+
+        .chat-header-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .chat-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .chat-status {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            /* Добавляем центрирование */
+            width: 100%;
+            max-width: 900px; /* Ширина колонки как в Telegram */
+            margin: 0 auto; /* Центрируем саму колонку */
+
+            background: transparent; /* Убеждаемся, что фон прозрачный */
+            /* Убираем position: relative, если он мешает фону, но обычно не мешает */
+            position: relative;
+            z-index: 1;
+        }
+
+
+            /* Важно! Сообщения должны быть ВЫШЕ фона */
+            .messages > * {
+                position: relative;
+                z-index: 1;
+            }
+
+
+
+        .input-bar {
+            padding: 10px 20px;
+            background: transparent; /* Прозрачный, чтобы видеть фон */
+            display: flex;
+            justify-content: center; /* Центрируем всё содержимое */
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 900px; /* Ограничиваем ширину, чтобы на больших экранах было не слишком широко */
+            margin: 0 auto; /* Центрируем сам блок */
+            position: relative;
+            z-index: 5;
+        }
+
+        .input-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #1f1f1f; /* Фон самого поля ввода */
+            border-radius: 25px; /* Сильное скругление */
+            padding: 5px 15px;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+            .input-container input {
+                flex: 1;
+                background: transparent;
+                border: none;
+                color: white;
+                padding: 10px;
+                font-size: 15px;
+                outline: none;
+            }
+
+        /* Кнопка скрепки внутри поля */
+        .attach-btn {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            transition: 0.2s;
+        }
+
+            .attach-btn:hover {
+                color: #ccc;
+            }
+
+        /* Круглая кнопка микрофона/отправки справа */
+        .voice-btn, .send-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+
+        .voice-btn {
+            background: #2d2d2d; /* Темный фон для микрофона */
+            color: white;
+        }
+
+            .voice-btn:hover {
+                background: #333;
+            }
+
+        .send-btn {
+            background: #007bff; /* Синий для отправки */
+            color: white;
+            padding-left: 5px; /* Визуально центрируем стрелочку */
+        }
+
+            .send-btn:hover {
+                background: #0056b3;
+            }
+
+
+
+
+        .input-bar input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 20px;
+            border: 1px solid #444;
+            background: #2d2d2d;
+            color: white;
+        }
+
+        /* Общие стили для сообщения */
+        .msg {
+            max-width: 75%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.4;
+            position: relative;
+            cursor: pointer;
+            word-wrap: break-word; /* Чтобы длинные слова переносились */
+        }
+
+        /* Свои сообщения (справа) - фиолетовые */
+        .msg-me {
+            align-self: flex-end;
+            background: #736AF0; /* Красивый фиолетовый цвет как на скриншоте */
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        /* Чужие сообщения (слева) - серые */
+        .msg-other {
+            align-self: flex-start;
+            background: #2d2d2d; /* Темно-серый */
+            color: white;
+            border-bottom-left-radius: 2px;
+        }
+
+        /* Системные сообщения (по центру) */
+        .msg-sys {
+            align-self: center;
+            background: rgba(34, 34, 34, 0.8);
+            border: 1px solid #444;
+            font-size: 13px;
+            color: #aaa;
+            padding: 4px 10px;
+            border-radius: 10px;
+        }
+
+        /* Блок мета-информации (время + галочки) */
+        /* Мета-информация (время + галочки) */
+        /* Мета-информация (время + галочки) */
+        .msg-meta {
+            float: right;
+            margin-left: 7px;
+            margin-top: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            vertical-align: bottom;
+            position: relative;
+            top: 3px;
+            white-space: nowrap; /* Важно: запрещает перенос на новую строку внутри мета-блока */
+            height: 14px;
+            line-height: 1;
+        }
+
+        .msg-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-right: 2px;
+        }
+
+        .msg-ticks {
+            font-size: 12px;
+            color: white; /* Всегда белые */
+            display: none;
+            font-weight: bold;
+        }
+
+        .msg-me .msg-ticks {
+            display: inline-block;
+        }
+
+
+        /* Прочитанные галочки (теперь они тоже белые, цвет не меняется) */
+        .tick-read {
+            color: white;
+        }
+
+
+
+        /* Шторки */
+        .overlay-sheet {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 4999;
+            display: none;
+        }
+
+
+
+        .action-sheet {
+            /* Оставляем старые стили */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #1f1f1f;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            padding: 20px;
+            z-index: 5000;
+            transform: translateY(100%);
+            /* ДОБАВЛЯЕМ ЭТО: скрываем от таба/фокуса, когда закрыто */
+            visibility: hidden;
+            transition: transform 0.3s, visibility 0s linear 0.3s;
+        }
+
+            .action-sheet.open {
+                transform: translateY(0);
+                /* ДОБАВЛЯЕМ ЭТО: показываем сразу при открытии */
+                visibility: visible;
+                transition: transform 0.3s, visibility 0s;
+            }
+
+
+        .action-btn {
+            background: #2d2d2d;
+            border: none;
+            padding: 15px;
+            color: white;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+            .action-btn:active {
+                background: #333;
+            }
+
+            .action-btn.delete {
+                color: #ff4444;
+            }
+
+        .sheet-title {
+            color: #777;
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        /* Профиль Шторка */
+        .profile-option {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+            .profile-option h3 {
+                margin: 0 0 10px 0;
+                font-size: 15px;
+                color: #ddd;
+            }
+
+        .profile-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Звонки */
+        .call-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 4000;
+            display: none;
+            flex-direction: column;
+            transition: opacity 0.5s;
+        }
+
+        .video-grid {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .local-video-container {
+            position: absolute;
+            bottom: 160px;
+            right: 20px;
+            /* УВЕЛИЧЕННЫЕ РАЗМЕРЫ */
+            width: 140px; /* Было 100px */
+            height: 210px; /* Было 150px (пропорция 2:3 сохранена) */
+            /* КРАСИВОЕ СКРУГЛЕНИЕ */
+            border-radius: 18px; /* Сильнее скруглено (было 10px) */
+
+            overflow: hidden;
+            /* УТОНЧЕННАЯ РАМКА */
+            border: 2px solid rgba(255, 255, 255, 0.2); /* Полупрозрачная белая рамка выглядит стильнее */
+            /* ТЕНЬ ДЛЯ ОБЪЕМА */
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            z-index: 4002;
+            display: block;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Плавная анимация */
+        }
+
+
+        #localVideo {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important; /* <--- Убирает черные полосы, обрезая лишнее */
+            position: absolute; /* <--- Фиксирует видео в углу контейнера */
+            top: 0;
+            left: 0;
+            background: #000;
+        }
+
+            #localVideo.mirror {
+                transform: scaleX(-1);
+            }
+
+
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px 10px 40px 10px;
+            z-index: 4003;
+            background: #18191c;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 70px;
+        }
+
+        .control-label {
+            font-size: 11px;
+            color: #b5bac1;
+            white-space: nowrap;
+        }
+
+        .btn-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            transition: 0.2s;
+            background: #2b2d31;
+            color: #dbdee1;
+        }
+
+            .btn-circle:active {
+                transform: scale(0.95);
+            }
+
+        .btn-active-white {
+            background: #f2f3f5 !important;
+            color: #313338 !important;
+        }
+
+        .btn-hangup {
+            background: #da373c !important;
+            color: white !important;
+        }
+
+        .btn-screen-on {
+            background: #248046 !important;
+            color: white !important;
+        }
+
+        .incoming-call {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #222;
+            padding: 15px 25px;
+            border-radius: 30px;
+            z-index: 5000;
+            display: none;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border: 1px solid #444;
+            width: 90%;
+            max-width: 400px;
+            justify-content: space-between;
+        }
+
+        .timer-badge {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: #fff;
+            z-index: 4003;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 120px;
+        }
+
+        #callStatusText {
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #callTimer {
+            font-size: 18px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        #callPing {
+            font-size: 11px;
+            color: #4caf50;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                border-right: none;
+            }
+
+            .chat-area {
+                display: none;
+                width: 100%;
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                z-index: 20;
+            }
+
+                .chat-area.active {
+                    display: flex;
+                }
+
+            .sidebar.hidden-mobile {
+                display: none;
+            }
+
+            .back-btn {
+                display: block;
+            }
+        }
+
+        /* 1. Общий фон для всего приложения */
+        #app-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Лежит под всем */
+            background-color: #0a0c10;
+        }
+
+            #app-background::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0.7;
+                pointer-events: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
+                background-size: 400px 400px;
+            }
+
+            #app-background::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: radial-gradient(circle at 50% 50%, rgba(10, 12, 16, 0.3) 0%, rgba(10, 12, 16, 0.7) 100%);
+                pointer-events: none;
+            }
+
+        /* 2. Убираем фоны у отдельных блоков, чтобы просвечивал общий фон */
+        body {
+            background: transparent; /* Было 121212 */
+        }
+
+        .chat-area {
+            background: transparent; /* Было 0d1117 */
+        }
+
+        #noChat {
+            background: transparent; /* Убираем фон отсюда */
+            /* Убираем псевдоэлементы ::before и ::after у #noChat, так как теперь есть общий фон */
+        }
+
+        /* Если у вас остались стили для #noChat::before и #noChat::after - УДАЛИТЕ ИХ */
+
+        .messages {
+            background: transparent; /* Убираем фон */
+            /* Убираем псевдоэлементы ::before и ::after у .messages */
+        }
+            /* Скрываем полосу прокрутки для Chrome, Safari и Opera */
+            .messages::-webkit-scrollbar {
+                display: none;
+            }
+
+        /* Скрываем полосу прокрутки для IE, Edge и Firefox */
+        .messages {
+            -ms-overflow-style: none; /* IE и Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+
+        /* PIP drag/resize */
+        #localPip {
+            /* важно: будет двигаться по left/top внутри .video-grid (она position: relative) */
+            touch-action: none;
+            user-select: none;
+            cursor: grab;
+        }
+
+            #localPip.dragging,
+            #localPip.resizing {
+                transition: none !important; /* чтобы не было "резины" при перетаскивании */
+            }
+
+            #localPip.dragging {
+                cursor: grabbing;
+            }
+
+            /* чтобы drag работал даже если тапаешь по самому видео */
+            #localPip > video {
+                pointer-events: none;
+            }
+
+            /* Ручка ресайза */
+            #localPip .pip-resize-handle {
+                position: absolute;
+                right: 8px;
+                bottom: 8px;
+                width: 22px;
+                height: 22px;
+                border-radius: 7px;
+                cursor: nwse-resize;
+                background: rgba(255,255,255,0.16);
+                border: 1px solid rgba(255,255,255,0.22);
+                box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+                backdrop-filter: blur(8px);
+            }
+
+                /* небольшой “блик”, чтобы выглядело как UI-элемент */
+                #localPip .pip-resize-handle::after {
+                    content: "";
+                    position: absolute;
+                    inset: 6px;
+                    border-right: 2px solid rgba(255,255,255,0.55);
+                    border-bottom: 2px solid rgba(255,255,255,0.55);
+                    border-radius: 2px;
+                    transform: rotate(0deg);
+                }
+
+        /* Принудительное скрытие кнопок */
+        .control-item-hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-background"></div>
+    <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
+    <!-- AUTH & REGISTRATION -->
+    <div id="authScreen" class="auth-overlay">
+
+        <!-- ШАГ 1: Вход / Регистрация -->
+        <div id="stepEmail" class="auth-box">
+            <h2>Вход в Messenger</h2>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="pass" placeholder="Пароль">
+            <button onclick="authAction()">Далее</button>
+            <div id="authError" style="color: #ff4444; margin-top: 10px; font-size: 13px;"></div>
+        </div>
+
+        <!-- ШАГ 2: Имя и Фамилия -->
+        <div id="stepName" class="auth-box" style="display: none;">
+            <h2>Ваше имя</h2>
+            <div style="font-size: 13px; color: #aaa; margin-bottom: 15px;">
+                Введите ваше имя и добавьте фото профиля (необязательно).
+            </div>
+
+            <input type="text" id="regName" placeholder="Имя (обязательно)" oninput="checkNameInput()">
+            <input type="text" id="regSurname" placeholder="Фамилия (необязательно)">
+
+            <button id="btnNameNext" onclick="goToUsernameStep()" disabled style="background: #444; cursor: not-allowed;">Далее</button>
+        </div>
+
+        <!-- ШАГ 3: Имя пользователя -->
+        <div id="stepUsername" class="auth-box" style="display: none;">
+            <div style="display:flex; justify-content: flex-start;">
+                <button onclick="backToName()" style="width: auto; background: none; color: #007bff; padding: 0; margin: 0 0 10px 0;">← Назад</button>
+            </div>
+            <h2>Имя пользователя</h2>
+            <div style="font-size: 13px; color: #aaa; margin-bottom: 15px;">
+                Выберите имя пользователя. Люди смогут найти вас по нему.
+            </div>
+
+            <div style="position: relative;">
+                <input type="text" id="regUsername" placeholder="@Username" oninput="checkUsernameInput()" style="padding-left: 10px;">
+            </div>
+
+            <div id="usernameStatus" style="font-size: 12px; text-align: left; margin-top: 5px; min-height: 15px;"></div>
+
+            <button id="btnFinish" onclick="finishRegistration()" disabled style="background: #444; cursor: not-allowed; margin-top: 15px;">Начать общение</button>
+        </div>
+
+    </div>
+
+
+    <!-- INCOMING -->
+    <div id="incomingPopup" class="incoming-call">
+        <!-- Теперь здесь только один span, в который мы будем писать почту -->
+        <span id="callerName" style="font-weight:bold; font-size: 14px;">Загрузка...</span>
+
+        <div style="display:flex; gap:15px;">
+            <button onclick="answerCall()" class="btn-circle" style="background:#248046; width:45px; height:45px; font-size:18px;">📞</button>
+            <button onclick="rejectCall()" class="btn-circle btn-hangup" style="width:45px; height:45px; font-size:18px;">✖</button>
+        </div>
+    </div>
+
+    <!-- ШТО� К�? -->
+    <div id="overlaySheet" class="overlay-sheet" onclick="closeAllSheets()"></div>
+
+    <!-- Шторка сообщения -->
+    <div id="actionSheet" class="action-sheet">
+        <div class="sheet-title">Сообщение</div>
+        <button class="action-btn delete" onclick="openDeleteSheet()">Удалить</button>
+        <button class="action-btn" onclick="closeAllSheets()">Отмена</button>
+    </div>
+
+    <!-- Шторка удаления -->
+    <div id="deleteSheet" class="action-sheet">
+        <div class="sheet-title">Удалить сообщение?</div>
+        <button id="btnDelAll" class="action-btn delete" onclick="confirmDelete('all')">Удалить у всех</button>
+        <button class="action-btn delete" onclick="confirmDelete('me')">Удалить у меня</button>
+        <button class="action-btn" onclick="closeAllSheets()">Отмена</button>
+    </div>
+
+    <!-- Шторка П� ОФ�?ЛЯ (Новая логика) -->
+    <!-- ПРОФИЛЬ -->
+    <div id="profileSheet" class="action-sheet" style="height: auto; max-height: 90dvh; overflow-y: auto;">
+        <div class="sheet-title" style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">Мой профиль</div>
+
+        <div style="display:flex; flex-direction:column; align-items:center; margin-bottom: 20px;">
+            <!-- Аватарка -->
+            <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; background: #333; margin-bottom: 10px; position: relative; border: 2px solid #555;">
+                <img id="profileAvatarPreview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                <div id="profileAvatarPlaceholder" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #888; font-size: 40px;">👤</div>
+            </div>
+            <!-- Кнопка загрузки -->
+            <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="handleAvatarSelect(this)">
+            <button onclick="document.getElementById('avatarInput').click()" style="background:none; border:none; color:#007bff; cursor:pointer;">Изменить фото</button>
+        </div>
+
+        <!-- Почта (только чтение) -->
+        <div class="profile-option">
+            <h3>Email</h3>
+            <div id="profileEmail" style="color: #007bff; margin-bottom: 10px;"></div>
+        </div>
+
+        <!-- Никнейм -->
+        <div class="profile-option">
+            <h3>Имя пользователя (@)</h3>
+            <div class="profile-input-group">
+                <span style="padding: 10px; background: #444; color: #aaa; border-radius: 8px 0 0 8px;">@</span>
+                <input type="text" id="profileUsername" placeholder="IvanIvanov" style="flex: 1; padding: 10px; background: #444; border: none; color: white; border-radius: 0 8px 8px 0;" oninput="validateUsername(this)">
+            </div>
+            <div style="font-size: 11px; color: #666; margin-top: 5px;">a-z, 0-9, _ и .</div>
+        </div>
+
+        <!-- Имя и Фамилия -->
+        <div class="profile-option">
+            <h3>Личные данные</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="profileName" placeholder="Имя *" style="flex: 1; padding: 10px; background: #444; border: none; color: white; border-radius: 8px;">
+                <input type="text" id="profileSurname" placeholder="Фамилия" style="flex: 1; padding: 10px; background: #444; border: none; color: white; border-radius: 8px;">
+            </div>
+
+            <h3 style="margin-top: 15px;">Дата рождения</h3>
+            <input type="date" id="profileBirthdate" style="width: 100%; padding: 10px; background: #444; border: none; color: white; border-radius: 8px; color-scheme: dark;">
+        </div>
+
+        <!-- Telegram ID (оставляем как было) -->
+        <div class="profile-option">
+            <h3>Telegram Connect</h3>
+            <div class="profile-input-group">
+                <input type="text" id="tgChatId" placeholder="Ваш ID" style="flex: 1; padding: 10px; background: #444; border: none; color: white; border-radius: 8px;">
+            </div>
+        </div>
+
+        <!-- Кнопка Сохранить -->
+        <button onclick="saveProfile()" class="action-btn" style="background: #28a745; color: white; margin-bottom: 10px;">Сохранить изменения</button>
+
+        <button onclick="auth.signOut()" class="action-btn" style="padding: 10px; font-size: 14px; width: 100%;">Выйти</button>
+    </div>
+
+
+    <!-- MAIN -->
+    <div id="mainSidebar" class="sidebar">
+        <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
+        <div class="profile-bar" style="padding: 12px 15px; gap: 12px;">
+
+            <!-- 1. Круглая кнопка профиля (только смайлик/фото) -->
+            <button onclick="openProfileSheet()" style="
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: #2d2d2d;
+                border: 1px solid #444;
+                color: #fff;
+                font-size: 22px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition: 0.2s;
+            " onmouseover="this.style.background='#383838'" onmouseout="this.style.background='#2d2d2d'">
+                <!-- Сюда подставится ваша аватарка или смайлик -->
+                <span id="myAvatarSmall">👤</span>
+            </button>
+
+            <!-- 2. Скругленный поиск (справа) -->
+            <div style="flex: 1; position: relative;">
+                <input type="text" id="searchInput" placeholder="Поиск..."
+                       style="
+                           width: 100%;
+                           height: 44px;
+                           padding: 0 15px;
+                           border-radius: 22px; /* Полное скругление */
+                           border: 1px solid #333;
+                           background: #181818;
+                           color: white;
+                           outline: none;
+                           font-size: 14px;
+                           transition: 0.2s;
+                       "
+                       onfocus="this.style.background='#222'; this.style.borderColor='#555'"
+                       onblur="this.style.background='#181818'; this.style.borderColor='#333'"
+                       oninput="handleSearchInput(this)">
+
+                <!-- Выпадающий список результатов -->
+                <div id="searchResults" style="
+                    position: absolute;
+                    top: 50px;
+                    left: 0;
+                    right: 0;
+                    background: #252525;
+                    border: 1px solid #333;
+                    border-radius: 12px;
+                    z-index: 100;
+                    display: none;
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+                    overflow: hidden;
+                ">
+                    <!-- JS вставит сюда результаты -->
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Выпадающий список результатов -->
+        <div id="searchResults" style="position: absolute; top: 45px; left: 10px; right: 10px; background: #2d2d2d; border: 1px solid #444; border-radius: 6px; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            <!-- Сюда JS будет вставлять найденных людей -->
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('friends')">
+                Друзья <span id="friendsBadge" class="tab-badge hidden">0</span>
+            </div>
+            <div class="tab" onclick="switchTab('requests')">
+                Заявки <span id="requestsBadge" class="tab-badge hidden">0</span>
+            </div>
+        </div>
+        <div id="friendsList" class="list-container"></div>
+        <div id="requestsList" class="list-container hidden"></div>
+    </div>
+
+    <div id="mainChatArea" class="chat-area">
+        <div id="noChat" style="height:100%; display:flex; align-items:center; justify-content:center; color:#555;"></div>
+        <div id="activeChat" class="hidden" style="height:100%; display:flex; flex-direction:column;">
+            <div class="chat-header">
+                <button class="back-btn" onclick="closeChat()" style="background: none; border: none; cursor: pointer; padding: 0 15px 0 0; display: flex; align-items: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#007bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <div class="chat-header-info">
+                    <div class="chat-title" id="chatTitle">User</div>
+                    <div class="chat-status" id="chatStatus">загрузка...</div>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="startCall()" style="background:#28a745; color:white; border:none; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold;">📹 Звонок</button>
+                </div>
+            </div>
+            <div id="msgList" class="messages"></div>
+            <div class="input-bar">
+                <div class="input-container">
+                    <input type="text" id="msgInput" placeholder="Сообщение" onkeypress="if(event.key==='Enter') sendMsg()">
+                    <button class="attach-btn" onclick="alert('Функция вложений пока в разработке')">📎</button>
+                </div>
+                <button class="voice-btn" onclick="alert('Голосовые сообщения скоро будут!')">🎤</button>
+                <button class="send-btn hidden" id="sendBtn" onclick="sendMsg()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CALL UI -->
+    <div id="callScreen" class="call-screen">
+        <div class="video-grid">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <div class="local-video-container" id="localPip">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="pip-resize-handle" aria-hidden="true"></div>
+            </div>
+        </div>
+        <div class="timer-badge">
+            <div id="callStatusText">Соединение...</div>
+            <div id="callTimer">00:00</div>
+            <div id="callPing">Ping: -</div>
+        </div>
+        <div class="controls">
+            <div class="control-item">
+                <button onclick="toggleScreen()" id="btnScr" class="btn-circle">🖥️</button>
+                <span id="lblScr" class="control-label">Экран</span>
+            </div>
+
+            <div class="control-item">
+                <button onclick="toggleCamera()" id="btnCam" class="btn-circle">📷</button>
+                <span id="lblCam" class="control-label">Вкл. видео</span>
+            </div>
+
+            <div class="control-item">
+                <button onclick="switchCamera()" id="btnFlip" class="btn-circle">🔄</button>
+                <span class="control-label">Камера</span>
+            </div>
+
+            <div class="control-item">
+                <button onclick="endCallUser()" class="btn-circle btn-hangup">📞</button>
+                <span class="control-label">Завершить</span>
+            </div>
+
+            <div class="control-item">
+                <button onclick="toggleMic()" id="btnMic" class="btn-circle">🎤</button>
+                <span id="lblMic" class="control-label">Выкл. звук</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBncXLA4D1JdsqQtA8_8rPqQioq2XRfic4",
+            authDomain: "mycoolmessenger.firebaseapp.com",
+            databaseURL: "https://mycoolmessenger-default-rtdb.firebaseio.com",
+            projectId: "mycoolmessenger",
+            storageBucket: "mycoolmessenger.firebasestorage.app",
+            messagingSenderId: "225503087166",
+            appId: "1:225503087166:web:1355f138e34e3a0172df6f"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        db.enablePersistence().catch(err => console.log("Оффлайн режим не включился:", err));
+
+        // --- Ш�?Ф� ОВАН�?Е ТОКЕНА ТЕЛЕГ� АМА (Base64) ---
+        // Токен: 8387775107:AAGhXPcfytIcnh-_zD04HvlGXIJ_b-crPK4
+        const ENCRYPTED_TOKEN = "ODM4Nzc3NTEwNzpBQUdoWFBjZnl0SWNuaC1fekQwNEh2bEdYSUpfYi1jclBLNA==";
+
+        function getTgToken() {
+            // � асшифровка перед отправкой
+            return atob(ENCRYPTED_TOKEN);
+        }
+
+        const iceServers = {
+            iceServers: [
+                { urls: "stun:stun.relay.metered.ca:80" },
+                { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+                { urls: "turn:global.relay.metered.ca:80", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turn:global.relay.metered.ca:80?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turn:global.relay.metered.ca:443", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turn:open-turn.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turn:open-turn.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turn:open-turn.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
+            ],
+            iceCandidatePoolSize: 10
+        };
+
+        let currentUser = null;
+        let currentFriendId = null;
+        let currentCallId = null;
+        let currentChatId = null;
+        let pc = null;
+        let localStream = null;
+        let currentFacingMode = "user";
+        let msgUnsub = null;
+        let candidateQueue = [];
+        let callTimerInt = null;
+        let callStartTime = 0;
+        let isConnected = false;
+        let wasCallConnected = false;
+        let amICaller = false;
+        let pingInterval = null;
+        let selectedMsgId = null;
+        let selectedMsgIsMine = false;
+        let lastSeenInterval = null;
+        let unreadCounts = {};
+        let audioCtx = null;
+        let toneTimer = null;
+
+        // --- НОВЫЙ ПОИСК ---
+        let searchTimeout = null;
+
+        function handleSearchInput(input) {
+            const val = input.value.trim();
+            const resultsBox = document.getElementById('searchResults');
+
+            // Если пусто — скрываем
+            if (val.length < 3) {
+                resultsBox.style.display = 'none';
+                return;
+            }
+
+            if (searchTimeout) clearTimeout(searchTimeout);
+
+            searchTimeout = setTimeout(() => {
+                performSearch(val);
+            }, 500); // Ищем через 0.5 сек после остановки ввода
+        }
+
+        async function performSearch(query) {
+            const resultsBox = document.getElementById('searchResults');
+            resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Поиск...</div>';
+            resultsBox.style.display = 'block';
+
+            // Убираем @ если есть
+            const cleanQuery = query.startsWith('@') ? query.slice(1) : query;
+
+            try {
+                const hits = [];
+
+                // 1. Ищем по username
+                const snapUser = await db.collection('users')
+                    .where('username', '>=', cleanQuery)
+                    .where('username', '<=', cleanQuery + '\uf8ff')
+                    .limit(3)
+                    .get();
+
+                snapUser.forEach(doc => {
+                    if (doc.id !== currentUser.uid) hits.push({ id: doc.id, ...doc.data() });
+                });
+
+                // 2. Если мало результатов, ищем по email
+                if (hits.length < 3) {
+                    const snapEmail = await db.collection('users')
+                        .where('email', '>=', query)
+                        .where('email', '<=', query + '\uf8ff')
+                        .limit(3)
+                        .get();
+
+                    snapEmail.forEach(doc => {
+                        if (doc.id !== currentUser.uid && !hits.find(h => h.id === doc.id)) {
+                            hits.push({ id: doc.id, ...doc.data() });
+                        }
+                    });
+                }
+
+                // Отрисовка результатов (максимум 3)
+                const finalHits = hits.slice(0, 3);
+
+                if (finalHits.length === 0) {
+                    resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Никого не найдено</div>';
+                } else {
+                    resultsBox.innerHTML = '';
+                    finalHits.forEach(user => {
+                        const div = document.createElement('div');
+                        div.style.padding = '10px';
+                        div.style.borderBottom = '1px solid #333';
+                        div.style.cursor = 'pointer';
+                        div.style.display = 'flex';
+                        div.style.alignItems = 'center';
+                        div.style.gap = '10px';
+
+                        // Аватарка или заглушка
+                        const avatarSrc = user.avatar ? `<img src="${user.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;">👤</div>`;
+
+                        // Никнейм (или none)
+                        const displayNick = user.username ? `@${user.username}` : 'none';
+
+                        div.innerHTML = `
+                                                                                                                    ${avatarSrc}
+                                                                                                                    <div>
+                                                                                                                        <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                    </div>
+                                                                                                                `;
+
+                        div.onclick = () => {
+                            sendFriendRequestToId(user.id); // Новая функция отправки
+                            resultsBox.style.display = 'none';
+                            document.getElementById('searchInput').value = '';
+                        };
+
+                        resultsBox.appendChild(div);
+                    });
+                }
+
+            } catch (e) {
+                console.error(e);
+                resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
+            }
+        }
+
+        // Новая функция отправки заявки по ID (а не email)
+        async function sendFriendRequestToId(targetUid) {
+            // Проверяем, не друзья ли уже
+            // Это сложнее в текущей схеме, но пока просто отправим заявку
+            try {
+                await db.collection('friend_requests').add({
+                    from: currentUser.uid,
+                    fromEmail: currentUser.email, // Оставляем email как тех. поле
+                    fromUsername: (await getCurrentUsername()) || 'none', // Добавляем username
+                    to: targetUid
+                });
+                alert('Заявка отправлена!');
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+
+        async function getCurrentUsername() {
+            const doc = await db.collection('users').doc(currentUser.uid).get();
+            return doc.exists ? doc.data().username : null;
+        }
+
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function beep(freq, duration, vol = 0.05) {
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            gain.gain.value = vol;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            setTimeout(() => {
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.04);
+                osc.stop(audioCtx.currentTime + 0.05);
+            }, duration);
+        }
+
+        function playConnectingTone() {
+            stopAllTones();
+            const loop = () => beep(425, 100, 0.05);
+            loop();
+            toneTimer = setInterval(loop, 1500);
+        }
+
+        function playRingingTone() {
+            stopAllTones();
+            const loop = () => beep(425, 1000, 0.08);
+            loop();
+            toneTimer = setInterval(loop, 4000);
+        }
+
+        function playEndTone() {
+            stopAllTones();
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        function stopAllTones() {
+            if (toneTimer) { clearInterval(toneTimer); toneTimer = null; }
+        }
+
+        function formatLastSeen(timestamp) {
+            if (!timestamp) return "был давно";
+            const now = Date.now();
+            const diff = now - timestamp.toMillis();
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+            const months = Math.floor(days / 30);
+            if (minutes < 1) return "в сети";
+            if (minutes < 60) return `${minutes} ${minutes === 1 ? 'минуту' : minutes < 5 ? 'минуты' : 'минут'} назад`;
+            if (hours < 24) return `${hours} ${hours === 1 ? 'час' : hours < 5 ? 'часа' : 'часов'} назад`;
+            if (days < 30) return `${days} ${days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'} назад`;
+            if (months < 12) return `${months} ${months === 1 ? 'месяц' : months < 5 ? 'месяца' : 'месяцев'} назад`;
+            return "был давно";
+        }
+
+        function updateLastSeen() {
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).update({
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(() => {
+                    db.collection('users').doc(currentUser.uid).set({
+                        email: currentUser.email,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+            }
+        }
+
+        // --- AUTH ---
+        // 1. Обработка входа/регистрации
+        function authAction() {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('pass').value;
+            if (!e || !p) return;
+
+            auth.signInWithEmailAndPassword(e, p).catch(err => {
+                // Если пользователя нет, создаем нового
+                if (err.code.includes('not-found') || err.code.includes('wrong') || err.code.includes('invalid')) {
+                    auth.createUserWithEmailAndPassword(e, p).then(cred => {
+                        // Создаем заготовку пользователя, но НЕ пускаем в приложение
+                        db.collection('users').doc(cred.user.uid).set({
+                            email: e,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                } else {
+                    document.getElementById('authError').innerText = err.message;
+                }
+            });
+        }
+
+
+        // --- 1. ОПТИМИСТИЧНЫЙ ВХОД (Вставить ПЕРЕД auth.onAuthStateChanged) ---
+        // Проверяем, входил ли юзер в прошлый раз
+        const wasLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+        if (wasLoggedIn) {
+            // Сразу скрываем экран входа, не дожидаясь ответа от Google
+            document.getElementById('authScreen').classList.add('hidden');
+        }
+
+        // --- 2. ОСНОВНАЯ ЛОГИКА (Вместо старого слушателя) ---
+        auth.onAuthStateChanged(u => {
+            if (u) {
+                currentUser = u;
+                // Успешный вход подтвержден сервером -> сохраняем метку на будущее
+                localStorage.setItem('isLoggedIn', 'true');
+
+                // Проверяем, завершена ли регистрация
+                db.collection('users').doc(u.uid).get().then(doc => {
+                    if (doc.exists && doc.data().username) {
+                        // Все ок, пускаем в приложение окончательно
+                        document.getElementById('authScreen').classList.add('hidden');
+                        document.getElementById('profileEmail').innerText = u.email;
+                        updateLastSeen();
+
+                        // Загружаем чаты только сейчас (так как нужен currentUser)
+                        loadData();
+                        listenForIncomingCalls();
+                        loadTgId();
+
+                        if (lastSeenInterval) clearInterval(lastSeenInterval);
+                        lastSeenInterval = setInterval(updateLastSeen, 30000);
+                    } else {
+                        // Регистрация не завершена -> возвращаем экран регистрации
+                        document.getElementById('stepEmail').style.display = 'none';
+                        document.getElementById('stepName').style.display = 'block';
+                        document.getElementById('stepUsername').style.display = 'none';
+                        document.getElementById('authScreen').classList.remove('hidden');
+                    }
+                });
+            } else {
+                // Сервер сказал: "Пользователь не вошел" или "Токен протух"
+                localStorage.removeItem('isLoggedIn'); // Удаляем метку
+
+                // Если мы "оптимистично" пустили юзера, а сервер отказал -> выгоняем
+                if (wasLoggedIn) {
+                    alert("Сессия истекла или отсутствует соединение. Пожалуйста, войдите снова.");
+                }
+
+                // Показываем экран входа (стандартная логика)
+                document.getElementById('authScreen').classList.remove('hidden');
+                document.getElementById('stepEmail').style.display = 'block';
+                document.getElementById('stepName').style.display = 'none';
+                document.getElementById('stepUsername').style.display = 'none';
+                if (lastSeenInterval) clearInterval(lastSeenInterval);
+            }
+        });
+
+
+
+        function checkNameInput() {
+            const name = document.getElementById('regName').value.trim();
+            const btn = document.getElementById('btnNameNext');
+
+            if (name.length > 0) {
+                btn.disabled = false;
+                btn.style.background = '#007bff'; // Синий
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.background = '#444';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+
+        // Переход к шагу 3
+        function goToUsernameStep() {
+            document.getElementById('stepName').style.display = 'none';
+            document.getElementById('stepUsername').style.display = 'block';
+        }
+
+        // Возврат назад (если нужно исправить имя)
+        function backToName() {
+            document.getElementById('stepUsername').style.display = 'none';
+            document.getElementById('stepName').style.display = 'block';
+        }
+
+        // Шаг 3: Проверка юзернейма в реальном времени
+        let usernameTimeout = null;
+
+        function checkUsernameInput() {
+            let val = document.getElementById('regUsername').value;
+            const status = document.getElementById('usernameStatus');
+            const btn = document.getElementById('btnFinish');
+
+            // Очистка от запрещенных символов
+            val = val.replace(/[^a-zA-Z0-9_.]/g, '');
+            document.getElementById('regUsername').value = val; // Обновляем поле
+
+            // Визуально добавляем @
+            // (В коде выше input уже имеет placeholder, но если хотите принудительно, можно оставить как есть)
+
+            btn.disabled = true;
+            btn.style.background = '#444';
+            btn.style.cursor = 'not-allowed';
+
+            if (val.length < 3) {
+                status.innerText = "Слишком короткое (мин. 3 символа)";
+                status.style.color = "#ff4444";
+                return;
+            }
+
+            status.innerText = "Проверка...";
+            status.style.color = "#aaa";
+
+            // Debounce (ждем пока перестанет печатать)
+            if (usernameTimeout) clearTimeout(usernameTimeout);
+
+            usernameTimeout = setTimeout(() => {
+                // Запрос к базе
+                db.collection('users').where('username', '==', val).get().then(snap => {
+                    if (snap.empty) {
+                        status.innerText = `@${val} свободно`;
+                        status.style.color = "#4caf50"; // Зеленый
+
+                        btn.disabled = false;
+                        btn.style.background = '#007bff';
+                        btn.style.cursor = 'pointer';
+                    } else {
+                        status.innerText = `@${val} уже занято`;
+                        status.style.color = "#ff4444"; // Красный
+                    }
+                });
+            }, 500); // Проверка через 0.5 сек после остановки ввода
+        }
+
+        // Завершение регистрации
+        function finishRegistration() {
+            const name = document.getElementById('regName').value.trim();
+            const surname = document.getElementById('regSurname').value.trim();
+            const username = document.getElementById('regUsername').value.trim();
+
+            if (!name || !username) return;
+
+            db.collection('users').doc(currentUser.uid).set({
+                name: name,
+                surname: surname,
+                username: username,
+                email: currentUser.email, // Обновляем на всякий случай
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).then(() => {
+                // Успех -> Перезагружаем страницу или просто скрываем окно
+                // Лучше просто скрыть окно и запустить логику, как в onAuthStateChanged
+                document.getElementById('authScreen').classList.add('hidden');
+                loadData();
+                listenForIncomingCalls();
+                loadTgId();
+                if (lastSeenInterval) clearInterval(lastSeenInterval);
+                lastSeenInterval = setInterval(updateLastSeen, 30000);
+            });
+        }
+
+        window.addEventListener('beforeunload', updateLastSeen);
+
+        // --- LOGIC ---
+        function switchTab(t) {
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            if (t === 'friends') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('friendsList').classList.remove('hidden');
+                document.getElementById('requestsList').classList.add('hidden');
+            }
+            else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('friendsList').classList.add('hidden');
+                document.getElementById('requestsList').classList.remove('hidden');
+            }
+        }
+
+        // Слушатель входящих заявок в друзья
+        function listenForFriendRequests() {
+            db.collection('friend_requests')
+                .where('to', '==', currentUser.uid)
+                .onSnapshot(async snap => {
+                    const list = document.getElementById('requestsList');
+                    const badge = document.getElementById('requestsBadge');
+
+                    // Обновляем счетчик заявок
+                    if (snap.size > 0) {
+                        badge.innerText = snap.size;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+
+                    // Если список открыт, отрисовываем
+                    list.innerHTML = '';
+                    if (snap.empty) {
+                        list.innerHTML = '<div style="padding:20px;text-align:center;color:#888">Нет новых заявок</div>';
+                        return;
+                    }
+
+                    snap.forEach(doc => {
+                        const data = doc.data();
+                        const div = document.createElement('div');
+                        div.className = 'user-item'; // Используем тот же стиль, что и для чатов
+
+                        // Аватарка (заглушка или можно подгрузить реальную)
+                        const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
+
+                        div.innerHTML = `
+                                                                            ${avatar}
+                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                            </div>
+                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                            </div>
+                                                                        `;
+                        list.appendChild(div);
+                    });
+                });
+        }
+
+
+        // Вспомогательная функция для обновления текста последнего сообщения в списке
+        function startMessageListener(chatId, fid, createdTime) {
+            db.collection('chats').doc(chatId).collection('msgs')
+                .orderBy('ts', 'desc').limit(1)
+                .onSnapshot(msgSnap => {
+                    const lastEl = document.getElementById('last-' + chatId);
+                    const dateEl = document.getElementById('date-' + chatId);
+                    const statusEl = document.getElementById('status-' + chatId);
+                    const userDiv = document.getElementById('u-' + fid);
+
+                    // Время по умолчанию - когда добавили в друзья
+                    let timeToDisplay = createdTime;
+
+                    if (!msgSnap.empty) {
+                        const lastData = msgSnap.docs[0].data();
+
+                        // Текст сообщения
+                        if (lastEl) {
+                            let shortTxt = lastData.txt;
+                            if (shortTxt.length > 25) shortTxt = shortTxt.substring(0, 25) + '...';
+                            if (lastData.from === currentUser.uid) shortTxt = 'Вы: ' + shortTxt;
+                            lastEl.innerHTML = shortTxt;
+                        }
+
+                        // Время сообщения
+                        if (lastData.ts) timeToDisplay = lastData.ts.toMillis();
+
+                        // Галочки (статус)
+                        if (statusEl) {
+                            if (lastData.from === currentUser.uid) {
+                                let ticksHtml = lastData.read
+                                    ? '<span style="margin-right:-4px;">✓</span>✓'
+                                    : '✓';
+                                statusEl.innerHTML = ticksHtml;
+                                statusEl.style.display = 'inline-flex';
+                            } else {
+                                statusEl.style.display = 'none';
+                            }
+                        }
+                    } else {
+                        if (lastEl) lastEl.innerHTML = "Нет сообщений";
+                        if (statusEl) statusEl.style.display = 'none';
+                    }
+
+                    // Обновляем дату
+                    if (dateEl && timeToDisplay > 0) {
+                        const date = new Date(timeToDisplay);
+                        const now = new Date();
+                        // Простая логика даты: часы:минуты или день
+                        if (date.toDateString() === now.toDateString()) {
+                            dateEl.innerText = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                        } else {
+                            dateEl.innerText = date.getDate() + '.' + (date.getMonth() + 1);
+                        }
+                    }
+
+                    // Обновляем сортировку списка
+                    if (userDiv) {
+                        userDiv.setAttribute('data-time', timeToDisplay);
+                        sortFriendsList();
+                    }
+                });
+
+            // Слушаем непрочитанные (Badge)
+            db.collection('chats').doc(chatId).collection('msgs')
+                .where('to', '==', currentUser.uid)
+                .where('read', '==', false)
+                .onSnapshot(unreadSnap => {
+                    const badgeEl = document.getElementById('badge-' + chatId);
+                    const count = unreadSnap.size;
+
+                    // Сохраняем в глобальный объект для общего счетчика (если он у вас есть)
+                    if (typeof unreadCounts !== 'undefined') {
+                        unreadCounts[chatId] = count;
+                        updateTotalFriendsBadge();
+                    }
+
+                    if (badgeEl) {
+                        if (count > 0) {
+                            badgeEl.innerText = count;
+                            badgeEl.classList.remove('hidden');
+                        } else {
+                            badgeEl.classList.add('hidden');
+                        }
+                    }
+                });
+        }
+
+
+        function loadData() {
+            // 1. Запускаем прослушку заявок
+            if (typeof listenForFriendRequests === 'function') {
+                listenForFriendRequests();
+            }
+
+            // 2. Слушаем список друзей
+            db.collection('friends')
+                .where('users', 'array-contains', currentUser.uid)
+                .onSnapshot(async snap => {
+
+                    if (typeof cacheFriends === 'function') cacheFriends(snap);
+
+                    const list = document.getElementById('friendsList');
+
+                    if (snap.empty) {
+                        list.innerHTML = '<div style="padding:20px;text-align:center;color:#888">Список друзей пуст</div>';
+                        return;
+                    }
+
+                    // Массив для хранения данных, чтобы запустить слушатели ПОТОМ
+                    const listenersToStart = [];
+
+                    const tasks = snap.docs.map(async doc => {
+                        try {
+                            const d = doc.data();
+                            const fid = d.users.find(id => id !== currentUser.uid);
+                            if (!fid) return null;
+
+                            const chatId = [currentUser.uid, fid].sort().join('_');
+                            const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
+
+                            const userDoc = await db.collection('users').doc(fid).get();
+
+                            let friendName = 'Неизвестный';
+                            let friendAvatar = null;
+                            let friendNick = '...';
+
+                            if (userDoc.exists) {
+                                const u = userDoc.data();
+                                friendName = (u.name || '') + ' ' + (u.surname || '');
+                                if (!friendName.trim()) friendName = u.username || 'Без имени';
+                                friendAvatar = u.avatar;
+                                friendNick = u.username ? '@' + u.username : '';
+                            }
+
+                            const div = document.createElement('div');
+                            div.className = 'user-item';
+                            div.id = 'u-' + fid;
+                            div.setAttribute('data-time', createdTime);
+
+                            const avatarHtml = friendAvatar
+                                ? `<img src="${friendAvatar}" class="user-item-avatar">`
+                                : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
+
+                            div.innerHTML = `
+                                                                                ${avatarHtml}
+                                                                                <div class="user-name">${friendName}</div>
+
+                                                                                <div class="last-msg-row">
+                                                                                     <span class="last-msg" id="last-${chatId}">Загрузка...</span>
+                                                                                </div>
+
+                                                                                <div class="meta-column">
+                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                    <div class="meta-bottom-row">
+                                                                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            `;
+
+                            div.onclick = () => openChat(fid, friendName, friendNick);
+
+                            // ВАЖНО: Мы НЕ запускаем startMessageListener здесь!
+                            // Мы запоминаем параметры, чтобы запустить его позже.
+                            listenersToStart.push({ chatId, fid, createdTime });
+
+                            return div;
+                        } catch (e) {
+                            console.error("Ошибка загрузки друга:", e);
+                            return null;
+                        }
+                    });
+
+                    const elements = await Promise.all(tasks);
+
+                    list.innerHTML = '';
+                    elements.forEach(el => {
+                        if (el) list.appendChild(el);
+                    });
+
+                    // ВОТ ТЕПЕРЬ, когда элементы на экране, запускаем слушатели
+                    listenersToStart.forEach(item => {
+                        startMessageListener(item.chatId, item.fid, item.createdTime);
+                    });
+
+                    sortFriendsList();
+                });
+        }
+
+
+
+
+
+
+
+
+        function sortFriendsList() {
+            const list = document.getElementById('friendsList');
+            const items = Array.from(list.children);
+            items.sort((a, b) => {
+                const timeA = parseInt(a.getAttribute('data-time') || 0);
+                const timeB = parseInt(b.getAttribute('data-time') || 0);
+                return timeB - timeA;
+            });
+            items.forEach(item => list.appendChild(item));
+        }
+
+        function updateTotalFriendsBadge() {
+            const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+            const el = document.getElementById('friendsBadge');
+            if (total > 0) { el.innerText = total; el.classList.remove('hidden'); }
+            else { el.classList.add('hidden'); }
+        }
+
+        async function sendFriendRequest() {
+            const e = document.getElementById('searchEmail').value;
+            const snap = await db.collection('users').where('email', '==', e).get();
+            if (snap.empty) return alert('Нет пользователя');
+            await db.collection('friend_requests').add({ from: currentUser.uid, fromEmail: currentUser.email, to: snap.docs[0].id });
+            alert('Отправлено'); document.getElementById('searchEmail').value = '';
+        }
+
+        async function accept(rid, fid, femail) {
+            await db.collection('friends').add({
+                users: [currentUser.uid, fid],
+                emails: { [currentUser.uid]: currentUser.email, [fid]: femail },
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await db.collection('friend_requests').doc(rid).delete();
+        }
+        function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
+
+        function openChat(fid, name, nick) {
+            currentFriendId = fid;
+            currentChatId = [currentUser.uid, fid].sort().join('_');
+
+            // UI переключения (мобильный/десктоп) - оставляем как было
+            if (window.innerWidth <= 768) {
+                document.getElementById('mainSidebar').classList.add('hidden-mobile');
+                document.getElementById('mainChatArea').classList.add('active');
+            }
+            document.getElementById('noChat').classList.add('hidden');
+            document.getElementById('activeChat').classList.remove('hidden');
+
+            // ЗАГОЛОВОК ЧАТА
+            // Теперь показываем Имя и снизу мелким шрифтом ник
+            document.getElementById('chatTitle').innerHTML = `
+                                                                                                        <div>${name}</div>
+                                                                                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                                                    `;
+
+            // Статус "был в сети" (оставляем логику lastSeen)
+            db.collection('users').doc(fid).onSnapshot(userSnap => {
+                if (userSnap.exists) {
+                    const userData = userSnap.data();
+                    // Можно дописать статус рядом с ником или отдельно
+                    document.getElementById('chatStatus').innerText = formatLastSeen(userData.lastSeen);
+                }
+            });
+
+            // Загрузка сообщений (оставляем как было)
+            loadMessages();
+            setTimeout(() => document.getElementById('msgInput').focus(), 100);
+
+        }
+
+        function loadMessages() {
+            const list = document.getElementById('msgList');
+            list.innerHTML = ''; // Очищаем список при смене чата
+
+            if (msgUnsub) msgUnsub(); // Отписываемся от старого чата
+
+            // Получаем список удаленных локально сообщений
+            const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
+
+            msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs').orderBy('ts').onSnapshot(snap => {
+                list.innerHTML = ''; // Полная перерисовка
+
+                const batch = db.batch();
+                let needCommit = false;
+
+                snap.forEach(d => {
+                    // Если сообщение удалено локально - пропускаем
+                    if (deletedLocal.includes(d.id)) return;
+
+                    const m = d.data();
+                    const msgId = d.id;
+
+                    // Если сообщение адресовано мне и не прочитано -> помечаем прочитанным
+                    if (m.to === currentUser.uid && !m.read) {
+                        batch.update(d.ref, { read: true });
+                        needCommit = true;
+                    }
+
+                    const div = document.createElement('div');
+                    div.id = 'msg-' + msgId;
+
+                    // Форматируем время
+                    let timeStr = '';
+                    if (m.ts) {
+                        const date = m.ts.toDate();
+                        timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                    }
+
+                    // Генерируем галочки (HTML)
+                    // Используем наложение для двух галочек, чтобы было "как в телеграме"
+                    let ticksHtml = '';
+                    if (m.read) {
+                        // Две галочки: первая сдвинута вправо, чтобы вторая "наехала" на неё
+                        // Цвет всегда белый (наследуется от родителя или задан в CSS)
+                        ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
+                    } else {
+                        // Одна галочка
+                        ticksHtml = '✓';
+                    }
+
+                    // Определяем класс сообщения
+                    if (m.sys) {
+                        div.className = 'msg msg-sys';
+                    } else if (m.from === currentUser.uid) {
+                        div.className = 'msg msg-me';
+                    } else {
+                        div.className = 'msg msg-other';
+                    }
+
+                    // Вставляем HTML внутрь сообщения
+                    if (m.sys) {
+                        div.innerHTML = m.txt;
+                    } else {
+                        // Текст + время внутри одного блока.
+                        // metaHtml - это контейнер с временем и галочками.
+                        // white-space: nowrap в CSS предотвратит разрыв строки между временем и галочками.
+                        let metaHtml = `
+                                                                                        <span class="msg-meta">
+                                                                                            <span class="msg-time">${timeStr}</span>
+                                                                                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                                                                                        </span>
+                                                                                    `;
+                        div.innerHTML = m.txt + metaHtml;
+                    }
+
+                    // Обработчик долгого нажатия или клика для меню
+                    div.onclick = (e) => {
+                        e.stopPropagation();
+                        openActionSheet(msgId, m.from === currentUser.uid);
+                    };
+
+                    list.appendChild(div);
+                });
+
+                if (needCommit) batch.commit();
+
+                // Прокрутка вниз
+                setTimeout(() => {
+                    list.scrollTop = list.scrollHeight;
+                }, 50);
+            });
+
+            // Автофокус на поле ввода
+            setTimeout(() => document.getElementById('msgInput').focus(), 100);
+        }
+
+
+
+
+
+        function closeChat() {
+            // Для мобильных: возвращаем сайдбар
+            document.getElementById('mainSidebar').classList.remove('hidden-mobile');
+            document.getElementById('mainChatArea').classList.remove('active');
+
+            // Для ПК: скрываем чат, показываем заглушку "Выберите чат"
+            document.getElementById('activeChat').classList.add('hidden');
+            document.getElementById('noChat').classList.remove('hidden');
+
+            currentFriendId = null;
+            currentChatId = null;
+
+            // Отписываемся от сообщений
+            if (msgUnsub) {
+                msgUnsub();
+                msgUnsub = null;
+            }
+        }
+
+
+        function sendMsg(txt, isSys = false) {
+            const t = txt || document.getElementById('msgInput').value; if (!t) return;
+            const msgData = {
+                txt: t, from: currentUser.uid, to: currentFriendId,
+                sys: isSys, read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
+            if (!txt) document.getElementById('msgInput').value = '';
+            document.getElementById('sendBtn').style.display = 'none';
+            document.querySelector('.voice-btn').style.display = 'flex';
+            document.getElementById('msgInput').focus(); // Возвращаем фокус
+
+
+            // УВЕДОМЛЕН�?Е В ТЕЛЕГ� АМ
+            if (!isSys && currentFriendId) {
+                db.collection('users').doc(currentFriendId).get().then(doc => {
+                    if (doc.exists) {
+                        const friendData = doc.data();
+                        if (friendData.tgChatId) {
+                            sendTelegramNotification(friendData.tgChatId, `📩 *Сообщение*\nОт: ${currentUser.email}\n${t}`);
+                        }
+                    }
+                });
+            }
+        }
+
+        function openActionSheet(msgId, isMine) {
+            selectedMsgId = msgId; selectedMsgIsMine = isMine;
+            document.getElementById('overlaySheet').style.display = 'block';
+            setTimeout(() => { document.getElementById('actionSheet').classList.add('open'); }, 10);
+        }
+        function openDeleteSheet() {
+            document.getElementById('actionSheet').classList.remove('open');
+            const btnAll = document.getElementById('btnDelAll');
+            btnAll.style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('deleteSheet').classList.add('open');
+            }, 100);
+        }
+
+        function openProfileSheet() {
+            document.getElementById('overlaySheet').style.display = 'block';
+            setTimeout(() => { document.getElementById('profileSheet').classList.add('open'); }, 10);
+        }
+
+        function confirmDelete(mode) {
+            if (!selectedMsgId) return;
+            if (mode === 'all') { db.collection('chats').doc(currentChatId).collection('msgs').doc(selectedMsgId).delete(); }
+            else if (mode === 'me') {
+                const el = document.getElementById(`msg-${selectedMsgId}`);
+                if (el) el.style.display = 'none';
+                const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
+                deletedLocal.push(selectedMsgId);
+                localStorage.setItem('deletedMsgs', JSON.stringify(deletedLocal));
+            }
+            closeAllSheets();
+        }
+
+        function closeAllSheets() {
+            document.getElementById('actionSheet').classList.remove('open');
+            document.getElementById('deleteSheet').classList.remove('open');
+            document.getElementById('profileSheet').classList.remove('open');
+            setTimeout(() => { document.getElementById('overlaySheet').style.display = 'none'; }, 300);
+            selectedMsgId = null;
+        }
+
+        function updateCallStatus(text) { document.getElementById('callStatusText').innerText = text; }
+
+        function startTimer() {
+            // Сбрасываем старый интервал, если был
+            if (callTimerInt) clearInterval(callTimerInt);
+
+            // Если время старта еще не записано — записываем сейчас
+            if (!callStartTime) callStartTime = Date.now();
+
+            const el = document.getElementById('callTimer');
+
+            const tick = () => {
+                // Считаем разницу между "сейчас" и "стартом"
+                const diff = Math.max(0, Date.now() - callStartTime);
+                const totalSeconds = Math.floor(diff / 1000);
+
+                const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                const ss = String(totalSeconds % 60).padStart(2, '0');
+
+                el.innerText = `${mm}:${ss}`;
+            };
+
+            // Запускаем тиканье каждую секунду
+            tick();
+            callTimerInt = setInterval(tick, 1000);
+        }
+
+
+        function setupPeerConnection() {
+            candidateQueue = [];
+            pc = new RTCPeerConnection(iceServers);
+            pc.oniceconnectionstatechange = () => {
+                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                    pc.getStats().then(stats => {
+                        stats.forEach(report => {
+                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                const local = stats.get(report.localCandidateId);
+                                console.log(`🚀 Connection: ${local.candidateType}`);
+                            }
+                        });
+                    });
+                }
+            };
+            pc.onicecandidate = e => { };
+            pc.ontrack = e => {
+                const remoteVid = document.getElementById('remoteVideo');
+                remoteVid.muted = false;
+                if (remoteVid.srcObject !== e.streams[0]) {
+                    remoteVid.srcObject = e.streams[0];
+                    remoteVid.play().catch(console.error);
+                }
+            };
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'connected') {
+                    isConnected = true; wasCallConnected = true; updateCallStatus("В разговоре");
+                    stopAllTones(); startTimer(); startPing();
+                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                    endCall(false);
+                }
+            };
+        }
+
+        function startPing() {
+            const el = document.getElementById('callPing');
+            if (pingInterval) clearInterval(pingInterval);
+            pingInterval = setInterval(async () => {
+                if (!pc) return;
+                const stats = await pc.getStats();
+                let rtt = null;
+                stats.forEach(r => {
+                    if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.currentRoundTripTime) { rtt = r.currentRoundTripTime; }
+                });
+                if (rtt) el.innerText = `Ping: ${(rtt * 1000).toFixed(0)} ms`;
+            }, 2000);
+        }
+
+        async function addCandidateSafely(candidate) {
+            if (!pc) return;
+            if (pc.remoteDescription && pc.remoteDescription.type) { try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { } }
+            else { candidateQueue.push(candidate); }
+        }
+        async function flushCandidateQueue() {
+            if (!pc) return;
+            for (const cand of candidateQueue) { try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) { } }
+            candidateQueue = [];
+        }
+
+        function setLocalMirror(facing) {
+            const v = document.getElementById('localVideo');
+            if (!v) return;
+            if (facing === 'user') v.classList.add('mirror');
+            else v.classList.remove('mirror');
+        }
+
+        async function getStreamForFacing(facing, withAudio) {
+            const audio = !!withAudio;
+
+            // 1) пробуем строго нужную камеру
+            try {
+                return await navigator.mediaDevices.getUserMedia({
+                    audio,
+                    video: { facingMode: { exact: facing } }
+                });
+            } catch (e1) { }
+
+            // 2) пробуем "желательно"
+            try {
+                return await navigator.mediaDevices.getUserMedia({
+                    audio,
+                    video: { facingMode: { ideal: facing } }
+                });
+            } catch (e2) {
+                // 3) fallback: через enumerateDevices + deviceId
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cams = devices.filter(d => d.kind === 'videoinput');
+                if (!cams.length) throw e2;
+
+                const cam = (facing === 'environment') ? cams[cams.length - 1] : cams[0];
+
+                return await navigator.mediaDevices.getUserMedia({
+                    audio,
+                    video: { deviceId: { exact: cam.deviceId } }
+                });
+            }
+        }
+
+        async function getMedia() {
+            try {
+                localStream = await getStreamForFacing(currentFacingMode, true);
+
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('localVideo').muted = true;
+
+                setLocalMirror(currentFacingMode);
+
+                // как было у тебя: видео по умолчанию выключено, микрофон включен
+                localStream.getVideoTracks()[0].enabled = false;
+                updateCamBtnUI(false);
+
+                localStream.getAudioTracks()[0].enabled = true;
+                updateMicBtnUI(true);
+
+                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+            } catch (e) {
+                console.error(e);
+                alert("Нет доступа к микр/камере");
+            }
+        }
+
+        async function switchCamera() {
+            if (!pc || !localStream) return;
+
+            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (!sender) return;
+
+            // если сейчас шаринг экрана — вернёмся на камеру
+            if (sender.track && sender.track.label && sender.track.label.toLowerCase().includes('screen')) {
+                stopScreen(sender);
+            }
+
+            const oldVideoTrack = localStream.getVideoTracks()[0];
+            const wasEnabled = oldVideoTrack ? oldVideoTrack.enabled : true;
+
+            const nextFacing = (currentFacingMode === 'user') ? 'environment' : 'user';
+
+            // важно для Android: освобождаем текущую камеру
+            if (oldVideoTrack) oldVideoTrack.stop();
+
+            let newStream;
+            try {
+                newStream = await getStreamForFacing(nextFacing, false); // только видео
+            } catch (e) {
+                console.error(e);
+                alert("Не удалось переключить камеру");
+                return;
+            }
+
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            newVideoTrack.enabled = wasEnabled;
+
+            // ключевое: меняем видеотрек без пересоздания звонка [web:16]
+            await sender.replaceTrack(newVideoTrack);
+
+            // пересобираем localStream: старый аудио + новый видео
+            const audioTrack = localStream.getAudioTracks()[0] || null;
+            localStream = new MediaStream();
+            if (audioTrack) localStream.addTrack(audioTrack);
+            localStream.addTrack(newVideoTrack);
+
+            document.getElementById('localVideo').srcObject = localStream;
+
+            currentFacingMode = nextFacing;
+            setLocalMirror(currentFacingMode);
+
+            // чистим временный стрим
+            newStream.getTracks().forEach(t => {
+                if (t !== newVideoTrack) t.stop();
+            });
+        }
+
+
+        async function startCall() {
+            if (currentCallId) {
+                try {
+                    const snap = await db.collection('calls').doc(currentCallId).get();
+                    if (snap.exists) { return alert("Вы уже в звонке!"); }
+                    else { currentCallId = null; isConnected = false; }
+                } catch (e) { currentCallId = null; }
+            }
+            if (isConnected) return alert("Вы уже в звонке!");
+
+            amICaller = true; wasCallConnected = false;
+            const newCallId = [currentUser.uid, currentFriendId].sort().join('_');
+            const callDoc = db.collection('calls').doc(newCallId);
+
+            const snap = await callDoc.get();
+            if (snap.exists && snap.data().caller !== currentUser.uid) { return alert("Линия занята!"); }
+
+            currentCallId = newCallId;
+            document.getElementById('callScreen').style.display = 'flex';
+            updateCallControlsVisibility();
+            document.getElementById('callScreen').style.pointerEvents = 'auto';
+            updateCallStatus("Соединение...");
+            playConnectingTone();
+
+            // Уведомление о звонке в Телеграм
+            if (currentFriendId) {
+                db.collection('users').doc(currentFriendId).get().then(doc => {
+                    if (doc.exists && doc.data().tgChatId) {
+                        sendTelegramNotification(doc.data().tgChatId, `📞 *Входящий звонок*\nОт: ${currentUser.email}\nЗайдите на сайт, чтобы ответить!`);
+                    }
+                });
+            }
+
+            setupPeerConnection();
+            pc.onicecandidate = e => { if (e.candidate) callDoc.collection('offerCandidates').add(e.candidate.toJSON()); };
+            await getMedia();
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await callDoc.set({ offer: { type: offer.type, sdp: offer.sdp }, caller: currentUser.uid, status: 'dialing' });
+
+            callDoc.onSnapshot(async snap => {
+                if (!snap.exists) { endCall(false, true); return; }
+                const data = snap.data();
+                if (data.status === 'ringing' && !isConnected) { updateCallStatus("Звонок..."); playRingingTone(); }
+                if (pc && !pc.currentRemoteDescription && data && data.answer) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    flushCandidateQueue();
+                }
+            });
+            callDoc.collection('answerCandidates').onSnapshot(snap => {
+                snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
+            });
+        }
+
+        async function answerCall() {
+            amICaller = false; wasCallConnected = false;
+            document.getElementById('ringtone').pause();
+            document.getElementById('incomingPopup').style.display = 'none';
+            document.getElementById('callScreen').style.display = 'flex';
+            updateCallControlsVisibility();
+            document.getElementById('callScreen').style.pointerEvents = 'auto';
+            updateCallStatus("Соединение...");
+            const callDoc = db.collection('calls').doc(currentCallId);
+            const data = (await callDoc.get()).data();
+            setupPeerConnection();
+            pc.onicecandidate = e => { if (e.candidate) callDoc.collection('answerCandidates').add(e.candidate.toJSON()); };
+            await getMedia();
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            flushCandidateQueue();
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'connected' });
+            callDoc.onSnapshot(snap => { if (!snap.exists) endCall(false, true); });
+            callDoc.collection('offerCandidates').onSnapshot(snap => {
+                snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
+            });
+        }
+
+        function toggleMic() {
+            if (!localStream) return;
+            const track = localStream.getAudioTracks()[0]; track.enabled = !track.enabled; updateMicBtnUI(track.enabled);
+        }
+        function updateMicBtnUI(enabled) {
+            const btn = document.getElementById('btnMic'); const lbl = document.getElementById('lblMic');
+            if (enabled) { btn.classList.remove('btn-active-white'); btn.innerHTML = '🎤'; lbl.innerText = 'Выкл. звук'; }
+            else { btn.classList.add('btn-active-white'); btn.innerHTML = '🔇'; lbl.innerText = 'Вкл. звук'; }
+        }
+        function toggleCamera() {
+            if (!localStream) return;
+            const sender = pc.getSenders().find(s => s.track.kind === 'video');
+            if (sender && sender.track.label.includes('screen')) stopScreen(sender);
+            const track = localStream.getVideoTracks()[0]; track.enabled = !track.enabled; updateCamBtnUI(track.enabled);
+        }
+        function updateCamBtnUI(enabled) {
+            const btn = document.getElementById('btnCam'); const lbl = document.getElementById('lblCam');
+            if (enabled) { btn.classList.add('btn-active-white'); btn.innerHTML = '📷'; lbl.innerText = 'Выкл. видео'; }
+            else { btn.classList.remove('btn-active-white'); btn.innerHTML = '📵'; lbl.innerText = 'Вкл. видео'; }
+        }
+        async function toggleScreen() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) { alert("Демонстрация экрана не поддерживается на iPhone."); return; }
+            if (!localStream) return;
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const screenTrack = stream.getVideoTracks()[0];
+                const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(screenTrack);
+                    document.getElementById('localVideo').srcObject = stream;
+                    const btn = document.getElementById('btnScr'); const lbl = document.getElementById('lblScr');
+                    btn.classList.add('btn-screen-on'); lbl.innerText = 'Ост. стрим';
+                    screenTrack.onended = () => stopScreen(sender);
+                }
+            } catch (e) { console.log(e); }
+        }
+        function stopScreen(sender) {
+            const camTrack = localStream.getVideoTracks()[0];
+            sender.replaceTrack(camTrack);
+            document.getElementById('localVideo').srcObject = localStream;
+            const btn = document.getElementById('btnScr'); const lbl = document.getElementById('lblScr');
+            btn.classList.remove('btn-screen-on'); lbl.innerText = 'Экран';
+        }
+
+        function listenForIncomingCalls() {
+            db.collection('calls').where('caller', '!=', currentUser.uid).onSnapshot(snap => {
+                snap.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        if (change.doc.id.includes(currentUser.uid)) {
+                            if (currentCallId) {
+                                console.log("Ignored incoming call because busy");
+                                return;
+                            }
+                            currentCallId = change.doc.id;
+
+                            document.getElementById('incomingPopup').style.display = 'flex';
+                            document.getElementById('ringtone').play().catch(() => { });
+
+                            db.collection('calls').doc(currentCallId).update({ status: 'ringing' }).catch(() => { });
+
+                            const data = change.doc.data();
+                            const callerId = data.caller;
+
+                            // Сначала пишем "Загрузка..."
+                            const nameEl = document.getElementById('callerName');
+                            nameEl.innerText = "Загрузка...";
+
+                            // Ищем email и ставим его вместо "Входящий"
+                            db.collection('users').doc(callerId).get().then(userDoc => {
+                                if (userDoc.exists) {
+                                    nameEl.innerText = userDoc.data().email; // <--- Почта теперь тут
+                                } else {
+                                    nameEl.innerText = "Неизвестный";
+                                }
+                            }).catch(err => {
+                                console.error(err);
+                                nameEl.innerText = "Ошибка";
+                            });
+                        }
+                    }
+                    if (change.type === "removed") {
+                        if (currentCallId === change.doc.id) {
+                            endCall(false, true);
+                        }
+                    }
+                });
+            });
+        }
+
+        // Функция отклонения входящего вызова
+        function rejectCall() {
+            // 1. Выключаем звук
+            document.getElementById('ringtone').pause();
+            document.getElementById('ringtone').currentTime = 0;
+
+            // 2. Скрываем окно входящего звонка
+            document.getElementById('incomingPopup').style.display = 'none';
+
+            // 3. Если есть активный звонок (ID звонка)
+            if (currentCallId) {
+                // Удаляем документ звонка из базы (это автоматически завершит звонок и у звонящего)
+                db.collection('calls').doc(currentCallId).delete()
+                    .then(() => {
+                        console.log("Звонок отклонен");
+                    })
+                    .catch(error => {
+                        console.error("Ошибка при отклонении:", error);
+                    });
+
+                // Сбрасываем локальную переменную
+                currentCallId = null;
+            }
+        }
+
+
+
+        function endCallUser() { endCall(true, false); }
+        function endCall(isInitiator = true, isRemote = false) {
+            document.getElementById('ringtone').pause();
+            document.getElementById('ringtone').currentTime = 0;
+            stopAllTones();
+
+            if (amICaller) {
+                if (wasCallConnected && isConnected) {
+                    const time = document.getElementById('callTimer').innerText;
+                    sendMsg(`📞 Звонок: ${time}`, true);
+                } else if (!wasCallConnected) {
+                    if (isInitiator && !isRemote) { sendMsg(`📞 Отмененный звонок`, true); }
+                    else {
+                        sendMsg(`📞 Пропущенный звонок`, true);
+                        if (currentFriendId) {
+                            db.collection('users').doc(currentFriendId).get().then(doc => {
+                                if (doc.exists && doc.data().tgChatId) {
+                                    sendTelegramNotification(doc.data().tgChatId, `❌ *Пропущенный звонок*\nОт: ${currentUser.email}`);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            if (pc) pc.close();
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            if (callTimerInt) clearInterval(callTimerInt);
+            if (pingInterval) clearInterval(pingInterval);
+
+            const statusText = document.getElementById('callStatusText');
+            statusText.innerText = "ЗВОНОК ЗАВЕ� ШЕН"; statusText.style.color = "#ff4444"; statusText.style.fontWeight = "bold";
+            playEndTone();
+            const screen = document.getElementById('callScreen'); screen.style.pointerEvents = 'none';
+            document.getElementById('incomingPopup').style.display = 'none';
+            if (isInitiator && currentCallId) { db.collection('calls').doc(currentCallId).delete().catch(() => { }); }
+
+            pc = null; localStream = null; candidateQueue = []; isConnected = false; currentCallId = null; wasCallConnected = false; amICaller = false;
+            setTimeout(() => {
+                screen.style.display = 'none';
+                document.getElementById('callTimer').innerText = "00:00";
+                document.getElementById('callPing').innerText = "Ping: -";
+                statusText.style.color = "#ccc"; statusText.style.fontWeight = "normal";
+            }, 1500);
+        }
+
+        function saveTgId() {
+            const id = document.getElementById('tgChatId').value.trim();
+            if (!id) return alert("Введите ID!");
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).set({ tgChatId: id }, { merge: true }).then(() => {
+                    alert("ID сохранен!");
+                    sendTelegramNotification(id, "✅ Уведомления подключены успешно!");
+                });
+            }
+        }
+        function loadTgId() {
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).get().then(doc => {
+                    if (doc.exists && doc.data().tgChatId) { document.getElementById('tgChatId').value = doc.data().tgChatId; }
+                });
+            }
+        }
+        function sendTelegramNotification(targetChatId, text) {
+            if (!targetChatId) return;
+            const token = getTgToken();
+            const url = `https://api.telegram.org/bot${token}/sendMessage`;
+            const params = { chat_id: targetChatId, text: text, parse_mode: 'Markdown' };
+            fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) }).catch(err => console.error(err));
+        }
+
+        // --- ЛОГИКА ПРОФИЛЯ ---
+
+        // Валидация никнейма (только англ, цифры, _ и .)
+        function validateUsername(input) {
+            input.value = input.value.replace(/[^a-zA-Z0-9_.]/g, '');
+        }
+
+        // Обработка выбора фото
+        // Глобальная переменная для хранения сжатого аватара
+        let currentAvatarBase64 = null;
+
+        function handleAvatarSelect(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                // Проверяем тип файла
+                if (!file.type.match('image.*')) {
+                    alert("Пожалуйста, выберите изображение.");
+                    return;
+                }
+
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+
+                    img.onload = function () {
+                        // Параметры сжатия
+                        const MAX_WIDTH = 300; // Уменьшаем размер до 300px (для аватара достаточно)
+                        const MAX_HEIGHT = 300;
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Вычисляем новые размеры, сохраняя пропорции
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        // Рисуем на Canvas для изменения размера
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Получаем сжатую Base64 строку (JPEG с качеством 0.7)
+                        // Это значительно уменьшит размер файла!
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                        // Сохраняем в переменную и показываем превью
+                        currentAvatarBase64 = compressedDataUrl;
+
+                        const preview = document.getElementById('profileAvatarPreview');
+                        const placeholder = document.getElementById('profileAvatarPlaceholder');
+
+                        preview.src = compressedDataUrl;
+                        preview.style.display = 'block';
+                        placeholder.style.display = 'none';
+                    };
+                };
+
+                reader.readAsDataURL(file);
+            }
+        }
+
+
+        // Функция сохранения профиля
+        async function saveProfile() {
+            const username = document.getElementById('profileUsername').value.trim();
+            const name = document.getElementById('profileName').value.trim();
+            const surname = document.getElementById('profileSurname').value.trim();
+            const birthdate = document.getElementById('profileBirthdate').value;
+            const tgId = document.getElementById('tgChatId').value.trim();
+
+            if (!name) {
+                alert("Имя обязательно для заполнения!");
+                return;
+            }
+
+            if (!username) {
+                alert("Придумайте имя пользователя (@)!");
+                return;
+            }
+
+            // Проверка уникальности никнейма
+            // Ищем пользователей с таким же никнеймом, но НЕ текущего пользователя
+            const snap = await db.collection('users')
+                .where('username', '==', username)
+                .get();
+
+            let isTaken = false;
+            snap.forEach(doc => {
+                if (doc.id !== currentUser.uid) isTaken = true;
+            });
+
+            if (isTaken) {
+                alert("Это имя пользователя уже занято!");
+                return;
+            }
+
+            // Собираем данные
+            const updateData = {
+                name: name,
+                surname: surname,
+                username: username,
+                birthdate: birthdate,
+                tgChatId: tgId
+            };
+
+            // Если меняли аватарку, добавляем её
+            if (currentAvatarBase64) {
+                updateData.avatar = currentAvatarBase64;
+            }
+
+            // Сохраняем в Firestore
+            db.collection('users').doc(currentUser.uid).set(updateData, { merge: true })
+                .then(() => {
+                    alert("Профиль сохранен!");
+                    closeAllSheets();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Ошибка сохранения: " + err.message);
+                });
+        }
+
+        // Загрузка данных в поля при открытии профиля
+        function openProfileSheet() {
+            document.getElementById('overlaySheet').style.display = 'block';
+            setTimeout(() => document.getElementById('profileSheet').classList.add('open'), 10);
+
+            // Загружаем текущие данные
+            db.collection('users').doc(currentUser.uid).get().then(doc => {
+                if (doc.exists) {
+                    const d = doc.data();
+                    document.getElementById('profileEmail').innerText = d.email;
+                    document.getElementById('profileUsername').value = d.username || '';
+                    document.getElementById('profileName').value = d.name || '';
+                    document.getElementById('profileSurname').value = d.surname || '';
+                    document.getElementById('profileBirthdate').value = d.birthdate || '';
+                    document.getElementById('tgChatId').value = d.tgChatId || '';
+
+                    if (d.avatar) {
+                        const img = document.getElementById('profileAvatarPreview');
+                        const ph = document.getElementById('profileAvatarPlaceholder');
+                        img.src = d.avatar;
+                        img.style.display = 'block';
+                        ph.style.display = 'none';
+                    }
+                }
+            });
+        }
+        document.addEventListener('keydown', function (event) {
+            if (event.key === "Escape" && currentChatId) {
+                closeChat();
+            }
+        });
+
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const voiceBtn = document.querySelector('.voice-btn');
+
+        msgInput.addEventListener('input', function () {
+            if (this.value.trim().length > 0) {
+                sendBtn.classList.remove('hidden'); // <-- ИСПРАВЛЕНО (было hidden-btn)
+                sendBtn.style.display = 'flex';     // Теперь это сработает
+                voiceBtn.style.display = 'none';
+            } else {
+                sendBtn.classList.add('hidden');    // <-- ИСПРАВЛЕНО
+                sendBtn.style.display = 'none';
+                voiceBtn.style.display = 'flex';
+            }
+        });
+
+        // Добавляем отправку по Enter
+        msgInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMsg();
+            }
+        });
+
+        // --- АВТОПОВОРОТ ОКОШКА СВОЕГО ВИДЕО ---
+        // --- PIP: drag + resize (красиво и без багов) ---
+        const localVidEl = document.getElementById('localVideo');
+        const pipEl = document.getElementById('localPip');              // новый id
+        const gridEl = document.querySelector('.video-grid');
+        const controlsEl = document.querySelector('.controls');
+        const resizeHandleEl = pipEl.querySelector('.pip-resize-handle');
+
+        const PIP_STORAGE_KEY = 'pipState_v3';
+
+        let pipRatio = 2 / 3;      // width/height, дефолт как у тебя 140x210
+        let pipUserSized = false;  // станет true после ручного ресайза
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        function getBounds() {
+            const gridRect = gridEl.getBoundingClientRect();
+            const controlsRect = controlsEl.getBoundingClientRect();
+
+            const margin = 12;
+
+            // bottomLimit: не даём залезать под controls (они absolute и перекрывают низ)
+            const bottomLimit = Math.min(gridRect.bottom, controlsRect.top) - gridRect.top - margin;
+
+            return {
+                minLeft: margin,
+                minTop: margin,
+                maxLeft: gridRect.width - margin,
+                maxTop: bottomLimit
+            };
+        }
+
+        function readPipRect() {
+            return {
+                left: parseFloat(pipEl.style.left || '0'),
+                top: parseFloat(pipEl.style.top || '0'),
+                width: parseFloat(pipEl.style.width || pipEl.offsetWidth),
+                height: parseFloat(pipEl.style.height || pipEl.offsetHeight)
+            };
+        }
+
+        function applyPipRect(rect, { save = true } = {}) {
+            const b = getBounds();
+
+            const minW = 110;
+            const maxW = Math.max(minW, b.maxLeft - b.minLeft);
+            const width = clamp(rect.width, minW, maxW);
+
+            // высоту держим по ratio (чтобы не растягивалось)
+            const height = Math.max(90, Math.round(width / pipRatio));
+
+            const maxLeft = Math.max(b.minLeft, b.maxLeft - width);
+            const maxTop = Math.max(b.minTop, b.maxTop - height);
+
+            const left = clamp(rect.left, b.minLeft, maxLeft);
+            const top = clamp(rect.top, b.minTop, maxTop);
+
+            // важное: переходим на left/top, чтобы drag/resize были предсказуемыми
+            pipEl.style.left = `${Math.round(left)}px`;
+            pipEl.style.top = `${Math.round(top)}px`;
+            pipEl.style.right = 'auto';
+            pipEl.style.bottom = 'auto';
+            pipEl.style.width = `${Math.round(width)}px`;
+            pipEl.style.height = `${Math.round(height)}px`;
+
+            if (save) {
+                const state = { left: Math.round(left), top: Math.round(top), width: Math.round(width), ratio: pipRatio, userSized: pipUserSized };
+                localStorage.setItem(PIP_STORAGE_KEY, JSON.stringify(state));
+            }
+        }
+
+        function setDefaultPip() {
+            const gridRect = gridEl.getBoundingClientRect();
+            const controlsRect = controlsEl.getBoundingClientRect();
+            const controlsH = Math.max(0, gridRect.bottom - controlsRect.top);
+
+            const defW = (pipRatio >= 1) ? 210 : 140;   // похоже на твою текущую логику landscape [по смыслу]
+            const left = gridRect.width - defW - 20;
+            const top = gridRect.height - controlsH - Math.round(defW / pipRatio) - 160; // твой bottom:160 [по смыслу]
+            pipUserSized = false;
+            applyPipRect({ left, top, width: defW, height: defW / pipRatio }, { save: true });
+        }
+
+        function loadPipState() {
+            try {
+                const raw = localStorage.getItem(PIP_STORAGE_KEY);
+                if (!raw) return false;
+                const s = JSON.parse(raw);
+
+                if (typeof s.ratio === 'number' && isFinite(s.ratio) && s.ratio > 0.1) pipRatio = s.ratio;
+                pipUserSized = !!s.userSized;
+
+                applyPipRect({ left: s.left ?? 0, top: s.top ?? 0, width: s.width ?? 140, height: 0 }, { save: false });
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function updateRatioFromVideo() {
+            if (localVidEl.videoWidth && localVidEl.videoHeight) {
+
+                const w = localVidEl.videoWidth;
+                const h = localVidEl.videoHeight;
+
+                // Логика: если видео широкое (ПК) -> делаем вертикальное окно (2:3)
+                // Если видео высокое (Телефон) -> оставляем как есть
+                if (w > h) {
+                    pipRatio = 2 / 3;
+                } else {
+                    pipRatio = w / h;
+                }
+
+                // Вычисляем новые размеры
+                let currentWidth = parseFloat(pipEl.style.width) || 140;
+                let newHeight = currentWidth / pipRatio;
+
+                // Защита от глюков: если высота получилась слишком маленькой, исправляем
+                if (newHeight < 100) newHeight = currentWidth * 1.5;
+
+                applyPipRect({ width: currentWidth, height: newHeight }, true);
+            }
+        }
+
+
+
+        // 1) Инициализация позиции/размера
+        (function initPip() {
+            // превращаем текущие bottom/right (из CSS) в left/top, чтобы дальше было стабильно
+            // если есть сохранение — оно главнее
+            const hasState = loadPipState();
+            if (!hasState) setDefaultPip();
+
+            // поддержка авто-ориентации без дерганий
+            localVidEl.addEventListener('loadedmetadata', () => {
+                updateRatioFromVideo();
+                // если пользователь не менял размер — можно поставить дефолт под ориентацию
+                if (!pipUserSized) setDefaultPip();
+            });
+
+            // когда меняется viewport (поворот/resize окна) — просто зажимаем в границы
+            window.addEventListener('resize', () => applyPipRect(readPipRect(), { save: true }));
+        })();
+
+        // 2) Drag
+        let drag = null;
+
+        pipEl.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            if (e.target === resizeHandleEl) return; // resize отдельно
+
+            e.preventDefault();
+            pipEl.classList.add('dragging');
+            pipEl.setPointerCapture(e.pointerId);
+
+            const r = readPipRect();
+            drag = {
+                id: e.pointerId,
+                startX: e.clientX,
+                startY: e.clientY,
+                startLeft: r.left,
+                startTop: r.top,
+                width: r.width,
+                height: r.height
+            };
+        });
+
+        pipEl.addEventListener('pointermove', (e) => {
+            if (!drag || drag.id !== e.pointerId) return;
+
+            const dx = e.clientX - drag.startX;
+            const dy = e.clientY - drag.startY;
+
+            applyPipRect({
+                left: drag.startLeft + dx,
+                top: drag.startTop + dy,
+                width: drag.width,
+                height: drag.height
+            }, { save: false });
+        });
+
+        pipEl.addEventListener('pointerup', (e) => {
+            if (!drag || drag.id !== e.pointerId) return;
+            pipEl.classList.remove('dragging');
+            drag = null;
+            applyPipRect(readPipRect(), { save: true });
+        });
+
+        // 3) Resize (с сохранением aspect ratio)
+        let resize = null;
+
+        resizeHandleEl.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+
+            pipEl.classList.add('resizing');
+            pipEl.setPointerCapture(e.pointerId);
+
+            const r = readPipRect();
+            resize = {
+                id: e.pointerId,
+                startX: e.clientX,
+                startY: e.clientY,
+                startW: r.width,
+                startLeft: r.left,
+                startTop: r.top
+            };
+        });
+
+        pipEl.addEventListener('pointermove', (e) => {
+            if (!resize || resize.id !== e.pointerId) return;
+
+            const dx = e.clientX - resize.startX;
+            const dy = e.clientY - resize.startY;
+
+            // берём “наиболее сильное” диагональное изменение
+            const grow = Math.max(dx, dy * pipRatio);
+            const newW = resize.startW + grow;
+
+            pipUserSized = true;
+
+            applyPipRect({
+                left: resize.startLeft,
+                top: resize.startTop,
+                width: newW,
+                height: 0
+            }, { save: false });
+        });
+
+        pipEl.addEventListener('pointerup', (e) => {
+            if (!resize || resize.id !== e.pointerId) return;
+            pipEl.classList.remove('resizing');
+            resize = null;
+            applyPipRect(readPipRect(), { save: true });
+        });
+
+        // 4) Быстрый сброс (двойной клик / двойной тап)
+        pipEl.addEventListener('dblclick', () => setDefaultPip());
+
+
+        // Слушаем события изменения размеров видео
+        localVidEl.addEventListener('loadedmetadata', checkLocalVideoOrientation);
+        localVidEl.addEventListener('resize', checkLocalVideoOrientation);
+
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        function updateCallControlsVisibility() {
+            const isMobile = isMobileDevice();
+
+            // Ищем кнопки
+            const btnFlip = document.getElementById('btnFlip');
+            const btnScr = document.getElementById('btnScr');
+
+            // Ищем их родительские .control-item
+            const flipItem = btnFlip ? btnFlip.closest('.control-item') : null;
+            const scrItem = btnScr ? btnScr.closest('.control-item') : null;
+
+            // Применяем класс скрытия:
+            // - Демонстрация экрана (btnScr) скрыта на телефоне
+            // - Переключение камеры (btnFlip) скрыто на ПК
+            if (scrItem) {
+                if (isMobile) {
+                    scrItem.classList.add('control-item-hidden');
+                } else {
+                    scrItem.classList.remove('control-item-hidden');
+                }
+            }
+
+            if (flipItem) {
+                if (isMobile) {
+                    flipItem.classList.remove('control-item-hidden');
+                } else {
+                    flipItem.classList.add('control-item-hidden');
+                }
+            }
+
+            console.log('[updateCallControls] isMobile:', isMobile, '| scrItem скрыта:', scrItem?.classList.contains('control-item-hidden'), '| flipItem скрыта:', flipItem?.classList.contains('control-item-hidden'));
+        }
+
+
+
+    </script>
+</body>
+</html>
+
+
