@@ -1285,14 +1285,7 @@
         };
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        firebase.firestore().enablePersistence()
-            .catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.log('Открыто несколько вкладок, персистенция не работает');
-                } else if (err.code == 'unimplemented') {
-                    console.log('Браузер не поддерживает это');
-                }
-            });
+
         const auth = firebase.auth();
         const db = firebase.firestore();
         db.enablePersistence().catch(err => console.log("Оффлайн режим не включился:", err));
