@@ -962,9 +962,17 @@
         }
     </style>
 
-    <script charset="UTF-8" src="//web.webpushs.com/js/push/fabde3a7efcc4c83cef66a2ebfb33fd5_1.js" async></script>
 
 
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function (OneSignal) {
+            await OneSignal.init({
+                appId: "c86f3fa3-2605-45dd-bfe2-c1100f876dab",
+            });
+        });
+    </script>
 
 
 </head>
