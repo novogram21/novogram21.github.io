@@ -879,7 +879,7 @@
                 pointer-events: none;
             }
 
-        /* 2. Убираем фоны у отдельных блоков, чтобы просвечивал общий фон */
+        
         body {
             background: transparent; /* Было 121212 */
         }
@@ -3356,6 +3356,29 @@
                 window.location.reload(); // Перезагружаем страницу
             });
         }
+
+        // ... твой существующий код ...
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Фикс для iOS Safari: при фокусе не даем странице уезжать
+            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                const input = document.getElementById('msgInput');
+                if (input) {
+                    input.addEventListener('focus', () => {
+                        setTimeout(() => {
+                            window.scrollTo(0, 0); // Возвращаем шапку на место
+
+                            // Если у тебя есть функция прокрутки вниз - вызови её
+                            // Если нет, используй:
+                            const list = document.getElementById('msgList');
+                            if (list) list.scrollTop = list.scrollHeight;
+
+                        }, 300);
+                    });
+                }
+            }
+        });
+
 
 
 
