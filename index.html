@@ -1421,12 +1421,12 @@
                         const displayNick = user.username ? `@${user.username}` : 'none';
 
                         div.innerHTML = `
-                                                                                                                                                                                                ${avatarSrc}
-                                                                                                                                                                                                <div>
-                                                                                                                                                                                                    <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                                                </div>
-                                                                                                                                                                                            `;
+                                                                                                                                                                                                    ${avatarSrc}
+                                                                                                                                                                                                    <div>
+                                                                                                                                                                                                        <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                `;
 
                         div.onclick = () => {
                             sendFriendRequestToId(user.id); // Новая функция отправки
@@ -1835,16 +1835,16 @@
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
 
                         div.innerHTML = `
-                                                                                                                                                        ${avatar}
-                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                        </div>
-                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                        </div>
-                                                                                                                                                    `;
+                                                                                                                                                            ${avatar}
+                                                                                                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                            </div>
+                                                                                                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                            </div>
+                                                                                                                                                        `;
                         list.appendChild(div);
                     });
                 });
@@ -2013,19 +2013,19 @@
 
                         // Вставляем HTML (Обрати внимание: id для last-msg и badge остались те же)
                         div.innerHTML = `
-                                    ${avatarHtml}
-                                    <div class="user-name">${fName}</div>
-                                    <div class="last-msg-row">
-                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                    </div>
-                                    <div class="meta-column">
-                                        <span class="last-msg-date" id="date-${chatId}"></span>
-                                        <div class="meta-bottom-row">
-                                            <span id="status-${chatId}" class="list-ticks"></span>
-                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                        ${avatarHtml}
+                                        <div class="user-name">${fName}</div>
+                                        <div class="last-msg-row">
+                                            <span class="last-msg" id="last-${chatId}">...</span>
                                         </div>
-                                    </div>
-                                `;
+                                        <div class="meta-column">
+                                            <span class="last-msg-date" id="date-${chatId}"></span>
+                                            <div class="meta-bottom-row">
+                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                            </div>
+                                        </div>
+                                    `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -2100,9 +2100,9 @@
 
             // ЗАГОЛОВОК ЧАТА
             document.getElementById('chatTitle').innerHTML = `
-                <div>${name}</div>
-                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-            `;
+                    <div>${name}</div>
+                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                `;
 
             // Статус "был в сети"
             db.collection('users').doc(fid).onSnapshot(userSnap => {
@@ -2206,11 +2206,11 @@
                             div.innerHTML = m.txt;
                         } else {
                             let metaHtml = `
-                                            <span class="msg-meta">
-                                                <span class="msg-time">${timeStr}</span>
-                                                ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                                            </span>
-                                        `;
+                                                <span class="msg-meta">
+                                                    <span class="msg-time">${timeStr}</span>
+                                                    ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                                                </span>
+                                            `;
                             div.innerHTML = m.txt + metaHtml;
                         }
 
@@ -2671,7 +2671,9 @@
                             }
                             currentCallId = change.doc.id;
 
-                            document.getElementById('incomingPopup').style.display = 'flex';
+                            // Показываем плашку
+                            const popup = document.getElementById('incomingPopup');
+                            popup.style.display = 'flex';
                             document.getElementById('ringtone').play().catch(() => { });
 
                             db.collection('calls').doc(currentCallId).update({ status: 'ringing' }).catch(() => { });
@@ -2679,21 +2681,53 @@
                             const data = change.doc.data();
                             const callerId = data.caller;
 
-                            // Сначала пишем "Загрузка..."
+                            // Ссылка на элемент имени
                             const nameEl = document.getElementById('callerName');
-                            nameEl.innerText = "Загрузка...";
+                            nameEl.innerHTML = "Загрузка..."; // Сброс перед загрузкой
 
-                            // Ищем email и ставим его вместо "Входящий"
+                            // --- ИЗМЕНЕНИЯ ЗДЕСЬ: ЗАГРУЗКА ИМЕНИ, ФАМИЛИИ И АВАТАРКИ ---
                             db.collection('users').doc(callerId).get().then(userDoc => {
                                 if (userDoc.exists) {
-                                    nameEl.innerText = userDoc.data().email; // <--- Почта теперь тут
+                                    const u = userDoc.data();
+
+                                    // 1. Формируем Имя + Фамилия
+                                    // Если фамилии нет, будет только имя. trim() убирает лишние пробелы.
+                                    let fullName = `${u.name || ''} ${u.surname || ''}`.trim();
+
+                                    // Если и имени нет, берем никнейм или заглушку
+                                    if (!fullName) fullName = u.username ? `@${u.username}` : "Неизвестный";
+
+                                    // 2. Логика Аватарки
+                                    let avatarHtml;
+                                    if (u.avatar) {
+                                        // Если есть фото - показываем фото
+                                        avatarHtml = `<img src="${u.avatar}" style="width:42px; height:42px; border-radius:50%; object-fit:cover; margin-right:12px;">`;
+                                    } else {
+                                        // Если нет фото - делаем градиентный кружок с первой буквой (Стиль Telegram)
+                                        const firstLetter = fullName.charAt(0).toUpperCase();
+                                        avatarHtml = `<div style="width:42px; height:42px; border-radius:50%; background: linear-gradient(135deg, #6a11cb, #2575fc); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; margin-right:12px; border: 1px solid #444;">${firstLetter}</div>`;
+                                    }
+
+                                    // 3. Формируем HTML "как в Телеграме"
+                                    // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
+                                    nameEl.innerHTML = `
+                                        <div style="display:flex; align-items:center;">
+                                            ${avatarHtml}
+                                            <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                            </div>
+                                        </div>
+                                    `;
+
                                 } else {
-                                    nameEl.innerText = "Неизвестный";
+                                    nameEl.innerText = "Неизвестный номер";
                                 }
                             }).catch(err => {
                                 console.error(err);
-                                nameEl.innerText = "Ошибка";
+                                nameEl.innerText = "Ошибка ID";
                             });
+                            // -------------------------------------------------------------
                         }
                     }
                     if (change.type === "removed") {
@@ -3473,11 +3507,11 @@
                     const name = userData.name || userData.username || 'User';
                     const nick = userData.username ? '@' + userData.username : '';
 
-                    // Вызываем обычную функцию открытия, но она снова поставит хеш. 
-                    // Это не страшно, но чтобы не зациклить, можно временно отключить слушатель, 
+                    // Вызываем обычную функцию открытия, но она снова поставит хеш.
+                    // Это не страшно, но чтобы не зациклить, можно временно отключить слушатель,
                     // но проще оставить как есть, браузер умный.
 
-                    // ВАЖНО: Мы вызываем openChat, но он сам ставит hash. 
+                    // ВАЖНО: Мы вызываем openChat, но он сам ставит hash.
                     // Чтобы не было двойной работы, код внутри openChat корректен.
 
                     // Прямой вызов UI логики (дублируем часть openChat чтобы избежать рекурсии хеша)
@@ -3492,9 +3526,9 @@
                     document.getElementById('activeChat').classList.remove('hidden');
 
                     document.getElementById('chatTitle').innerHTML = `
-                        <div>${name}</div>
-                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                    `;
+                            <div>${name}</div>
+                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                        `;
 
                     loadMessages();
                 } else {
