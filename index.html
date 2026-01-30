@@ -8,7 +8,8 @@
 
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+
     <title>Novogram21</title>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1414,12 +1415,12 @@
                         const displayNick = user.username ? `@${user.username}` : 'none';
 
                         div.innerHTML = `
-                                                                                                                                                                ${avatarSrc}
-                                                                                                                                                                <div>
-                                                                                                                                                                    <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                </div>
-                                                                                                                                                            `;
+                                                                                                                                                                    ${avatarSrc}
+                                                                                                                                                                    <div>
+                                                                                                                                                                        <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                    </div>
+                                                                                                                                                                `;
 
                         div.onclick = () => {
                             sendFriendRequestToId(user.id); // Новая функция отправки
@@ -1630,7 +1631,7 @@
                         loadTgId();
 
                         if (lastSeenInterval) clearInterval(lastSeenInterval);
-                       
+
                     } else {
                         // Регистрация не завершена -> возвращаем экран регистрации
                         document.getElementById('stepEmail').style.display = 'none';
@@ -1810,16 +1811,16 @@
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
 
                         div.innerHTML = `
-                                                                                                                        ${avatar}
-                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                        </div>
-                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                        </div>
-                                                                                                                    `;
+                                                                                                                            ${avatar}
+                                                                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                            </div>
+                                                                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                            </div>
+                                                                                                                        `;
                         list.appendChild(div);
                     });
                 });
@@ -1971,21 +1972,21 @@
                                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                             div.innerHTML = `
-                                                                                                                            ${avatarHtml}
-                                                                                                                            <div class="user-name">${friendName}</div>
+                                                                                                                                ${avatarHtml}
+                                                                                                                                <div class="user-name">${friendName}</div>
 
-                                                                                                                            <div class="last-msg-row">
-                                                                                                                                 <span class="last-msg" id="last-${chatId}">Загрузка...</span>
-                                                                                                                            </div>
-
-                                                                                                                            <div class="meta-column">
-                                                                                                                                <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                                                                <div class="meta-bottom-row">
-                                                                                                                                    <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                                                <div class="last-msg-row">
+                                                                                                                                     <span class="last-msg" id="last-${chatId}">Загрузка...</span>
                                                                                                                                 </div>
-                                                                                                                            </div>
-                                                                                                                        `;
+
+                                                                                                                                <div class="meta-column">
+                                                                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                                                                    <div class="meta-bottom-row">
+                                                                                                                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                                                    </div>
+                                                                                                                                </div>
+                                                                                                                            `;
 
                             div.onclick = () => openChat(fid, friendName, friendNick);
 
@@ -2074,9 +2075,9 @@
             // ЗАГОЛОВОК ЧАТА
             // Теперь показываем Имя и снизу мелким шрифтом ник
             document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                                    <div>${name}</div>
-                                                                                                                                                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                                `;
+                                                                                                                                                        <div>${name}</div>
+                                                                                                                                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                                                                                                    `;
 
             // Статус "был в сети" (оставляем логику lastSeen)
             db.collection('users').doc(fid).onSnapshot(userSnap => {
@@ -2160,11 +2161,11 @@
                         // metaHtml - это контейнер с временем и галочками.
                         // white-space: nowrap в CSS предотвратит разрыв строки между временем и галочками.
                         let metaHtml = `
-                                                                                                                                    <span class="msg-meta">
-                                                                                                                                        <span class="msg-time">${timeStr}</span>
-                                                                                                                                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                                                                                                                                    </span>
-                                                                                                                                `;
+                                                                                                                                        <span class="msg-meta">
+                                                                                                                                            <span class="msg-time">${timeStr}</span>
+                                                                                                                                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                                                                                                                                        </span>
+                                                                                                                                    `;
                         div.innerHTML = m.txt + metaHtml;
                     }
 
