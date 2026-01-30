@@ -2285,17 +2285,34 @@
                             contentHtml = m.txt;
                         }
                         else if (msgType === 'image') {
+                            // === ФИНАЛЬНЫЙ ФИКС ДЛЯ GOOGLE DRIVE ===
                             let imgSrc = m.txt;
-                            if (m.txt.includes('drive.google.com')) {
-                                const cleanUrl = m.txt.replace(/^https?:\/\//, '');
-                                imgSrc = `https://wsrv.nl/?url=${cleanUrl}&w=400&output=jpg`;
+
+                            // Если это ссылка на Google Диск
+                            if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
+                                try {
+                                    // 1. Вытаскиваем ID файла (все, что после "id=")
+                                    const fileId = m.txt.split('id=')[1];
+
+                                    // 2. Формируем "секретную" прямую ссылку (lh3), которая работает в <img>
+                                    if (fileId) {
+                                        imgSrc = `https://lh3.googleusercontent.com/d/${fileId}`;
+                                    }
+                                } catch (e) {
+                                    console.error("Ошибка парсинга ID:", e);
+                                }
                             }
 
                             contentHtml = `
-        <div class="media-container">
-            <img src="${imgSrc}" class="chat-media-img" onclick="window.open('${m.txt}', '_blank')" loading="lazy">
-        </div>
-    `;
+                                <div class="media-container" style="min-width: 200px; min-height: 150px; background: #222; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <img src="${imgSrc}" 
+                                         class="chat-media-img" 
+                                         onclick="window.open('${m.txt}', '_blank')" 
+                                         referrerpolicy="no-referrer"
+                                         onload="this.parentElement.style.background='transparent'"
+                                         onerror="this.src='https://placehold.co/200x200?text=Error'; this.style.opacity=0.5;">
+                                </div>
+                            `;
                         }
                         else if (msgType === 'file') {
                             // ФАЙЛ: Рисуем красивую карточку
