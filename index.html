@@ -2100,99 +2100,115 @@
 
         function loadMessages() {
             const list = document.getElementById('msgList');
-            list.innerHTML = ''; // Очищаем список при смене чата
+            list.innerHTML = ''; // Очищаем список ТОЛЬКО при смене чата (один раз)
 
-            if (msgUnsub) msgUnsub(); // Отписываемся от старого чата
+            if (msgUnsub) msgUnsub(); // Отписываемся от старого
 
-            // Получаем список удаленных локально сообщений
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
-            msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs').orderBy('ts').limitToLast(50).onSnapshot(snap => {
-                list.innerHTML = ''; // Полная перерисовка
+            msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
+                .orderBy('ts')
+                .limitToLast(50) // <--- ВАЖНО: Грузим только последние 50 сообщений для скорости
+                .onSnapshot(snap => {
+                    const batch = db.batch();
+                    let needCommit = false;
+                    let hasNewMessages = false;
 
-                const batch = db.batch();
-                let needCommit = false;
+                    // docChanges() дает нам только список ИЗМЕНЕНИЙ, а не все данные подряд
+                    snap.docChanges().forEach(change => {
+                        const d = change.doc;
+                        const m = d.data();
+                        const msgId = d.id;
 
-                snap.forEach(d => {
-                    // Если сообщение удалено локально - пропускаем
-                    if (deletedLocal.includes(d.id)) return;
+                        // Если сообщение удалено локально - пропускаем
+                        if (deletedLocal.includes(msgId)) return;
 
-                    const m = d.data();
-                    const msgId = d.id;
+                        // 1. ОБРАБОТКА УДАЛЕНИЯ (если сообщение удалили из базы)
+                        if (change.type === 'removed') {
+                            const el = document.getElementById('msg-' + msgId);
+                            if (el) el.remove();
+                            return;
+                        }
 
-                    // Если сообщение адресовано мне и не прочитано -> помечаем прочитанным
-                    if (m.to === currentUser.uid && !m.read) {
-                        batch.update(d.ref, { read: true });
-                        needCommit = true;
+                        // 2. СОЗДАНИЕ ИЛИ ПОИСК ЭЛЕМЕНТА
+                        let div = document.getElementById('msg-' + msgId);
+                        const isNew = !div; // Если элемента нет, значит это новое сообщение
+
+                        if (isNew) {
+                            div = document.createElement('div');
+                            div.id = 'msg-' + msgId;
+                            // Вешаем клик только один раз при создании
+                            div.onclick = (e) => {
+                                e.stopPropagation();
+                                openActionSheet(msgId, m.from === currentUser.uid);
+                            };
+                        }
+
+                        // 3. ОТМЕТКА ПРОЧИТАННЫМ (Только для новых входящих)
+                        if (change.type === 'added' && m.to === currentUser.uid && !m.read) {
+                            batch.update(d.ref, { read: true });
+                            needCommit = true;
+                        }
+
+                        // 4. ГЕНЕРАЦИЯ HTML (копируем вашу логику)
+                        // Форматируем время
+                        let timeStr = '';
+                        if (m.ts) {
+                            const date = m.ts.toDate();
+                            timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                        }
+
+                        // Галочки
+                        let ticksHtml = '';
+                        if (m.read) {
+                            ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
+                        } else {
+                            ticksHtml = '✓';
+                        }
+
+                        // Классы CSS
+                        if (m.sys) {
+                            div.className = 'msg msg-sys';
+                        } else if (m.from === currentUser.uid) {
+                            div.className = 'msg msg-me';
+                        } else {
+                            div.className = 'msg msg-other';
+                        }
+
+                        // Внутренний HTML
+                        if (m.sys) {
+                            div.innerHTML = m.txt;
+                        } else {
+                            let metaHtml = `
+                        <span class="msg-meta">
+                            <span class="msg-time">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                        </span>
+                    `;
+                            div.innerHTML = m.txt + metaHtml;
+                        }
+
+                        // 5. ВСТАВКА В DOM (только если новый)
+                        if (isNew) {
+                            list.appendChild(div);
+                            hasNewMessages = true;
+                        }
+                    });
+
+                    // Отправляем пакет обновлений "прочитано"
+                    if (needCommit) batch.commit();
+
+                    // Прокрутка вниз только если пришли новые сообщения или это первая загрузка
+                    if (hasNewMessages) {
+                        setTimeout(() => {
+                            list.scrollTop = list.scrollHeight;
+                        }, 50);
                     }
-
-                    const div = document.createElement('div');
-                    div.id = 'msg-' + msgId;
-
-                    // Форматируем время
-                    let timeStr = '';
-                    if (m.ts) {
-                        const date = m.ts.toDate();
-                        timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                    }
-
-                    // Генерируем галочки (HTML)
-                    // Используем наложение для двух галочек, чтобы было "как в телеграме"
-                    let ticksHtml = '';
-                    if (m.read) {
-                        // Две галочки: первая сдвинута вправо, чтобы вторая "наехала" на неё
-                        // Цвет всегда белый (наследуется от родителя или задан в CSS)
-                        ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
-                    } else {
-                        // Одна галочка
-                        ticksHtml = '✓';
-                    }
-
-                    // Определяем класс сообщения
-                    if (m.sys) {
-                        div.className = 'msg msg-sys';
-                    } else if (m.from === currentUser.uid) {
-                        div.className = 'msg msg-me';
-                    } else {
-                        div.className = 'msg msg-other';
-                    }
-
-                    // Вставляем HTML внутрь сообщения
-                    if (m.sys) {
-                        div.innerHTML = m.txt;
-                    } else {
-                        // Текст + время внутри одного блока.
-                        // metaHtml - это контейнер с временем и галочками.
-                        // white-space: nowrap в CSS предотвратит разрыв строки между временем и галочками.
-                        let metaHtml = `
-                                                                                                                                                <span class="msg-meta">
-                                                                                                                                                    <span class="msg-time">${timeStr}</span>
-                                                                                                                                                    ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                                                                                                                                                </span>
-                                                                                                                                            `;
-                        div.innerHTML = m.txt + metaHtml;
-                    }
-
-                    // Обработчик долгого нажатия или клика для меню
-                    div.onclick = (e) => {
-                        e.stopPropagation();
-                        openActionSheet(msgId, m.from === currentUser.uid);
-                    };
-
-                    list.appendChild(div);
                 });
 
-                if (needCommit) batch.commit();
-
-                // Прокрутка вниз
-                setTimeout(() => {
-                    list.scrollTop = list.scrollHeight;
-                }, 50);
-            });
-
-            // Автофокус на поле ввода
             setTimeout(() => document.getElementById('msgInput').focus(), 100);
         }
+
 
 
 
