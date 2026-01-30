@@ -1026,6 +1026,78 @@
             margin-left: 5px;
         }
 
+        /* --- СТИЛИ ДЛЯ КАРТИНОК В ЧАТЕ --- */
+        .chat-media-img {
+            /* Делаем их крупнее */
+            width: 100%;
+            max-width: 320px; /* Было 240, стало шире */
+            height: auto; /* Авто-высота, чтобы не искажалось */
+            max-height: 400px;
+            border-radius: 12px;
+            cursor: zoom-in; /* Курсор лупы */
+            display: block;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Тень для красоты */
+            transition: transform 0.2s;
+        }
+
+            .chat-media-img:active {
+                transform: scale(0.98); /* Эффект нажатия */
+            }
+
+        .media-container {
+            overflow: hidden;
+            border-radius: 12px;
+            background: transparent; /* Убираем черный фон */
+            display: inline-block;
+        }
+
+        /* --- СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА (LIGHTBOX) --- */
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9); /* Темный фон */
+            z-index: 9999; /* Поверх всего */
+            display: none; /* Скрыто по умолчанию */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(5px); /* Размытие фона */
+        }
+
+            .image-viewer.active {
+                display: flex;
+                opacity: 1;
+            }
+
+            .image-viewer img {
+                max-width: 95%;
+                max-height: 95%;
+                border-radius: 8px;
+                box-shadow: 0 0 20px rgba(0,0,0,0.5);
+                transform: scale(0.9);
+                transition: transform 0.3s;
+            }
+
+            .image-viewer.active img {
+                transform: scale(1);
+            }
+
+        .close-viewer-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10000;
+        }
+
 
     </style>
 
@@ -2234,9 +2306,7 @@
                         if (isNew) {
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
-                            // Обработчик клика для меню действий (удалить и т.д.)
                             div.onclick = (e) => {
-                                // Если клик был не по ссылке/картинке, открываем меню
                                 if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
                                     e.stopPropagation();
                                     openActionSheet(msgId, m.from === currentUser.uid);
@@ -2250,24 +2320,16 @@
                             needCommit = true;
                         }
 
-                        // --- [ГЛАВНОЕ ИЗМЕНЕНИЕ] ГЕНЕРАЦИЯ HTML ---
-
-                        // Формируем время
+                        // --- ГЕНЕРАЦИЯ HTML ---
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
                             timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
                         }
 
-                        // Галочки
-                        let ticksHtml = '';
-                        if (m.read) {
-                            ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
-                        } else {
-                            ticksHtml = '✓';
-                        }
+                        let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
-                        // Классы CSS
+                        // Классы
                         if (m.sys) {
                             div.className = 'msg msg-sys';
                         } else if (m.from === currentUser.uid) {
@@ -2276,46 +2338,41 @@
                             div.className = 'msg msg-other';
                         }
 
-                        // === ЛОГИКА ОТОБРАЖЕНИЯ КОНТЕНТА ===
+                        // === КОНТЕНТ ===
                         let contentHtml = '';
-                        // Если старое сообщение без типа, считаем текстом
                         const msgType = m.type || 'text';
 
                         if (m.sys) {
                             contentHtml = m.txt;
                         }
                         else if (msgType === 'image') {
-                            // === ФИНАЛЬНЫЙ ФИКС ДЛЯ GOOGLE DRIVE ===
+                            // === КАРТИНКА (ВЫСОКОЕ КАЧЕСТВО) ===
                             let imgSrc = m.txt;
 
-                            // Если это ссылка на Google Диск
+                            // Парсим ID и делаем High-Res ссылку (lh3.../d/ID=w1000)
                             if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
                                 try {
-                                    // 1. Вытаскиваем ID файла (все, что после "id=")
                                     const fileId = m.txt.split('id=')[1];
-
-                                    // 2. Формируем "секретную" прямую ссылку (lh3), которая работает в <img>
-                                    if (fileId) {
-                                        imgSrc = `https://lh3.googleusercontent.com/d/${fileId}`;
-                                    }
-                                } catch (e) {
-                                    console.error("Ошибка парсинга ID:", e);
-                                }
+                                    // =w600 - оптимально для чата (быстро грузит, четко выглядит)
+                                    // При клике откроется полная версия
+                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
+                                } catch (e) { }
                             }
 
+                            // Обрати внимание на onclick="openImageViewer(...)"
                             contentHtml = `
-                                <div class="media-container" style="min-width: 200px; min-height: 150px; background: #222; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <div class="media-container">
                                     <img src="${imgSrc}" 
                                          class="chat-media-img" 
-                                         onclick="window.open('${m.txt}', '_blank')" 
+                                         onclick="openImageViewer('${imgSrc}')" 
                                          referrerpolicy="no-referrer"
                                          onload="this.parentElement.style.background='transparent'"
-                                         onerror="this.src='https://placehold.co/200x200?text=Error'; this.style.opacity=0.5;">
+                                         onerror="this.src='https://placehold.co/200x200?text=Error';">
                                 </div>
                             `;
                         }
                         else if (msgType === 'file') {
-                            // ФАЙЛ: Рисуем красивую карточку
+                            // ФАЙЛ
                             contentHtml = `
                                 <a href="${m.txt}" target="_blank" class="chat-file-card">
                                     <div class="file-icon">📄</div>
@@ -2327,24 +2384,35 @@
                             `;
                         }
                         else {
-                            // ТЕКСТ: Превращаем ссылки в кликабельные, если есть
+                            // ТЕКСТ
                             const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
                             contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
                         }
 
-                        // Добавляем время и галочки (для не системных)
+                        // Мета
                         if (!m.sys) {
+                            let metaStyle = "";
+                            // Для картинок мета-данные красивее смотрятся поверх, в углу (как в ТГ)
+                            if (msgType === 'image') {
+                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px);";
+                                // Добавляем position: relative контейнеру, если это картинка
+                                contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
+                            }
+
                             let metaHtml = `
-                                <span class="msg-meta">
-                                    <span class="msg-time">${timeStr}</span>
-                                    ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                                <span class="msg-meta" style="${metaStyle}">
+                                    <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
+                                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
                                 </span>
                             `;
-                            div.innerHTML = contentHtml + metaHtml;
+
+                            if (msgType === 'image') contentHtml += metaHtml + `</div>`; // Закрываем wrapper
+                            else div.innerHTML = contentHtml + metaHtml;
+
+                            if (msgType === 'image') div.innerHTML = contentHtml; // Для картинок HTML уже собран с метой
                         } else {
                             div.innerHTML = contentHtml;
                         }
-                        // -------------------------------------------
 
                         if (isNew) {
                             list.appendChild(div);
@@ -3757,11 +3825,39 @@
             }
         }
 
+        // Функции для просмотра фото
+        function openImageViewer(src) {
+            const viewer = document.getElementById('imageViewer');
+            const img = document.getElementById('imageViewerImg');
+
+            // Меняем ссылку на качество повыше для просмотра (если это гугл диск)
+            // Добавляем параметр =w2000 (ширина 2000px)
+            let highResSrc = src;
+            if (src.includes('lh3.googleusercontent.com')) {
+                highResSrc = src.split('=')[0] + '=w2000';
+            }
+
+            img.src = highResSrc;
+            viewer.classList.add('active');
+        }
+
+        function closeImageViewer() {
+            const viewer = document.getElementById('imageViewer');
+            viewer.classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('imageViewerImg').src = ''; // Очистка
+            }, 300);
+        }
+
+
 
     </script>
 
 
-    <!-- Firebase -->
+    <div id="imageViewer" class="image-viewer" onclick="closeImageViewer()">
+        <span class="close-viewer-btn">&times;</span>
+        <img id="imageViewerImg" src="" onclick="event.stopPropagation()">
+    </div>
 
 
 </body>
