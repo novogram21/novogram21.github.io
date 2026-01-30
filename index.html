@@ -1119,55 +1119,65 @@
     <div id="mainSidebar" class="sidebar">
         <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
         <!-- Профиль -->
-        <div class="profile-bar">
-            <div style="flex:1; display: flex; align-items: center; gap: 10px;">
-                <img id="myAvatar" src="https://via.placeholder.com/40" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-                <div>
-                    <div id="myName" style="font-weight:bold;">Я</div>
-                    <div id="myEmail" style="font-size:12px; color:#888;">...</div>
+        <div class="profile-bar" style="padding: 12px 15px; gap: 12px;">
+
+            <!-- 1. Круглая кнопка профиля (только смайлик/фото) -->
+            <button onclick="openProfileSheet()" style="
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #2d2d2d;
+        border: 1px solid #444;
+        color: #fff;
+        font-size: 22px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: 0.2s;
+    " onmouseover="this.style.background='#383838'" onmouseout="this.style.background='#2d2d2d'">
+                <!-- Сюда подставится ваша аватарка или смайлик -->
+                <span id="myAvatarSmall">👤</span>
+            </button>
+
+            <!-- 2. Скругленный поиск (справа) -->
+            <div style="flex: 1; position: relative;">
+                <input type="text" id="searchInput" placeholder="Поиск..."
+                       style="
+                   width: 100%;
+                   height: 44px;
+                   padding: 0 15px;
+                   border-radius: 22px; /* Полное скругление */
+                   border: 1px solid #333;
+                   background: #181818;
+                   color: white;
+                   outline: none;
+                   font-size: 14px;
+                   transition: 0.2s;
+               "
+                       onfocus="this.style.background='#222'; this.style.borderColor='#555'"
+                       onblur="this.style.background='#181818'; this.style.borderColor='#333'"
+                       oninput="handleSearchInput(this)">
+
+                <!-- Выпадающий список результатов -->
+                <div id="searchResults" style="
+            position: absolute;
+            top: 50px;
+            left: 0;
+            right: 0;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 12px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        ">
+                    <!-- JS вставит сюда результаты -->
                 </div>
             </div>
-
-            <!-- ВОТ НАША КНОПКА КОЛОКОЛЬЧИК -->
-            <button id="custom-bell" title="Включить уведомления"
-                    style="background: transparent; border: none; cursor: pointer; font-size: 20px; padding: 5px; margin-right: 5px;">
-                🔔
-            </button>
-
-            <button onclick="logout()" style="background:none; border:none; color:#ff4444; cursor:pointer;">
-                Выйти
-            </button>
         </div>
-
-        <!-- СКРИПТ ДЛЯ КОЛОКОЛЬЧИКА (можно оставить здесь же или перенести в конец файла) -->
-        <script>
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-            OneSignalDeferred.push(function (OneSignal) {
-                const bell = document.getElementById('custom-bell');
-
-                // Функция проверки подписки
-                function updateBell() {
-                    // Проверяем, разрешены ли пуши
-                    const isSubscribed = OneSignal.User.PushSubscription.optedIn;
-                    if (isSubscribed) {
-                        bell.style.display = 'none'; // Скрываем, если уже подписан
-                    } else {
-                        bell.style.display = 'block'; // Показываем, если нет
-                    }
-                }
-
-                // Слушаем изменения (подписался/отписался)
-                OneSignal.User.PushSubscription.addEventListener("change", updateBell);
-
-                // Проверяем при загрузке
-                updateBell();
-
-                // При клике - просим подписаться
-                bell.addEventListener('click', async () => {
-                    await OneSignal.Slidedown.promptPush();
-                });
-            });
-        </script>
 
 
 
@@ -1401,12 +1411,12 @@
                         const displayNick = user.username ? `@${user.username}` : 'none';
 
                         div.innerHTML = `
-                                                                                                                                ${avatarSrc}
-                                                                                                                                <div>
-                                                                                                                                    <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                </div>
-                                                                                                                            `;
+                                                                                                                                    ${avatarSrc}
+                                                                                                                                    <div>
+                                                                                                                                        <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                    </div>
+                                                                                                                                `;
 
                         div.onclick = () => {
                             sendFriendRequestToId(user.id); // Новая функция отправки
@@ -1764,16 +1774,16 @@
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
 
                         div.innerHTML = `
-                                                                                        ${avatar}
-                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                        </div>
-                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                        </div>
-                                                                                    `;
+                                                                                            ${avatar}
+                                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                            </div>
+                                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                            </div>
+                                                                                        `;
                         list.appendChild(div);
                     });
                 });
@@ -1925,21 +1935,21 @@
                                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                             div.innerHTML = `
-                                                                                            ${avatarHtml}
-                                                                                            <div class="user-name">${friendName}</div>
+                                                                                                ${avatarHtml}
+                                                                                                <div class="user-name">${friendName}</div>
 
-                                                                                            <div class="last-msg-row">
-                                                                                                 <span class="last-msg" id="last-${chatId}">Загрузка...</span>
-                                                                                            </div>
-
-                                                                                            <div class="meta-column">
-                                                                                                <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                                <div class="meta-bottom-row">
-                                                                                                    <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                <div class="last-msg-row">
+                                                                                                     <span class="last-msg" id="last-${chatId}">Загрузка...</span>
                                                                                                 </div>
-                                                                                            </div>
-                                                                                        `;
+
+                                                                                                <div class="meta-column">
+                                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                                    <div class="meta-bottom-row">
+                                                                                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            `;
 
                             div.onclick = () => openChat(fid, friendName, friendNick);
 
@@ -2028,9 +2038,9 @@
             // ЗАГОЛОВОК ЧАТА
             // Теперь показываем Имя и снизу мелким шрифтом ник
             document.getElementById('chatTitle').innerHTML = `
-                                                                                                                    <div>${name}</div>
-                                                                                                                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                `;
+                                                                                                                        <div>${name}</div>
+                                                                                                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                                                                    `;
 
             // Статус "был в сети" (оставляем логику lastSeen)
             db.collection('users').doc(fid).onSnapshot(userSnap => {
@@ -2114,11 +2124,11 @@
                         // metaHtml - это контейнер с временем и галочками.
                         // white-space: nowrap в CSS предотвратит разрыв строки между временем и галочками.
                         let metaHtml = `
-                                                                                                    <span class="msg-meta">
-                                                                                                        <span class="msg-time">${timeStr}</span>
-                                                                                                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                                                                                                    </span>
-                                                                                                `;
+                                                                                                        <span class="msg-meta">
+                                                                                                            <span class="msg-time">${timeStr}</span>
+                                                                                                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                                                                                                        </span>
+                                                                                                    `;
                         div.innerHTML = m.txt + metaHtml;
                     }
 
