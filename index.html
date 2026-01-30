@@ -959,30 +959,46 @@
         }
 
 
-        /* Стили для картинок в чате */
-        .chat-media-img {
-            max-width: 240px; /* Ограничиваем ширину */
-            max-height: 300px; /* Ограничиваем высоту */
+        /* --- СТИЛИ ДЛЯ КАРТИНОК В ЧАТЕ --- */
+        .media-container {
+            display: inline-block;
             border-radius: 12px;
-            cursor: pointer;
+            overflow: hidden;
+            position: relative; /* Важно для позиционирования галочек и спиннера */
+            background: transparent;
+            max-width: 100%;
+        }
+
+        .chat-media-img {
             display: block;
-            margin-bottom: 2px;
+            width: 100%;
+            max-width: 320px; /* Оптимальная ширина как в TG */
+            height: auto;
+            max-height: 400px;
             object-fit: cover;
+            border-radius: 12px;
+            cursor: zoom-in; /* Курсор лупы */
+            transition: transform 0.2s, filter 0.3s;
             background: #222; /* Фон пока грузится */
         }
 
-        /* Стили для файлов */
+            .chat-media-img:active {
+                transform: scale(0.98);
+            }
+
+        /* --- СТИЛИ ДЛЯ ФАЙЛОВ --- */
         .chat-file-card {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.08); /* Полупрозрачная подложка */
-            border-radius: 10px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
             text-decoration: none;
-            max-width: 260px;
+            max-width: 300px;
             transition: 0.2s;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
         }
 
             .chat-file-card:hover {
@@ -990,14 +1006,15 @@
             }
 
         .file-icon {
-            font-size: 24px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
+            width: 42px;
+            height: 42px;
+            background: rgba(115, 106, 240, 0.2); /* Фиолетовый оттенок */
+            color: #736AF0;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 20px;
             flex-shrink: 0;
         }
 
@@ -1005,68 +1022,50 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            flex: 1;
         }
 
         .file-name {
             color: white;
             font-size: 14px;
             font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
         }
 
         .file-action {
-            color: #8faebf;
-            font-size: 11px;
-            margin-top: 2px;
+            color: #8faebf; /* Голубовато-серый */
+            font-size: 12px;
         }
 
-        /* Исправление для галочек поверх картинки (опционально) */
+        /* --- МЕТА-ИНФОРМАЦИЯ (ВРЕМЯ + ГАЛОЧКИ) --- */
         .msg-meta {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             vertical-align: bottom;
-            margin-left: 5px;
+            margin-left: 6px;
+            height: 14px;
+            line-height: 1;
         }
 
-        /* --- СТИЛИ ДЛЯ КАРТИНОК В ЧАТЕ --- */
-        .chat-media-img {
-            /* Делаем их крупнее */
-            width: 100%;
-            max-width: 320px; /* Было 240, стало шире */
-            height: auto; /* Авто-высота, чтобы не искажалось */
-            max-height: 400px;
-            border-radius: 12px;
-            cursor: zoom-in; /* Курсор лупы */
-            display: block;
-            object-fit: cover;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Тень для красоты */
-            transition: transform 0.2s;
-        }
-
-            .chat-media-img:active {
-                transform: scale(0.98); /* Эффект нажатия */
-            }
-
-        .media-container {
-            overflow: hidden;
-            border-radius: 12px;
-            background: transparent; /* Убираем черный фон */
-            display: inline-block;
-        }
-
-        /* --- СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА (LIGHTBOX) --- */
+        /* --- LIGHTBOX (ПРОСМОТР НА ВЕСЬ ЭКРАН) --- */
         .image-viewer {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9); /* Темный фон */
-            z-index: 9999; /* Поверх всего */
-            display: none; /* Скрыто по умолчанию */
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: none;
             justify-content: center;
             align-items: center;
             opacity: 0;
-            transition: opacity 0.3s;
-            backdrop-filter: blur(5px); /* Размытие фона */
+            transition: opacity 0.2s ease-in-out;
+            backdrop-filter: blur(8px);
         }
 
             .image-viewer.active {
@@ -1075,12 +1074,13 @@
             }
 
             .image-viewer img {
-                max-width: 95%;
-                max-height: 95%;
-                border-radius: 8px;
-                box-shadow: 0 0 20px rgba(0,0,0,0.5);
-                transform: scale(0.9);
-                transition: transform 0.3s;
+                max-width: 95vw;
+                max-height: 95vh;
+                border-radius: 4px;
+                box-shadow: 0 0 30px rgba(0,0,0,0.5);
+                transform: scale(0.95);
+                transition: transform 0.2s;
+                object-fit: contain;
             }
 
             .image-viewer.active img {
@@ -1092,37 +1092,62 @@
             top: 20px;
             right: 30px;
             color: white;
-            font-size: 40px;
-            font-weight: bold;
+            font-size: 36px;
+            opacity: 0.7;
             cursor: pointer;
             z-index: 10000;
+            transition: 0.2s;
         }
-        /* Крутилка загрузки */
+
+            .close-viewer-btn:hover {
+                opacity: 1;
+            }
+
+        /* --- ЗАГРУЗКА (КРУЖОК + ПРОЦЕНТЫ) --- */
+        .loading-overlay {
+            position: relative;
+            display: inline-block;
+        }
+
+            /* Затемняем картинку во время загрузки */
+            .loading-overlay img {
+                filter: brightness(0.4) blur(1px);
+            }
+
+        /* Текст процентов по центру */
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            z-index: 12;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        /* Спиннер вокруг процентов */
         .upload-spinner {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
+            width: 44px;
+            height: 44px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
-            border-top-color: white;
+            border-top-color: #fff;
             animation: spin 1s linear infinite;
-            z-index: 10;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 11;
+            pointer-events: none;
         }
 
         @keyframes spin {
             to {
                 transform: translate(-50%, -50%) rotate(360deg);
             }
-        }
-
-        /* Затемнение картинки во время загрузки */
-        .loading-overlay img {
-            filter: brightness(0.5) blur(2px);
-            transition: 0.3s;
         }
 
 
@@ -3797,32 +3822,38 @@
 
 
         // Функция показывает "фейковое" сообщение, пока файл грузится
-        function showTempMessage(file) {
+        // Функция показывает превью с заранее известным ID и местом под проценты
+        function showTempMessage(file, msgId) {
             const list = document.getElementById('msgList');
-            const tempId = 'temp-' + Date.now();
+
             const div = document.createElement('div');
-            div.id = tempId;
-            div.className = 'msg msg-me'; // Сразу как "своё"
+            // ВАЖНО: Присваиваем финальный ID сразу (формат 'msg-' + ID из базы)
+            div.id = 'msg-' + msgId;
+            div.className = 'msg msg-me';
 
             let contentHtml = '';
 
+            // Сценарий 1: Картинка
             if (file.type.startsWith('image/')) {
-                const url = URL.createObjectURL(file); // Берем картинку локально
+                const url = URL.createObjectURL(file);
                 contentHtml = `
-            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+            <div class="media-container loading-overlay">
+                <img src="${url}" class="chat-media-img">
                 <div class="upload-spinner"></div>
+                <div class="progress-text" id="prog-${msgId}">0%</div>
             </div>
         `;
-            } else {
+            }
+            // Сценарий 2: Файл
+            else {
                 contentHtml = `
-            <div class="chat-file-card" style="opacity: 0.7;">
+            <div class="chat-file-card" style="opacity: 0.8;">
                 <div class="file-icon">📄</div>
                 <div class="file-info">
                     <div class="file-name">${file.name}</div>
-                    <div class="file-action">Загрузка...</div>
+                    <div class="file-action" id="prog-${msgId}">0%</div>
                 </div>
-                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                <div class="upload-spinner" style="width: 24px; height: 24px; border-width: 2px; left: auto; right: 15px; top: 50%; margin: 0;"></div>
             </div>
         `;
             }
@@ -3832,8 +3863,6 @@
 
             // Скролл вниз
             setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
-
-            return tempId; // Возвращаем ID, чтобы потом удалить это сообщение
         }
 
 
