@@ -1118,65 +1118,57 @@
     <!-- MAIN -->
     <div id="mainSidebar" class="sidebar">
         <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
-        <div class="profile-bar" style="padding: 12px 15px; gap: 12px;">
-
-            <!-- 1. Круглая кнопка профиля (только смайлик/фото) -->
-            <button onclick="openProfileSheet()" style="
-                width: 44px;
-                height: 44px;
-                border-radius: 50%;
-                background: #2d2d2d;
-                border: 1px solid #444;
-                color: #fff;
-                font-size: 22px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                transition: 0.2s;
-            " onmouseover="this.style.background='#383838'" onmouseout="this.style.background='#2d2d2d'">
-                <!-- Сюда подставится ваша аватарка или смайлик -->
-                <span id="myAvatarSmall">👤</span>
-            </button>
-
-            <!-- 2. Скругленный поиск (справа) -->
-            <div style="flex: 1; position: relative;">
-                <input type="text" id="searchInput" placeholder="Поиск..."
-                       style="
-                           width: 100%;
-                           height: 44px;
-                           padding: 0 15px;
-                           border-radius: 22px; /* Полное скругление */
-                           border: 1px solid #333;
-                           background: #181818;
-                           color: white;
-                           outline: none;
-                           font-size: 14px;
-                           transition: 0.2s;
-                       "
-                       onfocus="this.style.background='#222'; this.style.borderColor='#555'"
-                       onblur="this.style.background='#181818'; this.style.borderColor='#333'"
-                       oninput="handleSearchInput(this)">
-
-                <!-- Выпадающий список результатов -->
-                <div id="searchResults" style="
-                    position: absolute;
-                    top: 50px;
-                    left: 0;
-                    right: 0;
-                    background: #252525;
-                    border: 1px solid #333;
-                    border-radius: 12px;
-                    z-index: 100;
-                    display: none;
-                    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-                    overflow: hidden;
-                ">
-                    <!-- JS вставит сюда результаты -->
+        <!-- Профиль -->
+        <div class="profile-bar">
+            <div style="flex:1; display: flex; align-items: center; gap: 10px;">
+                <img id="myAvatar" src="https://via.placeholder.com/40" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                <div>
+                    <div id="myName" style="font-weight:bold;">Я</div>
+                    <div id="myEmail" style="font-size:12px; color:#888;">...</div>
                 </div>
             </div>
+
+            <!-- ВОТ НАША КНОПКА КОЛОКОЛЬЧИК -->
+            <button id="custom-bell" title="Включить уведомления"
+                    style="background: transparent; border: none; cursor: pointer; font-size: 20px; padding: 5px; margin-right: 5px;">
+                🔔
+            </button>
+
+            <button onclick="logout()" style="background:none; border:none; color:#ff4444; cursor:pointer;">
+                Выйти
+            </button>
         </div>
+
+        <!-- СКРИПТ ДЛЯ КОЛОКОЛЬЧИКА (можно оставить здесь же или перенести в конец файла) -->
+        <script>
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(function (OneSignal) {
+                const bell = document.getElementById('custom-bell');
+
+                // Функция проверки подписки
+                function updateBell() {
+                    // Проверяем, разрешены ли пуши
+                    const isSubscribed = OneSignal.User.PushSubscription.optedIn;
+                    if (isSubscribed) {
+                        bell.style.display = 'none'; // Скрываем, если уже подписан
+                    } else {
+                        bell.style.display = 'block'; // Показываем, если нет
+                    }
+                }
+
+                // Слушаем изменения (подписался/отписался)
+                OneSignal.User.PushSubscription.addEventListener("change", updateBell);
+
+                // Проверяем при загрузке
+                updateBell();
+
+                // При клике - просим подписаться
+                bell.addEventListener('click', async () => {
+                    await OneSignal.Slidedown.promptPush();
+                });
+            });
+        </script>
+
 
 
         <!-- Выпадающий список результатов -->
