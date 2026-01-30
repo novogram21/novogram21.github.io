@@ -1097,6 +1097,33 @@
             cursor: pointer;
             z-index: 10000;
         }
+        /* Крутилка загрузки */
+        .upload-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        @keyframes spin {
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        /* Затемнение картинки во время загрузки */
+        .loading-overlay img {
+            filter: brightness(0.5) blur(2px);
+            transition: 0.3s;
+        }
 
 
     </style>
@@ -3767,35 +3794,121 @@
         // !!! ОБЯЗАТЕЛЬНО ЗАМЕНИ ССЫЛКУ НИЖЕ НА СВОЮ !!!
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4AnViDZV8N6X-Tk9XFG2LQwTUVb2TWWR3RcoCNhkRmOM5XLug9UBi1Ky-_j2sQB5u/exec";
 
+
+
+        // Функция показывает "фейковое" сообщение, пока файл грузится
+        function showTempMessage(file) {
+            const list = document.getElementById('msgList');
+            const tempId = 'temp-' + Date.now();
+            const div = document.createElement('div');
+            div.id = tempId;
+            div.className = 'msg msg-me'; // Сразу как "своё"
+
+            let contentHtml = '';
+
+            if (file.type.startsWith('image/')) {
+                const url = URL.createObjectURL(file); // Берем картинку локально
+                contentHtml = `
+            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                <div class="upload-spinner"></div>
+            </div>
+        `;
+            } else {
+                contentHtml = `
+            <div class="chat-file-card" style="opacity: 0.7;">
+                <div class="file-icon">📄</div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-action">Загрузка...</div>
+                </div>
+                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+            </div>
+        `;
+            }
+
+            div.innerHTML = contentHtml;
+            list.appendChild(div);
+
+            // Скролл вниз
+            setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+
+            return tempId; // Возвращаем ID, чтобы потом удалить это сообщение
+        }
+
+
+        // --- 1. Функция для показа "временного" сообщения (превью) ---
+        function showTempMessage(file) {
+            const list = document.getElementById('msgList');
+            const tempId = 'temp-' + Date.now();
+            const div = document.createElement('div');
+            div.id = tempId;
+            div.className = 'msg msg-me'; // Сразу как "своё"
+
+            let contentHtml = '';
+
+            // Если это картинка — показываем её сразу
+            if (file.type.startsWith('image/')) {
+                const url = URL.createObjectURL(file);
+                contentHtml = `
+            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                <div class="upload-spinner"></div>
+            </div>
+        `;
+            }
+            // Если это файл — показываем карточку
+            else {
+                contentHtml = `
+            <div class="chat-file-card" style="opacity: 0.7;">
+                <div class="file-icon">📄</div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-action">Загрузка...</div>
+                </div>
+                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+            </div>
+        `;
+            }
+
+            div.innerHTML = contentHtml;
+            list.appendChild(div);
+
+            // Скролл вниз
+            setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+
+            return tempId; // Возвращаем ID, чтобы потом удалить это сообщение
+        }
+
+        // --- 2. Основная функция загрузки ---
+        // !!! Убедись, что переменная GOOGLE_SCRIPT_URL объявлена выше !!!
         async function uploadFile(input) {
             const file = input.files[0];
             if (!file) return;
 
-            // Лимит 20 МБ
             if (file.size > 20 * 1024 * 1024) {
                 alert("Файл слишком большой! Максимум 20 МБ.");
                 return;
             }
 
-            const originalPlaceholder = document.getElementById('msgInput').placeholder;
-            document.getElementById('msgInput').placeholder = "Загрузка на Google Диск...";
-            document.getElementById('msgInput').disabled = true;
+            // 1. ПОКАЗЫВАЕМ ПРЕВЬЮ МГНОВЕННО
+            const tempMsgId = showTempMessage(file);
 
-            // Конвертируем файл в Base64
-            const toBase64 = file => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => {
-                    // Убираем заголовок "data:image/png;base64," чтобы Google понял
-                    resolve(reader.result.split(',')[1]);
-                };
-                reader.onerror = error => reject(error);
-            });
+            const originalPlaceholder = document.getElementById('msgInput').placeholder;
+            // document.getElementById('msgInput').disabled = true; // Можно раскомментировать, если хочешь блокировать ввод
 
             try {
+                // Конвертируем в Base64 (нужно для Google Script)
+                const toBase64 = f => new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(f);
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = error => reject(error);
+                });
+
                 const base64Data = await toBase64(file);
 
-                // Отправляем на Google Script
+                // Отправляем на Google
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     body: JSON.stringify({
@@ -3807,21 +3920,28 @@
 
                 const data = await response.json();
 
+                // 2. ЗАГРУЗКА ЗАВЕРШЕНА -> УДАЛЯЕМ ПРЕВЬЮ
+                const tempEl = document.getElementById(tempMsgId);
+                if (tempEl) tempEl.remove();
+
                 if (data.result === "success") {
+                    // 3. ОТПРАВЛЯЕМ НАСТОЯЩЕЕ СООБЩЕНИЕ
                     const type = file.type.startsWith('image/') ? 'image' : 'file';
-                    // Отправляем сообщение с ссылкой
                     sendMsg(data.url, false, type);
                 } else {
-                    throw new Error(data.message);
+                    throw new Error(data.message || "Ошибка скрипта");
                 }
 
             } catch (error) {
-                console.error("Ошибка загрузки:", error);
-                alert("Ошибка загрузки. Проверь консоль.");
+                console.error("Ошибка:", error);
+                // Если ошибка - удаляем крутилку и говорим юзеру
+                const tempEl = document.getElementById(tempMsgId);
+                if (tempEl) tempEl.remove();
+                alert("Не удалось загрузить файл. Попробуйте еще раз.");
             } finally {
                 document.getElementById('msgInput').placeholder = originalPlaceholder;
                 document.getElementById('msgInput').disabled = false;
-                input.value = '';
+                input.value = ''; // Очищаем инпут
             }
         }
 
