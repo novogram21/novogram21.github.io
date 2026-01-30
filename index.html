@@ -1281,7 +1281,14 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        db.enablePersistence().catch(err => console.log("Оффлайн режим не включился:", err));
+        db.enablePersistence({ synchronizeTabs: true })
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn("Много вкладок открыто. persistence может не работать.");
+                } else if (err.code == 'unimplemented') {
+                    console.warn("Браузер не поддерживает persistence");
+                }
+            });
 
         // --- Ш�?Ф� ОВАН�?Е ТОКЕНА ТЕЛЕГ� АМА (Base64) ---
         // Токен: 8387775107:AAGhXPcfytIcnh-_zD04HvlGXIJ_b-crPK4
@@ -3139,8 +3146,6 @@
 
 
         // Слушаем события изменения размеров видео
-        localVidEl.addEventListener('loadedmetadata', checkLocalVideoOrientation);
-        localVidEl.addEventListener('resize', checkLocalVideoOrientation);
 
         function isMobileDevice() {
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
