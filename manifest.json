@@ -1,0 +1,21 @@
+{
+  "name": "Novogram",
+  "short_name": "Novogram",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#181818",
+  "theme_color": "#181818",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/124/124010.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/124/124010.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
