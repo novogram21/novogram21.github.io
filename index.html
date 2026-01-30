@@ -2285,12 +2285,17 @@
                             contentHtml = m.txt;
                         }
                         else if (msgType === 'image') {
-                            // КАРТИНКА: Рисуем тег IMG
+                            let imgSrc = m.txt;
+                            if (m.txt.includes('drive.google.com')) {
+                                const cleanUrl = m.txt.replace(/^https?:\/\//, '');
+                                imgSrc = `https://wsrv.nl/?url=${cleanUrl}&w=400&output=jpg`;
+                            }
+
                             contentHtml = `
-                                <div class="media-container">
-                                    <img src="${m.txt}" class="chat-media-img" onclick="window.open('${m.txt}', '_blank')">
-                                </div>
-                            `;
+        <div class="media-container">
+            <img src="${imgSrc}" class="chat-media-img" onclick="window.open('${m.txt}', '_blank')" loading="lazy">
+        </div>
+    `;
                         }
                         else if (msgType === 'file') {
                             // ФАЙЛ: Рисуем красивую карточку
