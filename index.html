@@ -3234,6 +3234,18 @@
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
 
+        function checkLocalVideoOrientation() {
+            if (!localStream) return;
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (videoTrack) {
+                const settings = videoTrack.getSettings();
+                // Логика ориентации, если нужна, или просто заглушка, чтобы не падало
+                console.log("Orientation check:", settings.width, settings.height);
+            }
+        }
+
+
+
         function updateCallControlsVisibility() {
             const isMobile = isMobileDevice();
 
