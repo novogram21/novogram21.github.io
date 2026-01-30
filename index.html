@@ -1105,7 +1105,7 @@
 
         <!-- Telegram ID (оставляем как было) -->
         <div class="profile-option">
-            <h3>Novogram Connect</h3>
+            <h3>Telegram Connect</h3>
             <div class="profile-input-group">
                 <input type="text" id="tgChatId" placeholder="Ваш ID" style="flex: 1; padding: 10px; background: #444; border: none; color: white; border-radius: 8px;">
             </div>
@@ -1218,12 +1218,17 @@
                     <button onclick="startCall()" style="background:#28a745; color:white; border:none; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold;">📹 Звонок</button>
                 </div>
             </div>
+
             <div id="msgList" class="messages"></div>
             <div class="input-bar">
                 <div class="input-container">
                     <input type="text" id="msgInput" placeholder="Сообщение" onkeypress="if(event.key==='Enter') sendMsg()">
-                    <button class="attach-btn" onclick="alert('Функция вложений пока в разработке')">📎</button>
+
+                    <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
+
+                    <button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button>
                 </div>
+
                 <button class="voice-btn" onclick="alert('Голосовые сообщения скоро будут!')">🎤</button>
                 <button class="send-btn hidden" id="sendBtn" onclick="sendMsg()">➤</button>
             </div>
@@ -2270,26 +2275,52 @@
         }
 
 
-        function sendMsg(txt, isSys = false) {
-            const t = txt || document.getElementById('msgInput').value; if (!t) return;
+        // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
+        function sendMsg(txt, isSys = false, type = 'text') {
+            // Если txt не передан (обычная отправка), берем из поля ввода
+            const t = txt || document.getElementById('msgInput').value.trim();
+
+            if (!t) return;
+
             const msgData = {
-                txt: t, from: currentUser.uid, to: currentFriendId,
-                sys: isSys, read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
+                txt: t,
+                from: currentUser.uid,
+                to: currentFriendId,
+                sys: isSys,
+                type: type, // <--- ВАЖНО: Мы сохраняем тип сообщения
+                read: false,
+                ts: firebase.firestore.FieldValue.serverTimestamp()
             };
+
             db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
-            if (!txt) document.getElementById('msgInput').value = '';
-            document.getElementById('sendBtn').style.display = 'none';
-            document.querySelector('.voice-btn').style.display = 'flex';
-            document.getElementById('msgInput').focus(); // Возвращаем фокус
 
+            // Если это был обычный текст (из поля ввода), очищаем поле
+            if (!txt) {
+                document.getElementById('msgInput').value = '';
+                document.getElementById('sendBtn').style.display = 'none';
+                document.querySelector('.voice-btn').style.display = 'flex';
+                document.getElementById('msgInput').focus();
+            }
 
-            // УВЕДОМЛЕН�?Е В ТЕЛЕГ� АМ
+            // УВЕДОМЛЕНИЯ
             if (!isSys && currentFriendId) {
                 db.collection('users').doc(currentFriendId).get().then(doc => {
                     if (doc.exists) {
                         const friendData = doc.data();
+
+                        // Формируем красивый текст для уведомления
+                        let notifText = t;
+                        if (type === 'image') notifText = '📷 Фотография';
+                        if (type === 'file') notifText = '📁 Файл';
+
+                        // Telegram
                         if (friendData.tgChatId) {
-                            sendTelegramNotification(friendData.tgChatId, `📩 *Сообщение*\nОт: ${currentUser.email}\n${t}`);
+                            sendTelegramNotification(friendData.tgChatId, `📩 *Сообщение*\nОт: ${currentUser.email}\n${notifText}`);
+                        }
+
+                        // Push (OneSignal) - если есть
+                        if (friendData.oneSignalId && typeof sendPush === 'function') {
+                            sendPush(currentFriendId, notifText);
                         }
                     }
                 });
@@ -2715,7 +2746,7 @@
                                             ${avatarHtml}
                                             <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
                                                 <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Novogram Audio...</span>
+                                                <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
                                             </div>
                                         </div>
                                     `;
@@ -3538,6 +3569,69 @@
             }
         }
 
+
+        // --- Вставь это в свой скрипт ---
+
+        // !!! ОБЯЗАТЕЛЬНО ЗАМЕНИ ССЫЛКУ НИЖЕ НА СВОЮ !!!
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4AnViDZV8N6X-Tk9XFG2LQwTUVb2TWWR3RcoCNhkRmOM5XLug9UBi1Ky-_j2sQB5u/exec";
+
+        async function uploadFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Лимит 20 МБ
+            if (file.size > 20 * 1024 * 1024) {
+                alert("Файл слишком большой! Максимум 20 МБ.");
+                return;
+            }
+
+            const originalPlaceholder = document.getElementById('msgInput').placeholder;
+            document.getElementById('msgInput').placeholder = "Загрузка на Google Диск...";
+            document.getElementById('msgInput').disabled = true;
+
+            // Конвертируем файл в Base64
+            const toBase64 = file => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    // Убираем заголовок "data:image/png;base64," чтобы Google понял
+                    resolve(reader.result.split(',')[1]);
+                };
+                reader.onerror = error => reject(error);
+            });
+
+            try {
+                const base64Data = await toBase64(file);
+
+                // Отправляем на Google Script
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        filename: file.name,
+                        mimeType: file.type,
+                        base64: base64Data
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.result === "success") {
+                    const type = file.type.startsWith('image/') ? 'image' : 'file';
+                    // Отправляем сообщение с ссылкой
+                    sendMsg(data.url, false, type);
+                } else {
+                    throw new Error(data.message);
+                }
+
+            } catch (error) {
+                console.error("Ошибка загрузки:", error);
+                alert("Ошибка загрузки. Проверь консоль.");
+            } finally {
+                document.getElementById('msgInput').placeholder = originalPlaceholder;
+                document.getElementById('msgInput').disabled = false;
+                input.value = '';
+            }
+        }
 
 
     </script>
