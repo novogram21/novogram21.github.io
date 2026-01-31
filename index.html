@@ -1087,17 +1087,67 @@
             background: #000;
         }
 
+        .video-card
         /* --- НОВЫЙ СТИЛЬ ДЛЯ ВИДЕО --- */
-        .chat-media-video {
-            width: 100%;
-            max-width: 320px;
-            max-height: 400px;
-            border-radius: 12px;
-            display: block;
+        /* --- Стили для видео-карточки (Telegram Style) --- */
+        .video-card {
+            width: 260px;
+            height: 160px;
             background: #000;
-            outline: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
+        .download-btn {
+            cursor: pointer;
+            position: relative;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+            .download-btn:active {
+                transform: scale(0.95);
+            }
+
+        .icon-arrow {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: rotate(-90deg);
+            pointer-events: none;
+        }
+
+        .size-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: white;
+            font-weight: 500;
+            z-index: 10;
+        }
+
+
 
         /* --- СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА (LIGHTBOX) --- */
         .image-viewer {
@@ -2449,42 +2499,38 @@
                                                                                                                                                                                                                                                             `;
                         }
                         else if (msgType === 'video') {
-                            // === ВИДЕО (ИСПРАВЛЕНИЕ: ИСПОЛЬЗУЕМ IFRAME) ===
-                            let fileId = null;
+                            const fileId = m.txt;
+                            const uniqueId = `vid-${msgId}`;
+                            // Красивый размер (или заглушка, если старое сообщение)
+                            const sizeStr = m.fileSize ? formatBytes(m.fileSize) : 'Video';
 
-                            // 1. Пытаемся достать ID файла из разных форматов ссылок Google Drive
-                            if (m.txt.includes('id=')) {
-                                try { fileId = m.txt.split('id=')[1].split('&')[0]; } catch (e) { }
-                            }
-                            else if (m.txt.includes('/file/d/')) {
-                                try { fileId = m.txt.split('/file/d/')[1].split('/')[0]; } catch (e) { }
-                            }
+                            contentHtml = `
+                                <div id="${uniqueId}" class="video-card">
+                                    
+                                    <video class="chat-media-video" 
+                                           style="width: 100%; height: 100%; display: none; object-fit: contain;" 
+                                           playsinline>
+                                    </video>
 
-                            if (fileId) {
-                                // Используем официальный плеер Google через iframe (/preview)
-                                // Это обходит блокировку CORS и гарантирует воспроизведение
-                                const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-
-                                contentHtml = `
-                                    <div class="media-container" style="position: relative; width: 100%; max-width: 320px; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden;">
-                                        <iframe src="${embedUrl}" 
-                                                width="100%" 
-                                                height="100%" 
-                                                frameborder="0" 
-                                                allow="autoplay; encrypted-media; fullscreen" 
-                                                allowfullscreen
-                                                style="display: block; width: 100%; height: 100%;">
-                                        </iframe>
+                                    <div class="download-btn" onclick="downloadVideoWithProgress('${fileId}', '${uniqueId}')">
+                                        <svg class="progress-ring" width="48" height="48">
+                                            <circle stroke="white" stroke-width="3" fill="transparent" r="22" cx="24" cy="24" 
+                                                    stroke-dasharray="138" stroke-dashoffset="138" 
+                                                    style="transition: stroke-dashoffset 0.1s linear;"></circle>
+                                        </svg>
+                                        <span class="icon-arrow">⬇</span>
                                     </div>
-                                `;
-                            } else {
-                                // Если это не Google Drive (например, прямая ссылка на mp4), пробуем обычный плеер
-                                contentHtml = `
-                                    <div class="media-container">
-                                        <video src="${m.txt}" controls playsinline class="chat-media-video"></video>
+
+                                    <div class="size-badge">${sizeStr}</div>
+
+                                    <div style="position: absolute; bottom: 8px; right: 8px; z-index: 20;">
+                                        ${metaHtml ? metaHtml.replace('style="', 'style="color:white; text-shadow: 0 1px 2px rgba(0,0,0,0.8); ') : ''} 
                                     </div>
-                                `;
-                            }
+                                </div>
+                            `;
+
+                            // Важно: мы сами вставили мету, поэтому очищаем переменную, чтобы не было дубля
+                            // (Или просто оставьте как есть, если дубль не появляется в вашем CSS)
                         }
                         else if (msgType === 'file') {
                             // ФАЙЛ
@@ -2583,10 +2629,8 @@
 
 
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
-        function sendMsg(txt, isSys = false, type = 'text') {
-            // Если txt не передан (обычная отправка), берем из поля ввода
+        function sendMsg(txt, isSys = false, type = 'text', size = 0) {
             const t = txt || document.getElementById('msgInput').value.trim();
-
             if (!t) return;
 
             const msgData = {
@@ -2594,14 +2638,14 @@
                 from: currentUser.uid,
                 to: currentFriendId,
                 sys: isSys,
-                type: type, // <--- ВАЖНО: Мы сохраняем тип сообщения
+                type: type,
                 read: false,
-                ts: firebase.firestore.FieldValue.serverTimestamp()
+                ts: firebase.firestore.FieldValue.serverTimestamp(),
+                fileSize: size // Сохраняем размер!
             };
 
             db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
 
-            // Если это был обычный текст (из поля ввода), очищаем поле
             if (!txt) {
                 document.getElementById('msgInput').value = '';
                 document.getElementById('sendBtn').style.display = 'none';
@@ -2609,24 +2653,19 @@
                 document.getElementById('msgInput').focus();
             }
 
-            // УВЕДОМЛЕНИЯ
+            // ... (Уведомления можно оставить как есть, они ниже)
             if (!isSys && currentFriendId) {
                 db.collection('users').doc(currentFriendId).get().then(doc => {
                     if (doc.exists) {
                         const friendData = doc.data();
-
-                        // Формируем красивый текст для уведомления
                         let notifText = t;
                         if (type === 'image') notifText = '📷 Фотография';
                         if (type === 'file') notifText = '📁 Файл';
-                        if (type === 'video') notifText = '🎥 Видео'; // Новое уведомление для видео
+                        if (type === 'video') notifText = '🎥 Видео';
 
-                        // Telegram
                         if (friendData.tgChatId) {
                             sendTelegramNotification(friendData.tgChatId, `📩 *Сообщение*\nОт: ${currentUser.email}\n${notifText}`);
                         }
-
-                        // Push (OneSignal) - если есть
                         if (friendData.oneSignalId && typeof sendPush === 'function') {
                             sendPush(currentFriendId, notifText);
                         }
@@ -3884,6 +3923,104 @@
 
 
 
+        // --- 1. Токен для доступа к Гуглу ---
+        let cachedToken = null;
+
+        async function getAuthToken() {
+            if (cachedToken) return cachedToken;
+            try {
+                // Запрашиваем токен у вашего Apps Script
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const data = await response.json();
+                cachedToken = data.token;
+                // Токен живет час, сбрасываем через 50 мин
+                setTimeout(() => { cachedToken = null; }, 50 * 60 * 1000);
+                return cachedToken;
+            } catch (e) {
+                console.error("Ошибка токена:", e);
+                return null;
+            }
+        }
+
+        // --- 2. Красивый размер файла (14.5 MB) ---
+        function formatBytes(bytes, decimals = 1) {
+            if (!bytes || isNaN(bytes) || bytes === 0) return '???';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        // --- 3. Логика скачивания с прогрессом (XHR) ---
+        async function downloadVideoWithProgress(fileId, containerId) {
+            const container = document.getElementById(containerId);
+            const btn = container.querySelector('.download-btn');
+            const circle = container.querySelector('circle');
+            const icon = container.querySelector('.icon-arrow');
+            const videoTag = container.querySelector('video');
+
+            // Прячем стрелку, показываем кольцо (если оно скрыто)
+            icon.style.display = 'none';
+            container.querySelector('.progress-ring').style.display = 'block';
+
+            const circumference = 2 * Math.PI * 22; // Длина окружности (r=22)
+
+            try {
+                const token = await getAuthToken();
+                if (!token) throw new Error("Нет доступа к Google");
+
+                const xhr = new XMLHttpRequest();
+                // Запрашиваем файл напрямую у Google Drive API
+                xhr.open('GET', `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, true);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.responseType = 'blob';
+
+                // Слушаем прогресс
+                xhr.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percent = event.loaded / event.total;
+                        // Анимация кольца (stroke-dashoffset)
+                        const offset = circumference - (percent * circumference);
+                        circle.style.strokeDashoffset = offset;
+                    }
+                };
+
+                // Готово
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        const blob = xhr.response;
+                        const localUrl = URL.createObjectURL(blob);
+
+                        // Скрываем загрузчик, показываем видео
+                        btn.style.display = 'none';
+                        container.querySelector('.size-badge').style.display = 'none';
+
+                        videoTag.src = localUrl;
+                        videoTag.style.display = 'block';
+                        videoTag.controls = true;
+                        videoTag.play();
+                    } else {
+                        alert("Ошибка загрузки: " + xhr.status);
+                        resetUI();
+                    }
+                };
+
+                xhr.onerror = () => { alert("Ошибка сети"); resetUI(); };
+                xhr.send();
+
+            } catch (e) {
+                console.error(e);
+                alert("Ошибка: " + e.message);
+                resetUI();
+            }
+
+            function resetUI() {
+                icon.style.display = 'block';
+                circle.style.strokeDashoffset = circumference; // Сброс круга
+            }
+        }
+
         // Функция показывает "фейковое" сообщение, пока файл грузится
         function showTempMessage(file) {
             const list = document.getElementById('msgList');
@@ -3948,19 +4085,17 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (file.size > 20 * 1024 * 1024) {
-                alert("Файл слишком большой! Максимум 20 МБ.");
+            if (file.size > 45 * 1024 * 1024) {
+                alert("Файл слишком большой! Максимум 45 МБ.");
                 return;
             }
 
-            // 1. ПОКАЗЫВАЕМ ПРЕВЬЮ МГНОВЕННО
             const tempMsgId = showTempMessage(file);
-
             const originalPlaceholder = document.getElementById('msgInput').placeholder;
-            // document.getElementById('msgInput').disabled = true; // Можно раскомментировать, если хочешь блокировать ввод
+            document.getElementById('msgInput').disabled = true;
+            document.getElementById('msgInput').placeholder = "Загрузка на Диск...";
 
             try {
-                // Конвертируем в Base64 (нужно для Google Script)
                 const toBase64 = f => new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(f);
@@ -3970,7 +4105,6 @@
 
                 const base64Data = await toBase64(file);
 
-                // Отправляем на Google
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     body: JSON.stringify({
@@ -3981,32 +4115,30 @@
                 });
 
                 const data = await response.json();
-
-                // 2. ЗАГРУЗКА ЗАВЕРШЕНА -> УДАЛЯЕМ ПРЕВЬЮ
                 const tempEl = document.getElementById(tempMsgId);
                 if (tempEl) tempEl.remove();
 
                 if (data.result === "success") {
-                    // 3. ОТПРАВЛЯЕМ НАСТОЯЩЕЕ СООБЩЕНИЕ
                     let type = 'file';
                     if (file.type.startsWith('image/')) type = 'image';
-                    if (file.type.startsWith('video/')) type = 'video'; // <--- Добавили тип видео
+                    if (file.type.startsWith('video/')) type = 'video';
 
-                    sendMsg(data.url, false, type);
+                    // !!! ПЕРЕДАЕМ file.size !!!
+                    sendMsg(data.url, false, type, file.size);
                 } else {
-                    throw new Error(data.message || "Ошибка скрипта");
+                    throw new Error(data.message);
                 }
 
             } catch (error) {
                 console.error("Ошибка:", error);
-                // Если ошибка - удаляем крутилку и говорим юзеру
                 const tempEl = document.getElementById(tempMsgId);
                 if (tempEl) tempEl.remove();
-                alert("Не удалось загрузить файл. Попробуйте еще раз.");
+                alert("Не удалось загрузить. " + error.message);
             } finally {
                 document.getElementById('msgInput').placeholder = originalPlaceholder;
                 document.getElementById('msgInput').disabled = false;
-                input.value = ''; // Очищаем инпут
+                document.getElementById('msgInput').value = '';
+                document.getElementById('msgInput').focus();
             }
         }
 
