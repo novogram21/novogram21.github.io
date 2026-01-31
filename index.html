@@ -2386,7 +2386,14 @@
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
                 .orderBy('ts', 'asc')
                 .limitToLast(50)
-                .onSnapshot(snap => {
+                // Добавляем опцию для получения метаданных (нужно для проверки кэша)
+                .onSnapshot({ includeMetadataChanges: true }, snap => {
+
+                    // --- ИСПРАВЛЕНИЕ: Игнорируем неполные данные из кэша ---
+                    // Это уберет эффект, когда сначала грузится 1 сообщение, а потом остальные
+                    if (snap.metadata.fromCache) return;
+                    // -------------------------------------------------------
+
                     const batch = db.batch();
                     let needCommit = false;
 
@@ -2409,7 +2416,9 @@
                         };
 
                         if (m.to === currentUser.uid && !m.read) {
-                            batch.update(doc.ref, { read: true });
+                            batch.update(doc.ref, {
+                                read: true
+                            });
                             needCommit = true;
                         }
 
@@ -2448,22 +2457,22 @@
                                 } catch (e) { }
                             }
                             contentHtml = `
-                                    <div class="media-container">
-                                        <img src="${imgSrc}"
-                                             class="chat-media-img"
-                                             onclick="openImageViewer('${imgSrc}')"
-                                             referrerpolicy="no-referrer"
-                                             onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
-                                    </div>`;
+                             <div class="media-container">
+                                 <img src="${imgSrc}"
+                                      class="chat-media-img"
+                                      onclick="openImageViewer('${imgSrc}')"
+                                      referrerpolicy="no-referrer"
+                                      onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
+                             </div>`;
                         } else if (msgType === 'file') {
                             contentHtml = `
-                                    <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                        <div class="file-icon">📄</div>
-                                        <div class="file-info">
-                                            <div class="file-name">Скачать файл</div>
-                                            <div class="file-action">Нажмите для загрузки</div>
-                                        </div>
-                                    </a>`;
+                             <a href="${m.txt}" target="_blank" class="chat-file-card">
+                                 <div class="file-icon">📄</div>
+                                 <div class="file-info">
+                                     <div class="file-name">Скачать файл</div>
+                                     <div class="file-action">Нажмите для загрузки</div>
+                                 </div>
+                             </a>`;
                         } else {
                             const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
                             contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
@@ -2477,10 +2486,10 @@
                             }
 
                             let metaHtml = `
-                                    <span class="msg-meta" style="${metaStyle}">
-                                        <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
-                                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                    </span>`;
+                             <span class="msg-meta" style="${metaStyle}">
+                                 <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
+                                 ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                             </span>`;
 
                             if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                             else div.innerHTML = contentHtml + metaHtml;
@@ -2503,6 +2512,7 @@
                 if (inp) inp.focus();
             }, 100);
         }
+
 
 
 
