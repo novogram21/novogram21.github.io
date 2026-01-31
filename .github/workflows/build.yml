@@ -9,45 +9,51 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. Скачиваем твой код
-      - uses: actions/checkout@v3
+      # 1. Скачиваем твой код (Обновлено до v4)
+      - uses: actions/checkout@v4
 
-      # 2. Настраиваем Node.js
+      # 2. Настраиваем Node.js (Обновлено до v4)
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      # 3. Создаем package.json и ставим библиотеки (Важный шаг исправления!)
+      # 3. Устанавливаем зависимости
       - name: Install Dependencies
         run: |
-          npm init -y
+          # Создаем package.json если его нет, чтобы не было ошибок
+          if [ ! -f package.json ]; then
+            npm init -y
+          fi
+          # Устанавливаем Capacitor
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      # 4. Подготовка папок (Раскладываем всё по местам)
+      # 4. Подготовка папок
       - name: Prepare Project Structure
         run: |
-          mkdir www
-          # Перемещаем файлы сайта в папку www
-          mv index.html www/
-          # Если есть скрипты или стили, кидаем их тоже (игнорируем ошибки если их нет)
-          mv *.js www/ 2>/dev/null || true
-          mv *.css www/ 2>/dev/null || true
-          mv *.png www/ 2>/dev/null || true
-          mv *.json www/ 2>/dev/null || true
+          mkdir -p www
           
-          # ВАЖНО: Возвращаем конфиги обратно в корень
-          # Они нужны Capacitor'у здесь, а не внутри www
-          mv www/capacitor.config.json . 2>/dev/null || true
-          mv www/package.json . 2>/dev/null || true
+          # Перемещаем файлы сайта в папку www (если они еще не там)
+          # Используем find, чтобы не перемещать саму папку www в себя
+          find . -maxdepth 1 -name "index.html" -exec mv {} www/ \;
+          find . -maxdepth 1 -name "*.js" -exec mv {} www/ \;
+          find . -maxdepth 1 -name "*.css" -exec mv {} www/ \;
+          find . -maxdepth 1 -name "*.png" -exec mv {} www/ \;
+          find . -maxdepth 1 -name "*.json" ! -name "capacitor.config.json" ! -name "package.json" -exec mv {} www/ \;
+          
+          # Убеждаемся, что конфиги лежат в корне (где их ищет Capacitor)
+          if [ -f www/capacitor.config.json ]; then mv www/capacitor.config.json .; fi
+          if [ -f www/package.json ]; then mv www/package.json .; fi
 
-          # Создаем андроид проект
-          npx cap add android
+          # Создаем андроид проект (только если папки еще нет)
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
-      # 5. Внедряем разрешения (Упрощенный и надежный способ)
-      # Добавляем права на Камеру, Микрофон, Экран и Интернет
+      # 5. Внедряем разрешения (Камера, Микрофон, Экран, Интернет)
       - name: Inject Permissions
         run: |
+          # Вставляем разрешения одной строкой в AndroidManifest.xml
           sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.WAKE_LOCK" />' android/app/src/main/AndroidManifest.xml
 
       # 6. Собираем APK
@@ -57,9 +63,9 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # 7. Загружаем результат
+      # 7. Загружаем результат (Обновлено до v4)
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: novogram-app
           path: android/app/build/outputs/apk/debug/app-debug.apk
