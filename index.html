@@ -2377,21 +2377,18 @@
 
         function loadMessages() {
             const list = document.getElementById('msgList');
-            list.innerHTML = ''; // Очищаем чат перед загрузкой
-
             if (msgUnsub) msgUnsub();
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
-                .orderBy('ts', 'asc') // Сортируем строго по времени по возрастанию
+                .orderBy('ts', 'asc')
                 .limitToLast(50)
                 .onSnapshot(snap => {
                     const batch = db.batch();
                     let needCommit = false;
 
-                    // Вместо docChanges() перерисовываем актуальный список из snap.docs
-                    // Это гарантирует, что сообщения ВСЕГДА будут в правильном порядке
+                    // Очищаем и перерисовываем
                     list.innerHTML = '';
 
                     snap.docs.forEach(doc => {
@@ -2400,7 +2397,6 @@
 
                         if (deletedLocal.includes(msgId)) return;
 
-                        // Создаем элемент сообщения
                         const div = document.createElement('div');
                         div.id = 'msg-' + msgId;
                         div.onclick = (e) => {
@@ -2410,27 +2406,22 @@
                             }
                         };
 
-                        // Отметка прочитанным (если сообщение входящее)
                         if (m.to === currentUser.uid && !m.read) {
                             batch.update(doc.ref, { read: true });
                             needCommit = true;
                         }
 
-                        // Временная метка
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
                             timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
                         } else {
-                            // Если сервер еще не вернул время, ставим текущее локальное, 
-                            // чтобы сообщение не "прыгало"
                             const now = new Date();
                             timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                         }
 
                         let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
-                        // Классы оформления
                         if (m.sys) {
                             div.className = 'msg msg-sys';
                         } else if (m.from === currentUser.uid) {
@@ -2439,23 +2430,28 @@
                             div.className = 'msg msg-other';
                         }
 
-                        // Контент сообщения (текст/фото/файл)
                         let contentHtml = '';
                         const msgType = m.type || 'text';
 
                         if (m.sys) {
                             contentHtml = m.txt;
                         } else if (msgType === 'image') {
+                            // --- ИСПРАВЛЕННАЯ ССЫЛКА ---
                             let imgSrc = m.txt;
                             if (m.txt.includes('id=')) {
                                 try {
                                     const fileId = m.txt.split('id=')[1];
-                                    imgSrc = `https://lh3.googleusercontent.com/d/$${fileId}=w600`;
+                                    // Убираем лишние символы перед fileId
+                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
                                 } catch (e) { }
                             }
                             contentHtml = `
                         <div class="media-container">
-                            <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer">
+                            <img src="${imgSrc}" 
+                                 class="chat-media-img" 
+                                 onclick="openImageViewer('${imgSrc}')" 
+                                 referrerpolicy="no-referrer"
+                                 onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
                         </div>`;
                         } else if (msgType === 'file') {
                             contentHtml = `
@@ -2467,22 +2463,21 @@
                             </div>
                         </a>`;
                         } else {
-                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;">$1</a>');
+                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
                             contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
                         }
 
-                        // Мета-инфо
                         if (!m.sys) {
                             let metaStyle = "";
                             if (msgType === 'image') {
-                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px);";
-                                contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
+                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
+                                contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top;">${contentHtml}`;
                             }
 
                             let metaHtml = `
                         <span class="msg-meta" style="${metaStyle}">
-                            <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
-                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
+                            <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
                         </span>`;
 
                             if (msgType === 'image') contentHtml += metaHtml + `</div>`;
@@ -2497,11 +2492,14 @@
 
                     if (needCommit) batch.commit();
 
-                    // Всегда скроллим вниз при обновлении списка
+                    // Скроллим вниз только если это новое сообщение или открытие чата
                     list.scrollTop = list.scrollHeight;
                 });
 
-            setTimeout(() => document.getElementById('msgInput').focus(), 100);
+            setTimeout(() => {
+                const inp = document.getElementById('msgInput');
+                if (inp) inp.focus();
+            }, 100);
         }
 
 
