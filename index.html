@@ -1585,6 +1585,7 @@
         let unreadCounts = {};
         let audioCtx = null;
         let toneTimer = null;
+        let chatStatusUnsub = null;
 
         // --- НОВЫЙ ПОИСК ---
         let searchTimeout = null;
@@ -2328,14 +2329,10 @@
         function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
 
         function openChat(fid, name, nick) {
-            // === НОВОЕ: Меняем URL ===
             window.location.hash = "chat/" + fid;
-            // ==========================
-
             currentFriendId = fid;
             currentChatId = [currentUser.uid, fid].sort().join('_');
 
-            // UI переключения (мобильный/десктоп)
             if (window.innerWidth <= 768) {
                 document.getElementById('mainSidebar').classList.add('hidden-mobile');
                 document.getElementById('mainChatArea').classList.add('active');
@@ -2343,23 +2340,32 @@
             document.getElementById('noChat').classList.add('hidden');
             document.getElementById('activeChat').classList.remove('hidden');
 
-            // ЗАГОЛОВОК ЧАТА
+            // Установка заголовка
             document.getElementById('chatTitle').innerHTML = `
-                                        <div>${name}</div>
-                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                    `;
+        <div>${name}</div>
+        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+    `;
 
-            // Статус "был в сети"
-            db.collection('users').doc(fid).onSnapshot(userSnap => {
-                if (userSnap.exists) {
+            // --- ИСПРАВЛЕННЫЙ БЛОК СТАТУСА ---
+            // 1. Если уже есть активный слушатель статуса — отключаем его
+            if (chatStatusUnsub) chatStatusUnsub();
+
+            // 2. Создаем новый слушатель
+            chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
+                // Проверяем, что мы всё еще в чате именно с этим пользователем
+                if (userSnap.exists && currentFriendId === fid) {
                     const userData = userSnap.data();
                     const statusEl = document.getElementById('chatStatus');
-                    if (statusEl) statusEl.innerText = formatLastSeen(userData.lastSeen);
+                    if (statusEl) {
+                        statusEl.innerText = formatLastSeen(userData.lastSeen);
+                    }
                 }
-            });
+            }, err => console.error("Ошибка слушателя статуса:", err));
+            // --------------------------------
 
-            // Загрузка сообщений
             loadMessages();
+
+            // Фокус на инпут (только для ПК)
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (!isMobile) {
                 setTimeout(() => {
@@ -2535,20 +2541,6 @@
 
 
 
-        function closeChat() {
-            // === НОВОЕ: Просто очищаем хеш ===
-            // Это триггернет событие hashchange, которое само закроет окна
-            if (window.location.hash) {
-                history.pushState("", document.title, window.location.pathname + window.location.search);
-                // Вызываем обработчик вручную, чтобы UI обновился мгновенно
-                handleHashChange();
-            } else {
-                // Если хеша и так не было, просто скрываем UI (как раньше)
-                performCloseUI();
-            }
-        }
-
-        // Вспомогательная функция, которая делает грязную работу по скрытию
         function performCloseUI() {
             document.getElementById('mainSidebar').classList.remove('hidden-mobile');
             document.getElementById('mainChatArea').classList.remove('active');
@@ -2561,6 +2553,12 @@
             if (msgUnsub) {
                 msgUnsub();
                 msgUnsub = null;
+            }
+
+            // --- ДОБАВЬТЕ ЭТО ---
+            if (chatStatusUnsub) {
+                chatStatusUnsub();
+                chatStatusUnsub = null;
             }
         }
 
