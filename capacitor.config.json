@@ -3,13 +3,6 @@
   "appName": "Novogram",
   "webDir": "www",
   "bundledWebRuntime": false,
-  "server": {
-    "url": "https://novogram21.github.io",
-    "cleartext": true,
-    "allowNavigation": [
-      "*"
-    ]
-  },
   "android": {
     "allowMixedContent": true
   }
