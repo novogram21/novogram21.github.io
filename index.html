@@ -2449,13 +2449,10 @@
                                                                                                                                                                                                                                                             `;
                         }
                         else if (msgType === 'video') {
-                            // === ВИДЕО (ИСПРАВЛЕНИЕ ДЛЯ GOOGLE DRIVE) ===
-                            // Гугл не дает стримить видео напрямую в тег <video> из-за CORS.
-                            // Решение: использовать iframe с режимом /preview.
-
+                            // === ВИДЕО (ИСПРАВЛЕНИЕ: ИСПОЛЬЗУЕМ IFRAME) ===
                             let fileId = null;
 
-                            // 1. Пытаемся достать ID файла из разных форматов ссылок
+                            // 1. Пытаемся достать ID файла из разных форматов ссылок Google Drive
                             if (m.txt.includes('id=')) {
                                 try { fileId = m.txt.split('id=')[1].split('&')[0]; } catch (e) { }
                             }
@@ -2464,23 +2461,24 @@
                             }
 
                             if (fileId) {
-                                // Используем iframe с /preview - это единственный надежный способ
+                                // Используем официальный плеер Google через iframe (/preview)
+                                // Это обходит блокировку CORS и гарантирует воспроизведение
                                 const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
 
                                 contentHtml = `
-                                    <div class="media-container" style="position: relative; width: 300px; height: 170px; background: #000;">
+                                    <div class="media-container" style="position: relative; width: 100%; max-width: 320px; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden;">
                                         <iframe src="${embedUrl}" 
                                                 width="100%" 
                                                 height="100%" 
                                                 frameborder="0" 
                                                 allow="autoplay; encrypted-media; fullscreen" 
                                                 allowfullscreen
-                                                style="border-radius: 12px; pointer-events: auto;">
+                                                style="display: block; width: 100%; height: 100%;">
                                         </iframe>
-                                        </div>
+                                    </div>
                                 `;
                             } else {
-                                // Если ссылка не с Гугла или ID не найден, пробуем старый метод
+                                // Если это не Google Drive (например, прямая ссылка на mp4), пробуем обычный плеер
                                 contentHtml = `
                                     <div class="media-container">
                                         <video src="${m.txt}" controls playsinline class="chat-media-video"></video>
