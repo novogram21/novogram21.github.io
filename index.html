@@ -2394,140 +2394,131 @@
         }
 
         function loadMessages() {
-            const list = document.getElementById('msgList');
-            // НЕ очищаем чат полностью, чтобы не было прыжков
+    const list = document.getElementById('msgList');
+    // НЕ очищаем list.innerHTML здесь, чтобы избежать белого экрана
+    
+    if (msgUnsub) msgUnsub();
 
-            if (msgUnsub) msgUnsub();
+    const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
-            const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
+    msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
+        .orderBy('ts', 'asc')
+        .limitToLast(50)
+        .onSnapshot(snap => {
+            const batch = db.batch();
+            let needCommit = false;
+            let shouldScroll = false;
 
-            msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
-                .orderBy('ts', 'asc')
-                .limitToLast(50)
-                .onSnapshot(snap => {
-                    const batch = db.batch();
-                    let needCommit = false;
-                    let shouldScroll = false;
-                    const isInitialLoad = list.children.length === 0;
+            // Проверяем, пустой ли чат сейчас (первая загрузка)
+            const isInitialLoad = list.children.length === 0;
 
-                    snap.docChanges().forEach(change => {
-                        const d = change.doc;
-                        const m = d.data();
-                        const msgId = d.id;
+            snap.docChanges().forEach(change => {
+                const d = change.doc;
+                const m = d.data();
+                const msgId = d.id;
 
-                        if (deletedLocal.includes(msgId)) return;
+                if (deletedLocal.includes(msgId)) return;
 
-                        // 1. Обработка удаления
-                        if (change.type === 'removed') {
-                            const el = document.getElementById('msg-' + msgId);
-                            if (el) el.remove();
-                            return;
-                        }
+                // --- ОБРАБОТКА УДАЛЕНИЯ ---
+                if (change.type === 'removed') {
+                    const el = document.getElementById('msg-' + msgId);
+                    if (el) el.remove();
+                    return;
+                }
 
-                        // 2. Поиск или создание элемента (предотвращает дубли и прыжки)
-                        let div = document.getElementById('msg-' + msgId);
-                        const isNewElement = !div;
+                // --- ПОИСК ИЛИ СОЗДАНИЕ ЭЛЕМЕНТА ---
+                let div = document.getElementById('msg-' + msgId);
+                const isNewElement = !div;
 
-                        if (isNewElement) {
-                            div = document.createElement('div');
-                            div.id = 'msg-' + msgId;
-                        }
+                if (isNewElement) {
+                    div = document.createElement('div');
+                    div.id = 'msg-' + msgId;
+                }
 
-                        // Ставим временную метку для физической сортировки в DOM
-                        const sortTs = m.ts ? m.ts.toMillis() : Date.now();
-                        div.setAttribute('data-ts', sortTs);
+                // Устанавливаем время для сортировки (используем timestamp или текущее время)
+                const sortTs = m.ts ? m.ts.toMillis() : Date.now();
+                div.setAttribute('data-ts', sortTs);
 
-                        // 3. Отметка прочитанным
-                        if (m.to === currentUser.uid && !m.read) {
-                            batch.update(d.ref, { read: true });
-                            needCommit = true;
-                        }
+                // --- ЛОГИКА ПРОЧИТАНО ---
+                if (m.to === currentUser.uid && !m.read) {
+                    batch.update(d.ref, { read: true });
+                    needCommit = true;
+                }
 
-                        // 4. Формирование времени
-                        let timeStr = '';
-                        if (m.ts) {
-                            const date = m.ts.toDate();
-                            timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                        } else {
-                            const now = new Date();
-                            timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-                        }
+                // --- ФОРМИРОВАНИЕ ВРЕМЕНИ ---
+                let timeStr = '';
+                if (m.ts) {
+                    const date = m.ts.toDate();
+                    timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                } else {
+                    const now = new Date();
+                    timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                }
 
-                        // 5. Оформление
-                        div.className = m.sys ? 'msg msg-sys' : (m.from === currentUser.uid ? 'msg msg-me' : 'msg msg-other');
+                // --- КЛАССЫ И ОФОРМЛЕНИЕ ---
+                div.className = m.sys ? 'msg msg-sys' : (m.from === currentUser.uid ? 'msg msg-me' : 'msg msg-other');
 
-                        let contentHtml = '';
-                        const msgType = m.type || 'text';
-                        const ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
+                // --- ГЕНЕРАЦИЯ КОНТЕНТА ---
+                let contentHtml = '';
+                const msgType = m.type || 'text';
+                const ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
-                        // --- КОНТЕНТ (ТЕКСТ / ФОТО / ВИДЕО / ФАЙЛ) ---
-                        if (m.sys) {
-                            contentHtml = m.txt;
-                        } else if (msgType === 'image') {
-                            let imgSrc = m.txt;
-                            if (m.txt.includes('id=')) {
-                                const fileId = m.txt.split('id=')[1];
-                                imgSrc = `https://lh3.googleusercontent.com/u/0/d/${fileId}=w600`;
-                            }
-                            contentHtml = `<div class="media-container"><img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer"></div>`;
-                        } else if (msgType === 'video') {
-                            let videoSrc = m.txt;
-                            if (m.txt.includes('id=')) {
-                                const fileId = m.txt.split('id=')[1];
-                                videoSrc = `https://lh3.googleusercontent.com/u/0/d/$${fileId}`;
-                            }
-                            contentHtml = `<div class="media-container video-wrapper"><video src="${videoSrc}" class="chat-media-video" controls playsinline preload="metadata"></video></div>`;
-                        } else if (msgType === 'file') {
-                            contentHtml = `<a href="${m.txt}" target="_blank" class="chat-file-card"><div class="file-icon">📄</div><div class="file-info"><div class="file-name">Файл</div><div class="file-action">Скачать</div></div></a>`;
-                        } else {
-                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;">$1</a>');
-                            contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
-                        }
-
-                        // 6. Мета-данные поверх медиа
-                        if (!m.sys) {
-                            const isMedia = (msgType === 'image' || msgType === 'video');
-                            let metaHtml = `<span class="msg-meta ${isMedia ? 'meta-overlay' : ''}">
-                        <span class="msg-time">${timeStr}</span>
-                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color:white; margin-left:3px; font-size:12px;">${ticksHtml}</span>` : ''}
-                    </span>`;
-
-                            if (isMedia) {
-                                div.innerHTML = `<div style="position: relative; display: inline-block; vertical-align: top;">${contentHtml}${metaHtml}</div>`;
-                            } else {
-                                div.innerHTML = contentHtml + metaHtml;
-                            }
-                        } else {
-                            div.innerHTML = contentHtml;
-                        }
-
-                        if (isNewElement) {
-                            list.appendChild(div);
-                            shouldScroll = true;
-                        }
-                    });
-
-                    if (needCommit) batch.commit();
-
-                    // --- ФИЗИЧЕСКАЯ СОРТИРОВКА В DOM ---
-                    // Собираем элементы, сортируем по времени и перевставляем (это убирает баг с перемешанными сообщениями)
-                    const children = Array.from(list.children);
-                    children.sort((a, b) => a.getAttribute('data-ts') - b.getAttribute('data-ts'));
-                    children.forEach(node => list.appendChild(node));
-
-                    // --- СКРОЛЛ ---
-                    if (shouldScroll || isInitialLoad) {
-                        setTimeout(() => {
-                            list.scrollTo({ top: list.scrollHeight, behavior: isInitialLoad ? 'auto' : 'smooth' });
-                        }, 50);
+                if (m.sys) {
+                    contentHtml = m.txt;
+                } else if (msgType === 'image') {
+                    let imgSrc = m.txt;
+                    if (m.txt.includes('id=')) {
+                        const fileId = m.txt.split('id=')[1];
+                        imgSrc = `https://lh3.googleusercontent.com/u/0/d/${fileId}=w600`;
                     }
-                });
+                    contentHtml = `<div class="media-container"><img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer"></div>`;
+                } else if (msgType === 'file') {
+                    contentHtml = `<a href="${m.txt}" target="_blank" class="chat-file-card"><div class="file-icon">📄</div><div class="file-info"><div class="file-name">Файл</div><div class="file-action">Скачать</div></div></a>`;
+                } else {
+                    const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;">$1</a>');
+                    contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
+                }
 
-            setTimeout(() => {
-                const inp = document.getElementById('msgInput');
-                if (inp) inp.focus();
-            }, 100);
-        }
+                // --- СБОРКА С МЕТОЙ ---
+                if (!m.sys) {
+                    let metaHtml = `<span class="msg-meta ${msgType === 'image' ? 'meta-overlay' : ''}">
+                        <span class="msg-time">${timeStr}</span>
+                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                    </span>`;
+                    
+                    if (msgType === 'image') {
+                        div.innerHTML = `<div style="position: relative; display: inline-block;">${contentHtml}${metaHtml}</div>`;
+                    } else {
+                        div.innerHTML = contentHtml + metaHtml;
+                    }
+                } else {
+                    div.innerHTML = contentHtml;
+                }
+
+                if (isNewElement) {
+                    list.appendChild(div);
+                    shouldScroll = true; // Скроллим только если добавилось новое сообщение
+                }
+            });
+
+            if (needCommit) batch.commit();
+
+            // --- УМНАЯ СОРТИРОВКА ---
+            // Собираем все сообщения, сортируем по атрибуту data-ts и расставляем в DOM
+            const children = Array.from(list.children);
+            children.sort((a, b) => a.getAttribute('data-ts') - b.getAttribute('data-ts'));
+            children.forEach(node => list.appendChild(node));
+
+            // --- ПЛАВНЫЙ СКРОЛЛ ---
+            if (shouldScroll || isInitialLoad) {
+                setTimeout(() => {
+                    list.scrollTo({ top: list.scrollHeight, behavior: isInitialLoad ? 'auto' : 'smooth' });
+                }, 50);
+            }
+        });
+
+    setTimeout(() => { document.getElementById('msgInput').focus(); }, 100);
+}
 
 
 
