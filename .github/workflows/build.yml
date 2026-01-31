@@ -9,32 +9,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-
+      # 1. Скачиваем твой код
       - uses: actions/checkout@v4
 
-
+      # 2. Ставим Java 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
+      # 3. Настраиваем Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
+      # 4. Устанавливаем зависимости
       - name: Install Dependencies
         run: |
-          # Удаляем старые папки если они есть, чтобы начать с чистого листа
           rm -rf android www package.json package-lock.json
-
-          # Создаем чистый package.json
           npm init -y
-          
-          # Устанавливаем Capacitor
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
+      # 5. Подготовка папок (ИСПРАВЛЕНО)
       - name: Prepare Project Structure
         run: |
           mkdir -p www
@@ -44,26 +42,28 @@ jobs:
           find . -maxdepth 1 -name "*.js" -exec cp {} www/ \;
           find . -maxdepth 1 -name "*.css" -exec cp {} www/ \;
           find . -maxdepth 1 -name "*.png" -exec cp {} www/ \;
+          # Копируем json файлы, КРОМЕ конфига и package.json (они должны остаться в корне)
           find . -maxdepth 1 -name "*.json" ! -name "capacitor.config.json" ! -name "package.json" -exec cp {} www/ \;
           
-          # Копируем конфиги в корень (cp вместо mv, чтобы не потерять исходники)
-          if [ -f capacitor.config.json ]; then cp capacitor.config.json .; fi
+          # ОШИБОЧНАЯ СТРОКА УДАЛЕНА. 
+          # capacitor.config.json уже лежит в корне, копировать его не нужно.
 
-          # Создаем андроид проект с нуля
+          # Создаем андроид проект
           npx cap add android
 
+      # 6. Внедряем разрешения
       - name: Inject Permissions
         run: |
-          # Вставляем разрешения одной строкой
           sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.WAKE_LOCK" />' android/app/src/main/AndroidManifest.xml
 
+      # 7. Собираем APK
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
-          # Запускаем сборку с подавлением лишних ошибок
           ./gradlew assembleDebug --stacktrace
 
+      # 8. Загружаем результат
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
