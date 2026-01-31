@@ -1490,6 +1490,11 @@
             iceCandidatePoolSize: 10
         };
 
+     
+        let oldestMessageDoc = null; 
+        let isLoadingHistory = false; 
+        let isChatFullyLoaded = false; 
+        const MESSAGES_PER_PAGE = 20; 
         let currentUser = null;
         let currentFriendId = null;
         let currentCallId = null;
@@ -1593,12 +1598,12 @@
                         const displayNick = user.username ? `@${user.username}` : 'none';
 
                         div.innerHTML = `
-                                                                                                                                                                                                            ${avatarSrc}
-                                                                                                                                                                                                            <div>
-                                                                                                                                                                                                                <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                                                                                                <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                ${avatarSrc}
+                                                                                                                                                                                                                <div>
+                                                                                                                                                                                                                    <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                            `;
 
                         div.onclick = () => {
                             sendFriendRequestToId(user.id); // Новая функция отправки
@@ -2007,16 +2012,16 @@
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
 
                         div.innerHTML = `
-                                                                                                                                                                    ${avatar}
-                                                                                                                                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                    </div>
-                                                                                                                                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                    </div>
-                                                                                                                                                                `;
+                                                                                                                                                                        ${avatar}
+                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                        </div>
+                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                        </div>
+                                                                                                                                                                    `;
                         list.appendChild(div);
                     });
                 });
@@ -2185,19 +2190,19 @@
 
                         // Вставляем HTML (Обрати внимание: id для last-msg и badge остались те же)
                         div.innerHTML = `
-                                                ${avatarHtml}
-                                                <div class="user-name">${fName}</div>
-                                                <div class="last-msg-row">
-                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                </div>
-                                                <div class="meta-column">
-                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                    <div class="meta-bottom-row">
-                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                    ${avatarHtml}
+                                                    <div class="user-name">${fName}</div>
+                                                    <div class="last-msg-row">
+                                                        <span class="last-msg" id="last-${chatId}">...</span>
                                                     </div>
-                                                </div>
-                                            `;
+                                                    <div class="meta-column">
+                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                        <div class="meta-bottom-row">
+                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                        </div>
+                                                    </div>
+                                                `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -2272,9 +2277,9 @@
 
             // ЗАГОЛОВОК ЧАТА
             document.getElementById('chatTitle').innerHTML = `
-                            <div>${name}</div>
-                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                        `;
+                                <div>${name}</div>
+                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                            `;
 
             // Статус "был в сети"
             db.collection('users').doc(fid).onSnapshot(userSnap => {
@@ -2300,22 +2305,38 @@
             const list = document.getElementById('msgList');
             list.innerHTML = '';
 
+            // Сброс переменных пагинации
+            oldestMessageDoc = null;
+            isLoadingHistory = false;
+            isChatFullyLoaded = false;
+
+            // Отписываемся от старого слушателя
             if (msgUnsub) msgUnsub();
 
-            const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
+            // Удаляем старый обработчик скролла (чтобы не дублировался)
+            list.onscroll = null;
 
+            // === СЛУШАТЕЛЬ НОВЫХ СООБЩЕНИЙ (И ПЕРВЫХ 20) ===
+            // Мы слушаем только последние 20. Это очень быстро.
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
-                .orderBy('ts')
-                .limitToLast(50)
+                .orderBy('ts') // По возрастанию (старые -> новые)
+                .limitToLast(MESSAGES_PER_PAGE)
                 .onSnapshot(snap => {
                     const batch = db.batch();
                     let needCommit = false;
                     let hasNewMessages = false;
+                    let isFirstLoad = oldestMessageDoc === null;
+
+                    // Если это первая загрузка, запоминаем самое старое сообщение (первое в списке)
+                    if (isFirstLoad && !snap.empty) {
+                        oldestMessageDoc = snap.docs[0];
+                    }
 
                     snap.docChanges().forEach(change => {
                         const d = change.doc;
                         const m = d.data();
                         const msgId = d.id;
+                        const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
                         if (deletedLocal.includes(msgId)) return;
 
@@ -2325,135 +2346,55 @@
                             return;
                         }
 
+                        // Проверяем, есть ли уже такое сообщение (чтобы не дублировать при подгрузке истории)
                         let div = document.getElementById('msg-' + msgId);
                         const isNew = !div;
 
                         if (isNew) {
-                            div = document.createElement('div');
-                            div.id = 'msg-' + msgId;
-                            div.onclick = (e) => {
-                                if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
-                                    e.stopPropagation();
-                                    openActionSheet(msgId, m.from === currentUser.uid);
-                                }
-                            };
-                        }
+                            // Используем нашу новую функцию создания
+                            div = createMessageElement(msgId, m);
 
-                        // 3. Отметка прочитанным
-                        if (change.type === 'added' && m.to === currentUser.uid && !m.read) {
-                            batch.update(d.ref, { read: true });
-                            needCommit = true;
-                        }
-
-                        // --- ГЕНЕРАЦИЯ HTML ---
-                        let timeStr = '';
-                        if (m.ts) {
-                            const date = m.ts.toDate();
-                            timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                        }
-
-                        let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
-
-                        // Классы
-                        if (m.sys) {
-                            div.className = 'msg msg-sys';
-                        } else if (m.from === currentUser.uid) {
-                            div.className = 'msg msg-me';
-                        } else {
-                            div.className = 'msg msg-other';
-                        }
-
-                        // === КОНТЕНТ ===
-                        let contentHtml = '';
-                        const msgType = m.type || 'text';
-
-                        if (m.sys) {
-                            contentHtml = m.txt;
-                        }
-                        else if (msgType === 'image') {
-                            // === КАРТИНКА (ВЫСОКОЕ КАЧЕСТВО) ===
-                            let imgSrc = m.txt;
-
-                            // Парсим ID и делаем High-Res ссылку (lh3.../d/ID=w1000)
-                            if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
-                                try {
-                                    const fileId = m.txt.split('id=')[1];
-                                    // =w600 - оптимально для чата (быстро грузит, четко выглядит)
-                                    // При клике откроется полная версия
-                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
-                                } catch (e) { }
+                            // Если это новый входящий - отмечаем прочитанным
+                            if (change.type === 'added' && m.to === currentUser.uid && !m.read) {
+                                batch.update(d.ref, { read: true });
+                                needCommit = true;
                             }
 
-                            // Обрати внимание на onclick="openImageViewer(...)"
-                            contentHtml = `
-                                        <div class="media-container">
-                                            <img src="${imgSrc}"
-                                                 class="chat-media-img"
-                                                 onclick="openImageViewer('${imgSrc}')"
-                                                 referrerpolicy="no-referrer"
-                                                 onload="this.parentElement.style.background='transparent'"
-                                                 onerror="this.src='https://placehold.co/200x200?text=Error';">
-                                        </div>
-                                    `;
-                        }
-                        else if (msgType === 'file') {
-                            // ФАЙЛ
-                            contentHtml = `
-                                        <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                            <div class="file-icon">📄</div>
-                                            <div class="file-info">
-                                                <div class="file-name">Скачать файл</div>
-                                                <div class="file-action">Нажмите для загрузки</div>
-                                            </div>
-                                        </a>
-                                    `;
-                        }
-                        else {
-                            // ТЕКСТ
-                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
-                            contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
-                        }
-
-                        // Мета
-                        if (!m.sys) {
-                            let metaStyle = "";
-                            // Для картинок мета-данные красивее смотрятся поверх, в углу (как в ТГ)
-                            if (msgType === 'image') {
-                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px);";
-                                // Добавляем position: relative контейнеру, если это картинка
-                                contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
-                            }
-
-                            let metaHtml = `
-                                        <span class="msg-meta" style="${metaStyle}">
-                                            <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
-                                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
-                                        </span>
-                                    `;
-
-                            if (msgType === 'image') contentHtml += metaHtml + `</div>`; // Закрываем wrapper
-                            else div.innerHTML = contentHtml + metaHtml;
-
-                            if (msgType === 'image') div.innerHTML = contentHtml; // Для картинок HTML уже собран с метой
-                        } else {
-                            div.innerHTML = contentHtml;
-                        }
-
-                        if (isNew) {
                             list.appendChild(div);
                             hasNewMessages = true;
+                        } else {
+                            // Если сообщение изменилось (например, стало прочитанным), можно обновить галочки
+                            if (change.type === 'modified') {
+                                const newDiv = createMessageElement(msgId, m);
+                                list.replaceChild(newDiv, div);
+                            }
                         }
                     });
 
                     if (needCommit) batch.commit();
 
+                    // Автоскролл вниз только при первой загрузке или если мы внизу
                     if (hasNewMessages) {
-                        setTimeout(() => {
-                            list.scrollTop = list.scrollHeight;
-                        }, 50);
+                        // Простая логика: если это первая загрузка или пользователь был внизу
+                        const isAtBottom = (list.scrollHeight - list.scrollTop - list.clientHeight) < 100;
+
+                        if (isFirstLoad || isAtBottom) {
+                            setTimeout(() => {
+                                list.scrollTop = list.scrollHeight;
+                            }, 50);
+                        }
                     }
                 });
 
+            // === ОБРАБОТЧИК СКРОЛЛА (ДЛЯ ИСТОРИИ) ===
+            list.onscroll = () => {
+                // Если скролл поднялся до самого верха (0)
+                if (list.scrollTop === 0) {
+                    loadHistory();
+                }
+            };
+
+            // Фокус на ввод
             setTimeout(() => document.getElementById('msgInput').focus(), 100);
         }
 
@@ -2959,14 +2900,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                <div style="display:flex; align-items:center;">
-                                                    ${avatarHtml}
-                                                    <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                        <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                        <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                    <div style="display:flex; align-items:center;">
+                                                        ${avatarHtml}
+                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            `;
+                                                `;
 
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
@@ -3774,9 +3715,9 @@
                     document.getElementById('activeChat').classList.remove('hidden');
 
                     document.getElementById('chatTitle').innerHTML = `
-                                    <div>${name}</div>
-                                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                `;
+                                        <div>${name}</div>
+                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                    `;
 
                     loadMessages();
                 } else {
@@ -3807,22 +3748,22 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file); // Берем картинку локально
                 contentHtml = `
-                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                        <div class="upload-spinner"></div>
-                    </div>
-                `;
+                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                            <div class="upload-spinner"></div>
+                        </div>
+                    `;
             } else {
                 contentHtml = `
-                    <div class="chat-file-card" style="opacity: 0.7;">
-                        <div class="file-icon">📄</div>
-                        <div class="file-info">
-                            <div class="file-name">${file.name}</div>
-                            <div class="file-action">Загрузка...</div>
+                        <div class="chat-file-card" style="opacity: 0.7;">
+                            <div class="file-icon">📄</div>
+                            <div class="file-info">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-action">Загрузка...</div>
+                            </div>
+                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                         </div>
-                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                    </div>
-                `;
+                    `;
             }
 
             div.innerHTML = contentHtml;
@@ -3849,24 +3790,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                        <div class="upload-spinner"></div>
-                    </div>
-                `;
+                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                            <div class="upload-spinner"></div>
+                        </div>
+                    `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                    <div class="chat-file-card" style="opacity: 0.7;">
-                        <div class="file-icon">📄</div>
-                        <div class="file-info">
-                            <div class="file-name">${file.name}</div>
-                            <div class="file-action">Загрузка...</div>
+                        <div class="chat-file-card" style="opacity: 0.7;">
+                            <div class="file-icon">📄</div>
+                            <div class="file-info">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-action">Загрузка...</div>
+                            </div>
+                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                         </div>
-                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                    </div>
-                `;
+                    `;
             }
 
             div.innerHTML = contentHtml;
@@ -3967,6 +3908,164 @@
             }, 300);
         }
 
+        // Вспомогательная функция: создает HTML элемент сообщения
+        function createMessageElement(id, data, isHistory = false) {
+            const div = document.createElement('div');
+            div.id = 'msg-' + id;
+
+            // Обработчик клика (для меню действий)
+            div.onclick = (e) => {
+                if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
+                    e.stopPropagation();
+                    openActionSheet(id, data.from === currentUser.uid);
+                }
+            };
+
+            // Определение классов
+            const msgType = data.type || 'text';
+            if (data.sys) {
+                div.className = 'msg msg-sys';
+            } else if (data.from === currentUser.uid) {
+                div.className = 'msg msg-me';
+            } else {
+                div.className = 'msg msg-other';
+            }
+
+            // Время
+            let timeStr = '';
+            if (data.ts) {
+                const date = data.ts.toDate();
+                timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+            }
+
+            // Галочки
+            let ticksHtml = data.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
+
+            // Контент
+            let contentHtml = '';
+
+            if (data.sys) {
+                contentHtml = data.txt;
+            } else if (msgType === 'image') {
+                let imgSrc = data.txt;
+                if (data.txt.includes('drive.google.com') && data.txt.includes('id=')) {
+                    try {
+                        const fileId = data.txt.split('id=')[1];
+                        imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
+                    } catch (e) { }
+                }
+                contentHtml = `
+            <div class="media-container">
+                <img src="${imgSrc}" class="chat-media-img"
+                     onclick="openImageViewer('${imgSrc}')"
+                     referrerpolicy="no-referrer"
+                     onload="this.parentElement.style.background='transparent'"
+                     onerror="this.src='https://placehold.co/200x200?text=Error';">
+            </div>`;
+            } else if (msgType === 'file') {
+                contentHtml = `
+            <a href="${data.txt}" target="_blank" class="chat-file-card">
+                <div class="file-icon">📄</div>
+                <div class="file-info">
+                    <div class="file-name">Скачать файл</div>
+                    <div class="file-action">Нажмите для загрузки</div>
+                </div>
+            </a>`;
+            } else {
+                const txtWithLinks = data.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
+            }
+
+            // Сборка с метой
+            if (!data.sys) {
+                let metaStyle = "";
+                if (msgType === 'image') {
+                    metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px);";
+                    contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
+                }
+
+                let metaHtml = `
+            <span class="msg-meta" style="${metaStyle}">
+                <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
+                ${data.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
+            </span>`;
+
+                if (msgType === 'image') contentHtml += metaHtml + `</div>`;
+                else div.innerHTML = contentHtml + metaHtml;
+            } else {
+                div.innerHTML = contentHtml;
+            }
+
+            return div;
+        }
+
+        async function loadHistory() {
+            if (isLoadingHistory || isChatFullyLoaded || !oldestMessageDoc) return;
+
+            isLoadingHistory = true;
+            const list = document.getElementById('msgList');
+
+            // 1. Показываем лоадер сверху (опционально, но красиво)
+            const loader = document.createElement('div');
+            loader.innerText = "Загрузка истории...";
+            loader.style.textAlign = "center";
+            loader.style.fontSize = "12px";
+            loader.style.padding = "10px";
+            loader.style.color = "#888";
+            loader.id = "historyLoader";
+            list.prepend(loader);
+
+            // 2. Запоминаем текущую высоту скролла, чтобы не было скачка
+            const previousScrollHeight = list.scrollHeight;
+            const previousScrollTop = list.scrollTop;
+
+            try {
+                // 3. Делаем запрос: взять сообщения СТАРШЕ (меньше по дате), чем oldestMessageDoc
+                const snap = await db.collection('chats').doc(currentChatId).collection('msgs')
+                    .orderBy('ts', 'desc') // Сортируем от новых к старым
+                    .startAfter(oldestMessageDoc) // Начинаем ПОСЛЕ самого старого, что у нас есть
+                    .limit(MESSAGES_PER_PAGE)
+                    .get();
+
+                if (snap.empty) {
+                    isChatFullyLoaded = true;
+                    loader.innerText = "История загружена полностью";
+                    setTimeout(() => loader.remove(), 2000);
+                    return;
+                }
+
+                // Обновляем курсор на самое старое из загруженных (последнее в массиве, т.к. desc)
+                oldestMessageDoc = snap.docs[snap.docs.length - 1];
+
+                // 4. Добавляем сообщения в DOM (в обратном порядке, чтобы они шли снизу вверх)
+                // snap.docs идет: [Вчера 23:59, Вчера 23:58 ...]. Нам нужно вставить их перед текущими.
+
+                // Удаляем лоадер перед вставкой
+                loader.remove();
+
+                // Фрагмент документа для оптимизации
+                const fragment = document.createDocumentFragment();
+
+                snap.docs.forEach(doc => {
+                    const el = createMessageElement(doc.id, doc.data(), true);
+                    fragment.prepend(el); // Вставляем в начало фрагмента (чтобы сохранить хронологию)
+                });
+
+                list.prepend(fragment);
+
+                // 5. КОРРЕКЦИЯ СКРОЛЛА (Магия Telegram)
+                // Вычисляем, насколько увеличилась высота контента
+                const newScrollHeight = list.scrollHeight;
+                // Смещаем скролл вниз на разницу, чтобы визуально пользователь остался на том же сообщении
+                list.scrollTop = newScrollHeight - previousScrollHeight;
+
+            } catch (e) {
+                console.error("Ошибка загрузки истории:", e);
+                loader.remove();
+            } finally {
+                isLoadingHistory = false;
+            }
+        }
 
 
     </script>
