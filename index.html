@@ -2398,25 +2398,28 @@
 
         function loadMessages() {
             const list = document.getElementById('msgList');
+
+            // 1. Отписываемся от прослушивания старого чата
             if (msgUnsub) msgUnsub();
+
+            // 2. ИСПРАВЛЕНИЕ: Очищаем экран СРАЗУ ЖЕ, не дожидаясь загрузки новых данных
+            list.innerHTML = '';
+            // Можно добавить крутилку, если хочется: list.innerHTML = '<div style="text-align:center; padding:20px; color:#555;">Загрузка...</div>';
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
                 .orderBy('ts', 'asc')
                 .limitToLast(50)
-                // Добавляем опцию для метаданных
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
 
-                    // Если данные пришли из локального кэша и их мало (часто бывает 1 сообщение-заглушка),
-                    // то пропускаем отрисовку и ждем данные с сервера.
-                    // Это решает проблему "сначала одно сообщение, потом все".
+                    // Пропуск "пустого" кэша (из предыдущего исправления)
                     if (snap.metadata.fromCache && snap.docs.length < 2 && snap.docs.length > 0) return;
 
                     const batch = db.batch();
                     let needCommit = false;
 
-                    // Очищаем и перерисовываем
+                    // Внутри тоже очищаем, чтобы при обновлении (приходе нового сообщения) не дублировалось
                     list.innerHTML = '';
 
                     snap.docs.forEach(doc => {
@@ -2527,6 +2530,7 @@
                 if (inp) inp.focus();
             }, 100);
         }
+
 
 
 
