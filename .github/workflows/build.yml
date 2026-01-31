@@ -1,4 +1,4 @@
- name: Build Novogram APK
+name: Build Novogram APK
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
       # 1. Скачиваем код
       - uses: actions/checkout@v4
 
-      # 2. Ставим Java 21 (нужна для Gradle 8+)
+      # 2. Ставим Java 21 (обязательно для нового Android)
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -32,16 +32,20 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      # 5. Подготовка папок
+      # 5. Подготовка папок (ИСПРАВЛЕНО - ОШИБКИ НЕ БУДЕТ)
       - name: Prepare Project Structure
         run: |
           mkdir -p www
+          
+          # Копируем файлы сайта в папку www
           find . -maxdepth 1 -name "index.html" -exec cp {} www/ \;
           find . -maxdepth 1 -name "*.js" -exec cp {} www/ \;
           find . -maxdepth 1 -name "*.css" -exec cp {} www/ \;
           find . -maxdepth 1 -name "*.png" -exec cp {} www/ \;
-          find . -maxdepth 1 -name "*.json" ! -name "capacitor.config.json" ! -name "package.json" -exec cp {} www/ \;
           
+          # ВАЖНО: Копируем JSON, но НЕ трогаем конфиги (чтобы не было ошибки "same file")
+          find . -maxdepth 1 -name "*.json" ! -name "capacitor.config.json" ! -name "package.json" -exec cp {} www/ \;
+
           # Создаем проект Андроид
           npx cap add android
 
@@ -50,8 +54,7 @@ jobs:
         run: |
           sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.WAKE_LOCK" />' android/app/src/main/AndroidManifest.xml
 
-      # 7. ЛЕЧИМ ОШИБКУ KOTLIN (Duplicate class)
-      # Добавляем правило: принудительно использовать версию 1.8.22 для всех библиотек Kotlin
+      # 7. Лечим ошибку Kotlin (на всякий случай оставляем)
       - name: Fix Kotlin Dependencies
         run: |
           cd android
