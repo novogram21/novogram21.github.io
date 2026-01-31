@@ -2117,11 +2117,27 @@
 
                         // Текст сообщения
                         if (lastEl) {
-                            let shortTxt = lastData.txt;
-                            if (shortTxt.length > 25) shortTxt = shortTxt.substring(0, 25) + '...';
-                            if (lastData.from === currentUser.uid) shortTxt = 'Вы: ' + shortTxt;
-                            lastEl.innerHTML = shortTxt;
+                            const type = lastData.type || 'text'; // Получаем тип сообщения
+                            let displayText = '';
+
+                            if (type === 'image') {
+                                displayText = '📷 Фотография';
+                            } else if (type === 'file') {
+                                displayText = '📄 Файл';
+                            } else {
+                                // Обычный текст - обрезаем, если длинный
+                                displayText = lastData.txt || '';
+                                if (displayText.length > 25) displayText = displayText.substring(0, 25) + '...';
+                            }
+
+                            // Добавляем приставку "Вы:", если отправитель - текущий пользователь
+                            if (lastData.from === currentUser.uid) {
+                                displayText = 'Вы: ' + displayText;
+                            }
+
+                            lastEl.innerHTML = displayText;
                         }
+
 
                         // Время сообщения
                         if (lastData.ts) timeToDisplay = lastData.ts.toMillis();
