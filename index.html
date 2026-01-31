@@ -1004,164 +1004,6 @@
             background: #222; /* Фон пока грузится */
         }
 
-        .custom-video-container {
-            position: relative;
-            display: inline-block;
-            overflow: hidden;
-            border-radius: 12px;
-            max-width: 320px;
-            background: #000;
-            line-height: 0;
-            cursor: pointer;
-        }
-
-        /* --- СТИЛИ ДЛЯ ВИДЕО В ЧАТЕ --- */
-        .chat-media-video {
-            width: 100%;
-            height: auto;
-            max-height: 400px;
-            display: block;
-            object-fit: cover;
-        }
-
-        .center-play-btn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            padding-left: 4px; /* Визуальная центровка треугольника */
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            transition: all 0.2s;
-            z-index: 10;
-        }
-
-        .video-controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            padding: 25px 10px 10px 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 15;
-        }
-
-        .custom-video-container:hover .video-controls,
-        .custom-video-container.paused .video-controls {
-            opacity: 1;
-        }
-
-        .video-progress-container {
-            width: 100%;
-            height: 4px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 2px;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .video-progress-bar {
-            height: 100%;
-            background: #2481cc; /* Цвет Телеграма */
-            width: 0%;
-            border-radius: 2px;
-            position: relative;
-        }
-
-            .video-progress-bar::after {
-                content: '';
-                position: absolute;
-                right: -4px;
-                top: -3px;
-                width: 10px;
-                height: 10px;
-                background: white;
-                border-radius: 50%;
-                transform: scale(0);
-                transition: transform 0.1s;
-            }
-
-        .video-progress-container:hover .video-progress-bar::after {
-            transform: scale(1);
-        }
-
-        .video-controls-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .fullscreen-btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-            padding: 0;
-        }
-
-        .video-msg-meta {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 2px 8px;
-            border-radius: 12px;
-            backdrop-filter: blur(2px);
-            z-index: 5;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: white;
-            font-size: 11px;
-            pointer-events: none;
-        }
-
-        .custom-video-container.playing .center-play-btn {
-            opacity: 0; /* Скрываем, когда играет */
-            transform: translate(-50%, -50%) scale(1.5); /* Эффект "взрыва" */
-            pointer-events: none;
-        }
-
-        .video-meta-overlay {
-            position: absolute;
-            bottom: 6px;
-            right: 6px;
-            background: rgba(0, 0, 0, 0.5); /* Полупрозрачный фон */
-            padding: 2px 8px;
-            border-radius: 10px;
-            backdrop-filter: blur(2px);
-            z-index: 5;
-            pointer-events: none; /* Чтобы клики проходили сквозь плашку */
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-            .video-meta-overlay .msg-time {
-                color: white;
-                font-size: 11px;
-            }
-
-            .video-meta-overlay .msg-ticks {
-                font-size: 12px;
-            }
 
         /* Стили для файлов */
         .chat-file-card {
@@ -1240,13 +1082,10 @@
             }
 
         .media-container {
-            position: relative;
-            display: inline-block;
             overflow: hidden;
-            border-radius: 12px; /* Скругление как у картинок */
-            max-width: 320px;
-            background: #000; /* Черный фон пока грузится */
-            line-height: 0; /* Убирает отступ снизу */
+            border-radius: 12px;
+            background: transparent; /* Убираем черный фон */
+            display: inline-block;
         }
 
 
@@ -2530,75 +2369,6 @@
             }
         }
 
-
-
-        // --- ЛОГИКА КАСТОМНОГО ПЛЕЕРА ---
-
-        function toggleVideoPlay(container) {
-            const video = container.querySelector('video');
-            const btn = container.querySelector('.center-play-btn');
-
-            if (video.paused) {
-                // Ставим на паузу все остальные видео
-                document.querySelectorAll('video').forEach(v => {
-                    if (v !== video) {
-                        v.pause();
-                        v.parentElement.classList.remove('playing');
-                        v.parentElement.classList.add('paused');
-                    }
-                });
-
-                video.play();
-                container.classList.add('playing');
-                container.classList.remove('paused');
-            } else {
-                video.pause();
-                container.classList.remove('playing');
-                container.classList.add('paused');
-            }
-        }
-
-        function updateVideoProgress(video) {
-            const container = video.parentElement;
-            const bar = container.querySelector('.video-progress-bar');
-            const timeDisplay = container.querySelector('.video-time');
-
-            const percent = (video.currentTime / video.duration) * 100;
-            bar.style.width = `${percent}%`;
-
-            // Форматируем время 0:00
-            const curMins = Math.floor(video.currentTime / 60);
-            const curSecs = Math.floor(video.currentTime % 60).toString().padStart(2, '0');
-            const durMins = Math.floor((video.duration || 0) / 60);
-            const durSecs = Math.floor((video.duration || 0) % 60).toString().padStart(2, '0');
-
-            timeDisplay.innerText = `${curMins}:${curSecs} / ${durMins}:${durSecs}`;
-
-            if (video.ended) {
-                container.classList.remove('playing');
-                container.classList.add('paused');
-            }
-        }
-
-        function seekVideo(e, progressContainer) {
-            e.stopPropagation(); // Чтобы не сработал клик по контейнеру (пауза)
-            const video = progressContainer.parentElement.parentElement.querySelector('video');
-            const rect = progressContainer.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const percent = clickX / rect.width;
-
-            video.currentTime = percent * video.duration;
-        }
-
-        function toggleFullscreen(btn) {
-            const container = btn.closest('.custom-video-container');
-            const video = container.querySelector('video');
-
-            if (video.requestFullscreen) video.requestFullscreen();
-            else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen(); // Safari
-            else if (video.msRequestFullscreen) video.msRequestFullscreen();
-        }
-
         function loadMessages() {
             const list = document.getElementById('msgList');
             list.innerHTML = '';
@@ -2635,48 +2405,38 @@
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
                             div.onclick = (e) => {
-                                // Игнорируем клики по медиа и контролам
-                                if (!e.target.closest('.custom-video-container') && e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
+                                if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
                                     e.stopPropagation();
                                     openActionSheet(msgId, m.from === currentUser.uid);
                                 }
                             };
                         }
 
+                        // 3. Отметка прочитанным
                         if (change.type === 'added' && m.to === currentUser.uid && !m.read) {
                             batch.update(d.ref, { read: true });
                             needCommit = true;
                         }
 
-                        // --- МЕТА ДАННЫЕ ---
+                        // --- ГЕНЕРАЦИЯ HTML ---
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
                             timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
                         }
-                        let ticksHtml = m.read ? '<span style="margin-right: -2px;">✓</span>✓' : '✓';
 
-                        // Мета для видео (вверху справа)
-                        const metaVideoHtml = `
-                            <div class="video-msg-meta">
-                                <span class="msg-time">${timeStr}</span>
-                                ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                            </div>
-                        `;
-
-                        // Мета стандартная
-                        const metaStandardHtml = `
-                            <span class="msg-meta">
-                                <span class="msg-time" style="color: rgba(255,255,255,0.7);">${timeStr}</span>
-                                ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                            </span>
-                        `;
+                        let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
                         // Классы
-                        if (m.sys) { div.className = 'msg msg-sys'; }
-                        else if (m.from === currentUser.uid) { div.className = 'msg msg-me'; }
-                        else { div.className = 'msg msg-other'; }
+                        if (m.sys) {
+                            div.className = 'msg msg-sys';
+                        } else if (m.from === currentUser.uid) {
+                            div.className = 'msg msg-me';
+                        } else {
+                            div.className = 'msg msg-other';
+                        }
 
+                        // === КОНТЕНТ ===
                         let contentHtml = '';
                         const msgType = m.type || 'text';
 
@@ -2684,72 +2444,73 @@
                             contentHtml = m.txt;
                         }
                         else if (msgType === 'image') {
+                            // === КАРТИНКА (ВЫСОКОЕ КАЧЕСТВО) ===
                             let imgSrc = m.txt;
+
+                            // Парсим ID и делаем High-Res ссылку (lh3.../d/ID=w1000)
                             if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
-                                try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://googleusercontent.com/profile/picture/0{fileId}=w600`; } catch (e) { }
-                            }
-                            contentHtml = `
-                                <div class="media-container">
-                                    <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" onload="this.parentElement.style.background='transparent'" onerror="this.src='https://placehold.co/200x200?text=Error';">
-                                    <div class="video-msg-meta" style="bottom: 8px; top: auto; right: 8px;">
-                                        <span class="msg-time">${timeStr}</span>
-                                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        else if (msgType === 'video') {
-                            // === КАСТОМНЫЙ ВИДЕО ПЛЕЕР ===
-                            let vidSrc = m.txt;
-
-                            // Фикс ссылок Google Drive
-                            if (vidSrc.includes('drive.google.com') && vidSrc.includes('/file/d/')) {
                                 try {
-                                    const fileId = vidSrc.split('/file/d/')[1].split('/')[0];
-                                    vidSrc = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                    const fileId = m.txt.split('id=')[1];
+                                    // =w600 - оптимально для чата (быстро грузит, четко выглядит)
+                                    // При клике откроется полная версия
+                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
                                 } catch (e) { }
-                            } else if (vidSrc.includes('drive.google.com') && !vidSrc.includes('export=download')) {
-                                if (vidSrc.includes('id=')) vidSrc = vidSrc.replace('/view', '').replace('open?', 'uc?export=download&');
                             }
 
+                            // Обрати внимание на onclick="openImageViewer(...)"
                             contentHtml = `
-                                <div class="custom-video-container paused" onclick="toggleVideoPlay(this)">
-                                    <video src="${vidSrc}" class="chat-media-video" playsinline ontimeupdate="updateVideoProgress(this)"></video>
-                                    
-                                    <div class="center-play-btn">▶</div>
-                                    
-                                    ${metaVideoHtml}
-
-                                    <div class="video-controls" onclick="event.stopPropagation()">
-                                        <div class="video-progress-container" onclick="seekVideo(event, this)">
-                                            <div class="video-progress-bar"></div>
-                                        </div>
-                                        <div class="video-controls-row">
-                                            <span class="video-time">0:00 / 0:00</span>
-                                            <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
+                                                <div class="media-container">
+                                                    <img src="${imgSrc}"
+                                                         class="chat-media-img"
+                                                         onclick="openImageViewer('${imgSrc}')"
+                                                         referrerpolicy="no-referrer"
+                                                         onload="this.parentElement.style.background='transparent'"
+                                                         onerror="this.src='https://placehold.co/200x200?text=Error';">
+                                                </div>
+                                            `;
                         }
                         else if (msgType === 'file') {
+                            // ФАЙЛ
                             contentHtml = `
-                                <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                    <div class="file-icon">📄</div>
-                                    <div class="file-info">
-                                        <div class="file-name">Скачать файл</div>
-                                        <div class="file-action">Нажмите для загрузки</div>
-                                    </div>
-                                </a>
-                                ${metaStandardHtml}
-                            `;
+                                                <a href="${m.txt}" target="_blank" class="chat-file-card">
+                                                    <div class="file-icon">📄</div>
+                                                    <div class="file-info">
+                                                        <div class="file-name">Скачать файл</div>
+                                                        <div class="file-action">Нажмите для загрузки</div>
+                                                    </div>
+                                                </a>
+                                            `;
                         }
                         else {
+                            // ТЕКСТ
                             const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
-                            contentHtml = `<span class="msg-text">${txtWithLinks}</span> ${metaStandardHtml}`;
+                            contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
                         }
 
-                        div.innerHTML = contentHtml;
+                        // Мета
+                        if (!m.sys) {
+                            let metaStyle = "";
+                            // Для картинок мета-данные красивее смотрятся поверх, в углу (как в ТГ)
+                            if (msgType === 'image') {
+                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px);";
+                                // Добавляем position: relative контейнеру, если это картинка
+                                contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
+                            }
+
+                            let metaHtml = `
+                                                <span class="msg-meta" style="${metaStyle}">
+                                                    <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
+                                                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
+                                                </span>
+                                            `;
+
+                            if (msgType === 'image') contentHtml += metaHtml + `</div>`; // Закрываем wrapper
+                            else div.innerHTML = contentHtml + metaHtml;
+
+                            if (msgType === 'image') div.innerHTML = contentHtml; // Для картинок HTML уже собран с метой
+                        } else {
+                            div.innerHTML = contentHtml;
+                        }
 
                         if (isNew) {
                             list.appendChild(div);
@@ -2760,7 +2521,9 @@
                     if (needCommit) batch.commit();
 
                     if (hasNewMessages) {
-                        setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+                        setTimeout(() => {
+                            list.scrollTop = list.scrollHeight;
+                        }, 50);
                     }
                 });
 
@@ -4105,7 +3868,6 @@
 
 
         // Функция показывает "фейковое" сообщение, пока файл грузится
-        // --- 1. Функция для показа "временного" сообщения (превью) ---
         function showTempMessage(file) {
             const list = document.getElementById('msgList');
             const tempId = 'temp-' + Date.now();
@@ -4114,47 +3876,35 @@
             div.className = 'msg msg-me'; // Сразу как "своё"
 
             let contentHtml = '';
-            const url = URL.createObjectURL(file); // Создаем ссылку на локальный файл
 
-            // Если это картинка
             if (file.type.startsWith('image/')) {
+                const url = URL.createObjectURL(file); // Берем картинку локально
                 contentHtml = `
-                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                        <div class="upload-spinner"></div>
-                    </div>
-                `;
-            }
-            // Если это ВИДЕО (НОВОЕ)
-            else if (file.type.startsWith('video/')) {
+                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                <div class="upload-spinner"></div>
+                            </div>
+                        `;
+            } else {
                 contentHtml = `
-                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                        <video src="${url}" class="chat-media-video" style="opacity: 0.6;"></video>
-                        <div class="upload-spinner"></div>
-                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:24px; color:white;">▶</div>
-                    </div>
-                `;
-            }
-            // Если это файл
-            else {
-                contentHtml = `
-                    <div class="chat-file-card" style="opacity: 0.7;">
-                        <div class="file-icon">📄</div>
-                        <div class="file-info">
-                            <div class="file-name">${file.name}</div>
-                            <div class="file-action">Загрузка...</div>
-                        </div>
-                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                    </div>
-                `;
+                            <div class="chat-file-card" style="opacity: 0.7;">
+                                <div class="file-icon">📄</div>
+                                <div class="file-info">
+                                    <div class="file-name">${file.name}</div>
+                                    <div class="file-action">Загрузка...</div>
+                                </div>
+                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                            </div>
+                        `;
             }
 
             div.innerHTML = contentHtml;
             list.appendChild(div);
 
+            // Скролл вниз
             setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
 
-            return tempId;
+            return tempId; // Возвращаем ID, чтобы потом удалить это сообщение
         }
 
 
@@ -4247,10 +3997,7 @@
 
                 if (data.result === "success") {
                     // 3. ОТПРАВЛЯЕМ НАСТОЯЩЕЕ СООБЩЕНИЕ
-                    let type = 'file';
-                    if (file.type.startsWith('image/')) type = 'image';
-                    if (file.type.startsWith('video/')) type = 'video'; // <--- Добавили определение видео
-
+                    const type = file.type.startsWith('image/') ? 'image' : 'file';
                     sendMsg(data.url, false, type);
                 } else {
                     throw new Error(data.message || "Ошибка скрипта");
