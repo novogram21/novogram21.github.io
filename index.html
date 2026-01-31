@@ -270,8 +270,9 @@
             overflow: hidden;
             background-color: #0a0c10;
         }
+
         #noChat {
-             height: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1081,11 +1082,9 @@
                 transform: scale(0.98); /* Эффект нажатия */
             }
 
-        .media-container {
-            overflow: hidden;
-            border-radius: 12px;
-            background: transparent; /* Убираем черный фон */
-            display: inline-block;
+        .media-container iframe {
+            display: block;
+            background: #000;
         }
 
         /* --- НОВЫЙ СТИЛЬ ДЛЯ ВИДЕО --- */
@@ -1357,7 +1356,7 @@
 
             <div style="flex: 1; position: relative;">
                 <input type="text" id="searchInput" placeholder="Поиск..."
-                                   style="
+                       style="
                    width: 100%;
                    height: 44px;
                    padding: 0 15px;
@@ -1369,9 +1368,9 @@
                    font-size: 14px;
                    transition: 0.2s;
                "
-                                   onfocus="this.style.background='#222'; this.style.borderColor='#555'"
-                                   onblur="this.style.background='#181818'; this.style.borderColor='#333'"
-                                   oninput="handleSearchInput(this)">
+                       onfocus="this.style.background='#222'; this.style.borderColor='#555'"
+                       onblur="this.style.background='#181818'; this.style.borderColor='#333'"
+                       oninput="handleSearchInput(this)">
 
                 <div id="searchResults" style="
 
@@ -1399,7 +1398,7 @@
 
         ">
 
-                    </div>
+                </div>
 
             </div>
 
@@ -1408,7 +1407,7 @@
 
 
         <div id="searchResults" style="position: absolute; top: 45px; left: 10px; right: 10px; background: #2d2d2d; border: 1px solid #444; border-radius: 6px; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-            </div>
+        </div>
 
         <div class="tabs">
             <div class="tab active" onclick="switchTab('friends')">
@@ -1646,12 +1645,12 @@
                         const displayNick = user.username ? `@${user.username}` : 'none';
 
                         div.innerHTML = `
-                                                                                                                                                                                                                                                            ${avatarSrc}
-                                                                                                                                                                                                                                                            <div>
-                                                                                                                                                                                                                                                                <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                                                                                                                                                <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                                ${avatarSrc}
+                                                                                                                                                                                                                                                                <div>
+                                                                                                                                                                                                                                                                    <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                            `;
 
                         div.onclick = () => {
                             sendFriendRequestToId(user.id); // Новая функция отправки
@@ -2060,16 +2059,16 @@
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
 
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                    ${avatar}
-                                                                                                                                                                                                                                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                                        ${avatar}
+                                                                                                                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                    `;
                         list.appendChild(div);
                     });
                 });
@@ -2238,19 +2237,19 @@
 
                         // Вставляем HTML (Обрати внимание: id для last-msg и badge остались те же)
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                        ${avatarHtml}
-                                                                                                                                                                                                                                                                        <div class="user-name">${fName}</div>
-                                                                                                                                                                                                                                                                        <div class="last-msg-row">
-                                                                                                                                                                                                                                                                            <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                        <div class="meta-column">
-                                                                                                                                                                                                                                                                            <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                                                                                                                                                                                                            <div class="meta-bottom-row">
-                                                                                                                                                                                                                                                                                <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                                                                                                                                                                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                                                                                                                                                                                            ${avatarHtml}
+                                                                                                                                                                                                                                                                            <div class="user-name">${fName}</div>
+                                                                                                                                                                                                                                                                            <div class="last-msg-row">
+                                                                                                                                                                                                                                                                                <span class="last-msg" id="last-${chatId}">...</span>
                                                                                                                                                                                                                                                                             </div>
-                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                            <div class="meta-column">
+                                                                                                                                                                                                                                                                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                                                                                                                                                                                                                <div class="meta-bottom-row">
+                                                                                                                                                                                                                                                                                    <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                                                                                                                                                                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                        `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -2325,9 +2324,9 @@
 
             // ЗАГОЛОВОК ЧАТА
             document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                                                                                                                            <div>${name}</div>
-                                                                                                                                                                                                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                <div>${name}</div>
+                                                                                                                                                                                                                                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                                                                                                                                                                                            `;
 
             // Статус "был в сети"
             db.collection('users').doc(fid).onSnapshot(userSnap => {
@@ -2439,50 +2438,67 @@
 
                             // Обрати внимание на onclick="openImageViewer(...)"
                             contentHtml = `
-                                                                                                                                                                                                                                                            <div class="media-container">
-                                                                                                                                                                                                                                                                <img src="${imgSrc}"
-                                                                                                                                                                                                                                                                     class="chat-media-img"
-                                                                                                                                                                                                                                                                     onclick="openImageViewer('${imgSrc}')"
-                                                                                                                                                                                                                                                                     referrerpolicy="no-referrer"
-                                                                                                                                                                                                                                                                     onload="this.parentElement.style.background='transparent'"
-                                                                                                                                                                                                                                                                     onerror="this.src='https://placehold.co/200x200?text=Error';">
-                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                                <div class="media-container">
+                                                                                                                                                                                                                                                                    <img src="${imgSrc}"
+                                                                                                                                                                                                                                                                         class="chat-media-img"
+                                                                                                                                                                                                                                                                         onclick="openImageViewer('${imgSrc}')"
+                                                                                                                                                                                                                                                                         referrerpolicy="no-referrer"
+                                                                                                                                                                                                                                                                         onload="this.parentElement.style.background='transparent'"
+                                                                                                                                                                                                                                                                         onerror="this.src='https://placehold.co/200x200?text=Error';">
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                            `;
                         }
                         else if (msgType === 'video') {
-                            // === ВИДЕО (НОВАЯ ЛОГИКА) ===
-                            let videoSrc = m.txt;
+                            // === ВИДЕО (ИСПРАВЛЕНИЕ ДЛЯ GOOGLE DRIVE) ===
+                            // Гугл не дает стримить видео напрямую в тег <video> из-за CORS.
+                            // Решение: использовать iframe с режимом /preview.
 
-                            // Хак для Google Drive: меняем /open?id= или /file/d/ на /uc?export=download&id=
-                            // Это заставляет браузер думать, что это прямой поток
-                            if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
-                                const fileId = m.txt.split('id=')[1];
-                                videoSrc = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                            } else if (m.txt.includes('/file/d/')) {
-                                const parts = m.txt.split('/file/d/');
-                                if (parts[1]) {
-                                    const fileId = parts[1].split('/')[0];
-                                    videoSrc = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                                }
+                            let fileId = null;
+
+                            // 1. Пытаемся достать ID файла из разных форматов ссылок
+                            if (m.txt.includes('id=')) {
+                                try { fileId = m.txt.split('id=')[1].split('&')[0]; } catch (e) { }
+                            }
+                            else if (m.txt.includes('/file/d/')) {
+                                try { fileId = m.txt.split('/file/d/')[1].split('/')[0]; } catch (e) { }
                             }
 
-                            contentHtml = `
-                                            <div class="media-container">
-                                                <video src="${videoSrc}" controls playsinline class="chat-media-video" preload="metadata"></video>
-                                            </div>
-                                        `;
+                            if (fileId) {
+                                // Используем iframe с /preview - это единственный надежный способ
+                                const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+
+                                contentHtml = `
+                                    <div class="media-container" style="position: relative; width: 300px; height: 170px; background: #000;">
+                                        <iframe src="${embedUrl}" 
+                                                width="100%" 
+                                                height="100%" 
+                                                frameborder="0" 
+                                                allow="autoplay; encrypted-media; fullscreen" 
+                                                allowfullscreen
+                                                style="border-radius: 12px; pointer-events: auto;">
+                                        </iframe>
+                                        </div>
+                                `;
+                            } else {
+                                // Если ссылка не с Гугла или ID не найден, пробуем старый метод
+                                contentHtml = `
+                                    <div class="media-container">
+                                        <video src="${m.txt}" controls playsinline class="chat-media-video"></video>
+                                    </div>
+                                `;
+                            }
                         }
                         else if (msgType === 'file') {
                             // ФАЙЛ
                             contentHtml = `
-                                                                                                                                                                                                                                                            <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                                                                                                                                                                                                                                                <div class="file-icon">📄</div>
-                                                                                                                                                                                                                                                                <div class="file-info">
-                                                                                                                                                                                                                                                                    <div class="file-name">Скачать файл</div>
-                                                                                                                                                                                                                                                                    <div class="file-action">Нажмите для загрузки</div>
-                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                            </a>
-                                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                                <a href="${m.txt}" target="_blank" class="chat-file-card">
+                                                                                                                                                                                                                                                                    <div class="file-icon">📄</div>
+                                                                                                                                                                                                                                                                    <div class="file-info">
+                                                                                                                                                                                                                                                                        <div class="file-name">Скачать файл</div>
+                                                                                                                                                                                                                                                                        <div class="file-action">Нажмите для загрузки</div>
+                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                </a>
+                                                                                                                                                                                                                                                            `;
                         }
                         else {
                             // ТЕКСТ
@@ -2501,11 +2517,11 @@
                             }
 
                             let metaHtml = `
-                                                                                                                                                                                                                                                            <span class="msg-meta" style="${metaStyle}">
-                                                                                                                                                                                                                                                                <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
-                                                                                                                                                                                                                                                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
-                                                                                                                                                                                                                                                            </span>
-                                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                                <span class="msg-meta" style="${metaStyle}">
+                                                                                                                                                                                                                                                                    <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
+                                                                                                                                                                                                                                                                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
+                                                                                                                                                                                                                                                                </span>
+                                                                                                                                                                                                                                                            `;
 
                             if (msgType === 'image' || msgType === 'video') contentHtml += metaHtml + `</div>`; // Закрываем wrapper
                             else div.innerHTML = contentHtml + metaHtml;
@@ -3036,14 +3052,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                                                                                                                                                                                                                <div style="display:flex; align-items:center;">
-                                                                                                                                                                                                                                                                                    ${avatarHtml}
-                                                                                                                                                                                                                                                                                    <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                                                                                                                                                                                                        <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                                                                                                                                                                                                        <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                                                                    <div style="display:flex; align-items:center;">
+                                                                                                                                                                                                                                                                                        ${avatarHtml}
+                                                                                                                                                                                                                                                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                                                                                                                                                                                                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                                                                                                                                                                                                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                                                                        </div>
                                                                                                                                                                                                                                                                                     </div>
-                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                                                `;
 
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
@@ -3850,9 +3866,9 @@
                     document.getElementById('activeChat').classList.remove('hidden');
 
                     document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                                                                                                                                        <div>${name}</div>
-                                                                                                                                                                                                                                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                            <div>${name}</div>
+                                                                                                                                                                                                                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                                                                                                                                                                                                        `;
 
                     loadMessages();
                 } else {
@@ -3884,39 +3900,39 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                                                                                                                                                                                                                                <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                                                                                                    <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                                                                                                    <div class="upload-spinner"></div>
-                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                                                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                                                                                        <div class="upload-spinner"></div>
+                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                `;
             }
             // Если это видео — показываем заглушку видео (можно тоже превью, если удастся)
             else if (file.type.startsWith('video/')) {
                 // Для видео создаем объект URL, чтобы показать первый кадр (если браузер сможет)
                 // Или просто красивую заглушку
                 contentHtml = `
-                                            <div class="chat-file-card" style="opacity: 0.7;">
-                                                <div class="file-icon">🎥</div>
-                                                <div class="file-info">
-                                                    <div class="file-name">Видео загружается...</div>
-                                                    <div class="file-action">Пожалуйста, подождите</div>
+                                                <div class="chat-file-card" style="opacity: 0.7;">
+                                                    <div class="file-icon">🎥</div>
+                                                    <div class="file-info">
+                                                        <div class="file-name">Видео загружается...</div>
+                                                        <div class="file-action">Пожалуйста, подождите</div>
+                                                    </div>
+                                                    <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                 </div>
-                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                            </div>
-                                        `;
+                                            `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                                                                                                                                                                                                                                <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                                                                                                    <div class="file-icon">📄</div>
-                                                                                                                                                                                                                                                                    <div class="file-info">
-                                                                                                                                                                                                                                                                        <div class="file-name">${file.name}</div>
-                                                                                                                                                                                                                                                                        <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                                                    <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                                                                                        <div class="file-icon">📄</div>
+                                                                                                                                                                                                                                                                        <div class="file-info">
+                                                                                                                                                                                                                                                                            <div class="file-name">${file.name}</div>
+                                                                                                                                                                                                                                                                            <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                                                                                                     </div>
-                                                                                                                                                                                                                                                                    <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                                `;
             }
 
             div.innerHTML = contentHtml;
