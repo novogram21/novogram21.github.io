@@ -1,0 +1,72 @@
+name: Build Novogram APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Скачиваем твои файлы
+      - uses: actions/checkout@v3
+
+      # 2. Настраиваем Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # 3. Устанавливаем Capacitor
+      - name: Install Dependencies
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      # 4. ПОДГОТОВКА: Раскладываем файлы правильно
+      # Capacitor требует, чтобы сайт лежал в папке 'www', а конфиг - в корне.
+      - name: Prepare Project Structure
+        run: |
+          mkdir www
+          
+          # Перемещаем файлы сайта в папку www
+          mv index.html www/
+          # Перемещаем скрипты и иконки, если они есть (игнорируем ошибки, если нет)
+          mv *.js www/ 2>/dev/null || true
+          mv *.json www/ 2>/dev/null || true
+          mv *.png www/ 2>/dev/null || true
+          
+          # НО! Возвращаем capacitor.config.json и package.json обратно в корень, 
+          # они должны лежать рядом с папкой android, а не внутри www
+          mv www/capacitor.config.json .
+          mv www/package.json . 2>/dev/null || true
+
+          # Добавляем платформу Андроид (используя твой готовый конфиг!)
+          npx cap add android
+
+      # 5. Внедряем разрешения (для звонков и камеры через сайт)
+      - name: Inject Permissions
+        run: |
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          
+          # Добавляем права на Интернет, Камеру, Звук и Экран
+          sed -i '/<application/i \
+          <uses-permission android:name="android.permission.INTERNET" /> \
+          <uses-permission android:name="android.permission.CAMERA" /> \
+          <uses-permission android:name="android.permission.RECORD_AUDIO" /> \
+          <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /> \
+          <uses-permission android:name="android.permission.WAKE_LOCK" />' $MANIFEST_PATH
+
+      # 6. Собираем APK
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # 7. Загружаем готовый файл
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: novogram-magic-sync
+          path: android/app/build/outputs/apk/debug/app-debug.apk
