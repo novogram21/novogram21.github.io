@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. Скачиваем твои файлы
+      # 1. Скачиваем твой код
       - uses: actions/checkout@v3
 
       # 2. Настраиваем Node.js
@@ -18,44 +18,37 @@ jobs:
         with:
           node-version: '18'
 
-      # 3. Устанавливаем Capacitor
+      # 3. Создаем package.json и ставим библиотеки (Важный шаг исправления!)
       - name: Install Dependencies
         run: |
+          npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      # 4. ПОДГОТОВКА: Раскладываем файлы правильно
-      # Capacitor требует, чтобы сайт лежал в папке 'www', а конфиг - в корне.
+      # 4. Подготовка папок (Раскладываем всё по местам)
       - name: Prepare Project Structure
         run: |
           mkdir www
-          
           # Перемещаем файлы сайта в папку www
           mv index.html www/
-          # Перемещаем скрипты и иконки, если они есть (игнорируем ошибки, если нет)
+          # Если есть скрипты или стили, кидаем их тоже (игнорируем ошибки если их нет)
           mv *.js www/ 2>/dev/null || true
-          mv *.json www/ 2>/dev/null || true
+          mv *.css www/ 2>/dev/null || true
           mv *.png www/ 2>/dev/null || true
+          mv *.json www/ 2>/dev/null || true
           
-          # НО! Возвращаем capacitor.config.json и package.json обратно в корень, 
-          # они должны лежать рядом с папкой android, а не внутри www
-          mv www/capacitor.config.json .
+          # ВАЖНО: Возвращаем конфиги обратно в корень
+          # Они нужны Capacitor'у здесь, а не внутри www
+          mv www/capacitor.config.json . 2>/dev/null || true
           mv www/package.json . 2>/dev/null || true
 
-          # Добавляем платформу Андроид (используя твой готовый конфиг!)
+          # Создаем андроид проект
           npx cap add android
 
-      # 5. Внедряем разрешения (для звонков и камеры через сайт)
+      # 5. Внедряем разрешения (Упрощенный и надежный способ)
+      # Добавляем права на Камеру, Микрофон, Экран и Интернет
       - name: Inject Permissions
         run: |
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          
-          # Добавляем права на Интернет, Камеру, Звук и Экран
-          sed -i '/<application/i \
-          <uses-permission android:name="android.permission.INTERNET" /> \
-          <uses-permission android:name="android.permission.CAMERA" /> \
-          <uses-permission android:name="android.permission.RECORD_AUDIO" /> \
-          <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /> \
-          <uses-permission android:name="android.permission.WAKE_LOCK" />' $MANIFEST_PATH
+          sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.WAKE_LOCK" />' android/app/src/main/AndroidManifest.xml
 
       # 6. Собираем APK
       - name: Build Android APK
@@ -64,9 +57,9 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # 7. Загружаем готовый файл
+      # 7. Загружаем результат
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
-          name: novogram-magic-sync
+          name: novogram-app
           path: android/app/build/outputs/apk/debug/app-debug.apk
