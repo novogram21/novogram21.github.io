@@ -257,18 +257,58 @@
         }
 
 
+        /* Видео в чате */
+        .chat-video-container {
+            position: relative;
+            max-width: 320px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            background: #000;
+        }
+
+            .chat-video-container video {
+                display: block;
+                width: 100%;
+                max-height: 400px;
+                border-radius: 12px;
+            }
+
+        /* Кнопка Play по центру */
+        .video-play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            backdrop-filter: blur(4px);
+            transition: 0.2s;
+        }
+
+        .chat-video-container:hover .video-play-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
 
 
         /* Фон с паттерном для пустого экрана "Выберите чат" */
-        .noChat {
+        #noChat {
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #aaa;
+            color: #555;
             position: relative;
             overflow: hidden;
-            background-color: #0a0c10;
         }
 
         #noChat {
@@ -279,7 +319,7 @@
             color: #aaa;
             position: relative;
             overflow: hidden;
-            background-color: transparent; /* Убрал фон */
+            background-color: #0a0c10;
         }
 
             #noChat > div {
@@ -1082,71 +1122,12 @@
                 transform: scale(0.98); /* Эффект нажатия */
             }
 
-        .media-container iframe {
-            display: block;
-            background: #000;
-        }
-
-        .video-card
-        /* --- НОВЫЙ СТИЛЬ ДЛЯ ВИДЕО --- */
-        /* --- Стили для видео-карточки (Telegram Style) --- */
-        .video-card {
-            width: 260px;
-            height: 160px;
-            background: #000;
-            border-radius: 12px;
-            position: relative;
+        .media-container {
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border-radius: 12px;
+            background: transparent; /* Убираем черный фон */
+            display: inline-block;
         }
-
-        .download-btn {
-            cursor: pointer;
-            position: relative;
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 50%;
-            transition: 0.2s;
-        }
-
-            .download-btn:active {
-                transform: scale(0.95);
-            }
-
-        .icon-arrow {
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .progress-ring {
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform: rotate(-90deg);
-            pointer-events: none;
-        }
-
-        .size-badge {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            color: white;
-            font-weight: 500;
-            z-index: 10;
-        }
-
 
 
         /* --- СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА (LIGHTBOX) --- */
@@ -1248,8 +1229,10 @@
     <div id="app-background"></div>
     <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
 
+    <!-- AUTH & REGISTRATION -->
     <div id="authScreen" class="auth-overlay">
 
+        <!-- ШАГ 1: Вход / Регистрация -->
         <div id="stepEmail" class="auth-box">
             <h2>Вход в Messenger</h2>
             <input type="email" id="email" placeholder="Email">
@@ -1258,6 +1241,7 @@
             <div id="authError" style="color: #ff4444; margin-top: 10px; font-size: 13px;"></div>
         </div>
 
+        <!-- ШАГ 2: Имя и Фамилия -->
         <div id="stepName" class="auth-box" style="display: none;">
             <h2>Ваше имя</h2>
             <div style="font-size: 13px; color: #aaa; margin-bottom: 15px;">
@@ -1270,6 +1254,7 @@
             <button id="btnNameNext" onclick="goToUsernameStep()" disabled style="background: #444; cursor: not-allowed;">Далее</button>
         </div>
 
+        <!-- ШАГ 3: Имя пользователя -->
         <div id="stepUsername" class="auth-box" style="display: none;">
             <div style="display:flex; justify-content: flex-start;">
                 <button onclick="backToName()" style="width: auto; background: none; color: #007bff; padding: 0; margin: 0 0 10px 0;">← Назад</button>
@@ -1291,7 +1276,9 @@
     </div>
 
 
+    <!-- INCOMING -->
     <div id="incomingPopup" class="incoming-call">
+        <!-- Теперь здесь только один span, в который мы будем писать почту -->
         <span id="callerName" style="font-weight:bold; font-size: 14px;">Загрузка...</span>
 
         <div style="display:flex; gap:15px;">
@@ -1300,14 +1287,17 @@
         </div>
     </div>
 
+    <!-- ШТО� К�? -->
     <div id="overlaySheet" class="overlay-sheet" onclick="closeAllSheets()"></div>
 
+    <!-- Шторка сообщения -->
     <div id="actionSheet" class="action-sheet">
         <div class="sheet-title">Сообщение</div>
         <button class="action-btn delete" onclick="openDeleteSheet()">Удалить</button>
         <button class="action-btn" onclick="closeAllSheets()">Отмена</button>
     </div>
 
+    <!-- Шторка удаления -->
     <div id="deleteSheet" class="action-sheet">
         <div class="sheet-title">Удалить сообщение?</div>
         <button id="btnDelAll" class="action-btn delete" onclick="confirmDelete('all')">Удалить у всех</button>
@@ -1315,25 +1305,31 @@
         <button class="action-btn" onclick="closeAllSheets()">Отмена</button>
     </div>
 
+    <!-- Шторка П� ОФ�?ЛЯ (Новая логика) -->
+    <!-- ПРОФИЛЬ -->
     <div id="profileSheet" class="action-sheet" style="height: auto; max-height: 90dvh; overflow-y: auto;">
         <div class="sheet-title" style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">Мой профиль</div>
 
         <div style="display:flex; flex-direction:column; align-items:center; margin-bottom: 20px;">
+            <!-- Аватарка -->
             <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; background: #333; margin-bottom: 10px; position: relative; border: 2px solid #555;">
                 <img id="profileAvatarPreview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
                 <div id="profileAvatarPlaceholder" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #888; font-size: 40px;">👤</div>
             </div>
 
+            <!-- Кнопка загрузки -->
             <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="handleAvatarSelect(this)">
             <button onclick="document.getElementById('avatarInput').click()" style="background:none; border:none; color:#007bff; cursor:pointer;">Изменить фото</button>
         </div>
 
 
+        <!-- Почта (только чтение) -->
         <div class="profile-option">
             <h3>Email</h3>
             <div id="profileEmail" style="color: #007bff; margin-bottom: 10px;"></div>
         </div>
 
+        <!-- Никнейм -->
         <div class="profile-option">
             <h3>Имя пользователя (@)</h3>
             <div class="profile-input-group">
@@ -1343,6 +1339,7 @@
             <div style="font-size: 11px; color: #666; margin-top: 5px;">a-z, 0-9, _ и .</div>
         </div>
 
+        <!-- Имя и Фамилия -->
         <div class="profile-option">
             <h3>Личные данные</h3>
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -1354,6 +1351,7 @@
             <input type="date" id="profileBirthdate" style="width: 100%; padding: 10px; background: #444; border: none; color: white; border-radius: 8px; color-scheme: dark;">
         </div>
 
+        <!-- Telegram ID (оставляем как было) -->
         <div class="profile-option">
             <h3>Telegram Connect</h3>
             <div class="profile-input-group">
@@ -1361,15 +1359,20 @@
             </div>
         </div>
 
+        <!-- Кнопка Сохранить -->
         <button onclick="saveProfile()" class="action-btn" style="background: #28a745; color: white; margin-bottom: 10px;">Сохранить изменения</button>
 
         <button onclick="logout()" class="action-btn" style="padding: 10px; font-size: 14px; width: 100%;">Выйти</button>
     </div>
 
 
+    <!-- MAIN -->
     <div id="mainSidebar" class="sidebar">
+        <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
+        <!-- Профиль -->
         <div class="profile-bar" style="padding: 12px 15px; gap: 12px;">
 
+            <!-- 1. Круглая кнопка профиля (только смайлик/фото) -->
             <button onclick="openProfileSheet()" style="
 
         width: 44px;
@@ -1400,28 +1403,32 @@
 
     " onmouseover="this.style.background='#383838'" onmouseout="this.style.background='#2d2d2d'">
 
+                <!-- Сюда подставится ваша аватарка или смайлик -->
+
                 <span id="myAvatarSmall">👤</span>
 
             </button>
 
+            <!-- 2. Скругленный поиск (справа) -->
             <div style="flex: 1; position: relative;">
                 <input type="text" id="searchInput" placeholder="Поиск..."
-                       style="
-                   width: 100%;
-                   height: 44px;
-                   padding: 0 15px;
-                   border-radius: 22px; /* Полное скругление */
-                   border: 1px solid #333;
-                   background: #181818;
-                   color: white;
-                   outline: none;
-                   font-size: 14px;
-                   transition: 0.2s;
-               "
-                       onfocus="this.style.background='#222'; this.style.borderColor='#555'"
-                       onblur="this.style.background='#181818'; this.style.borderColor='#333'"
-                       oninput="handleSearchInput(this)">
+                                   style="
+                   width: 100%;
+                   height: 44px;
+                   padding: 0 15px;
+                   border-radius: 22px; /* Полное скругление */
+                   border: 1px solid #333;
+                   background: #181818;
+                   color: white;
+                   outline: none;
+                   font-size: 14px;
+                   transition: 0.2s;
+               "
+                                   onfocus="this.style.background='#222'; this.style.borderColor='#555'"
+                                   onblur="this.style.background='#181818'; this.style.borderColor='#333'"
+                                   oninput="handleSearchInput(this)">
 
+                <!-- Выпадающий список результатов -->
                 <div id="searchResults" style="
 
             position: absolute;
@@ -1448,6 +1455,8 @@
 
         ">
 
+                    <!-- JS вставит сюда результаты -->
+
                 </div>
 
             </div>
@@ -1456,7 +1465,9 @@
 
 
 
+        <!-- Выпадающий список результатов -->
         <div id="searchResults" style="position: absolute; top: 45px; left: 10px; right: 10px; background: #2d2d2d; border: 1px solid #444; border-radius: 6px; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            <!-- Сюда JS будет вставлять найденных людей -->
         </div>
 
         <div class="tabs">
@@ -1505,6 +1516,7 @@
         </div>
     </div>
 
+    <!-- CALL UI -->
     <div id="callScreen" class="call-screen">
         <div class="video-grid">
             <video id="remoteVideo" autoplay playsinline></video>
@@ -1568,12 +1580,12 @@
 
 
 
-        // --- ШИФ ОВАН ИЕ ТОКЕНА ТЕЛЕГ АМА (Base64) ---
+        // --- Ш�?Ф� ОВАН�?Е ТОКЕНА ТЕЛЕГ� АМА (Base64) ---
         // Токен: 8387775107:AAGhXPcfytIcnh-_zD04HvlGXIJ_b-crPK4
         const ENCRYPTED_TOKEN = "ODM4Nzc3NTEwNzpBQUdoWFBjZnl0SWNuaC1fekQwNEh2bEdYSUpfYi1jclBLNA==";
 
         function getTgToken() {
-            //  асшифровка перед отправкой
+            // � асшифровка перед отправкой
             return atob(ENCRYPTED_TOKEN);
         }
 
@@ -1695,12 +1707,12 @@
                         const displayNick = user.username ? `@${user.username}` : 'none';
 
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                ${avatarSrc}
-                                                                                                                                                                                                                                                                <div>
-                                                                                                                                                                                                                                                                    <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                        ${avatarSrc}
+                                                                                                                                                                                                                        <div>
+                                                                                                                                                                                                                            <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                                                                                                            <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                    `;
 
                         div.onclick = () => {
                             sendFriendRequestToId(user.id); // Новая функция отправки
@@ -2109,16 +2121,16 @@
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
 
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                        ${avatar}
-                                                                                                                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                ${avatar}
+                                                                                                                                                                                <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                    ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                    <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                </div>
+                                                                                                                                                                                <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                    <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                    <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                </div>
+                                                                                                                                                                            `;
                         list.appendChild(div);
                     });
                 });
@@ -2287,19 +2299,19 @@
 
                         // Вставляем HTML (Обрати внимание: id для last-msg и badge остались те же)
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                            ${avatarHtml}
-                                                                                                                                                                                                                                                                            <div class="user-name">${fName}</div>
-                                                                                                                                                                                                                                                                            <div class="last-msg-row">
-                                                                                                                                                                                                                                                                                <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                            <div class="meta-column">
-                                                                                                                                                                                                                                                                                <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                                                                                                                                                                                                                <div class="meta-bottom-row">
-                                                                                                                                                                                                                                                                                    <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                                                                                                                                                                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                        `;
+                                                            ${avatarHtml}
+                                                            <div class="user-name">${fName}</div>
+                                                            <div class="last-msg-row">
+                                                                <span class="last-msg" id="last-${chatId}">...</span>
+                                                            </div>
+                                                            <div class="meta-column">
+                                                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                <div class="meta-bottom-row">
+                                                                    <span id="status-${chatId}" class="list-ticks"></span>
+                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                </div>
+                                                            </div>
+                                                        `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -2374,9 +2386,9 @@
 
             // ЗАГОЛОВОК ЧАТА
             document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                                                                                                                                <div>${name}</div>
-                                                                                                                                                                                                                                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                                                                                                                            `;
+                                        <div>${name}</div>
+                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                    `;
 
             // Статус "был в сети"
             db.collection('users').doc(fid).onSnapshot(userSnap => {
@@ -2434,6 +2446,7 @@
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
                             div.onclick = (e) => {
+                                // Не открываем меню, если кликнули по ссылке, картинке или видео-контроллам
                                 if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG' && e.target.tagName !== 'VIDEO') {
                                     e.stopPropagation();
                                     openActionSheet(msgId, m.from === currentUser.uid);
@@ -2441,13 +2454,11 @@
                             };
                         }
 
-                        // 3. Отметка прочитанным
                         if (change.type === 'added' && m.to === currentUser.uid && !m.read) {
                             batch.update(d.ref, { read: true });
                             needCommit = true;
                         }
 
-                        // --- ГЕНЕРАЦИЯ HTML ---
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
@@ -2456,7 +2467,6 @@
 
                         let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
-                        // Классы
                         if (m.sys) {
                             div.className = 'msg msg-sys';
                         } else if (m.from === currentUser.uid) {
@@ -2473,104 +2483,66 @@
                             contentHtml = m.txt;
                         }
                         else if (msgType === 'image') {
-                            // === КАРТИНКА (ВЫСОКОЕ КАЧЕСТВО) ===
                             let imgSrc = m.txt;
-
-                            // Парсим ID и делаем High-Res ссылку (lh3.../d/ID=w1000)
                             if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
                                 try {
                                     const fileId = m.txt.split('id=')[1];
-                                    // =w600 - оптимально для чата (быстро грузит, четко выглядит)
-                                    // При клике откроется полная версия
                                     imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
                                 } catch (e) { }
                             }
-
-                            // Обрати внимание на onclick="openImageViewer(...)"
                             contentHtml = `
-                                                                                                                                                                                                                                                                <div class="media-container">
-                                                                                                                                                                                                                                                                    <img src="${imgSrc}"
-                                                                                                                                                                                                                                                                         class="chat-media-img"
-                                                                                                                                                                                                                                                                         onclick="openImageViewer('${imgSrc}')"
-                                                                                                                                                                                                                                                                         referrerpolicy="no-referrer"
-                                                                                                                                                                                                                                                                         onload="this.parentElement.style.background='transparent'"
-                                                                                                                                                                                                                                                                         onerror="this.src='https://placehold.co/200x200?text=Error';">
-                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                            `;
+                        <div class="media-container">
+                            <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer" onload="this.parentElement.style.background='transparent'" onerror="this.src='https://placehold.co/200x200?text=Error';">
+                        </div>`;
                         }
                         else if (msgType === 'video') {
-                            const fileId = m.txt;
-                            const uniqueId = `vid-${msgId}`;
-                            // Красивый размер (или заглушка, если старое сообщение)
-                            const sizeStr = m.fileSize ? formatBytes(m.fileSize) : 'Video';
+                            // === ВИДЕО (ЛОГИКА TELEGRAM) ===
+                            let videoSrc = m.txt;
+                            // Если это ссылка на Drive, делаем её пригодной для <video>
+                            if (m.txt.includes('id=')) {
+                                const fileId = m.txt.split('id=')[1];
+                                videoSrc = `https://lh3.googleusercontent.com/u/0/d/${fileId}`;
+                            }
 
                             contentHtml = `
-                                <div id="${uniqueId}" class="video-card">
-                                    
-                                    <video class="chat-media-video" 
-                                           style="width: 100%; height: 100%; display: none; object-fit: contain;" 
-                                           playsinline>
-                                    </video>
-
-                                    <div class="download-btn" onclick="downloadVideoWithProgress('${fileId}', '${uniqueId}')">
-                                        <svg class="progress-ring" width="48" height="48">
-                                            <circle stroke="white" stroke-width="3" fill="transparent" r="22" cx="24" cy="24" 
-                                                    stroke-dasharray="138" stroke-dashoffset="138" 
-                                                    style="transition: stroke-dashoffset 0.1s linear;"></circle>
-                                        </svg>
-                                        <span class="icon-arrow">⬇</span>
-                                    </div>
-
-                                    <div class="size-badge">${sizeStr}</div>
-
-                                    <div style="position: absolute; bottom: 8px; right: 8px; z-index: 20;">
-                                        ${metaHtml ? metaHtml.replace('style="', 'style="color:white; text-shadow: 0 1px 2px rgba(0,0,0,0.8); ') : ''} 
-                                    </div>
-                                </div>
-                            `;
-
-                            // Важно: мы сами вставили мету, поэтому очищаем переменную, чтобы не было дубля
-                            // (Или просто оставьте как есть, если дубль не появляется в вашем CSS)
+                        <div class="media-container video-wrapper">
+                            <video src="${videoSrc}" class="chat-media-video" controls playsinline preload="metadata" poster="https://placehold.co/300x200/2d2d2d/white?text=Video"></video>
+                        </div>`;
                         }
                         else if (msgType === 'file') {
-                            // ФАЙЛ
                             contentHtml = `
-                                                                                                                                                                                                                                                                <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                                                                                                                                                                                                                                                    <div class="file-icon">📄</div>
-                                                                                                                                                                                                                                                                    <div class="file-info">
-                                                                                                                                                                                                                                                                        <div class="file-name">Скачать файл</div>
-                                                                                                                                                                                                                                                                        <div class="file-action">Нажмите для загрузки</div>
-                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                </a>
-                                                                                                                                                                                                                                                            `;
+                        <a href="${m.txt}" target="_blank" class="chat-file-card">
+                            <div class="file-icon">📄</div>
+                            <div class="file-info">
+                                <div class="file-name">Скачать файл</div>
+                                <div class="file-action">Нажмите для загрузки</div>
+                            </div>
+                        </a>`;
                         }
                         else {
-                            // ТЕКСТ
                             const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
                             contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
                         }
 
-                        // Мета
+                        // === МЕТА-ДАННЫЕ (ВРЕМЯ И ГАЛОЧКИ) ===
                         if (!m.sys) {
                             let metaStyle = "";
-                            // Для картинок и видео мета-данные красивее смотрятся поверх, в углу (как в ТГ)
+                            // Для медиа (фото/видео) накладываем мету поверх контента
                             if (msgType === 'image' || msgType === 'video') {
-                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px); pointer-events: none;";
-                                // Добавляем position: relative контейнеру, если это картинка
-                                contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
+                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2; pointer-events: none;";
+                                contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top;">${contentHtml}`;
                             }
 
                             let metaHtml = `
-                                                                                                                                                                                                                                                                <span class="msg-meta" style="${metaStyle}">
-                                                                                                                                                                                                                                                                    <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
-                                                                                                                                                                                                                                                                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
-                                                                                                                                                                                                                                                                </span>
-                                                                                                                                                                                                                                                            `;
+                        <span class="msg-meta" style="${metaStyle}">
+                            <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
+                        </span>`;
 
-                            if (msgType === 'image' || msgType === 'video') contentHtml += metaHtml + `</div>`; // Закрываем wrapper
+                            if (msgType === 'image' || msgType === 'video') contentHtml += metaHtml + `</div>`;
                             else div.innerHTML = contentHtml + metaHtml;
 
-                            if (msgType === 'image' || msgType === 'video') div.innerHTML = contentHtml; // Для картинок HTML уже собран с метой
+                            if (msgType === 'image' || msgType === 'video') div.innerHTML = contentHtml;
                         } else {
                             div.innerHTML = contentHtml;
                         }
@@ -2629,8 +2601,10 @@
 
 
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
-        function sendMsg(txt, isSys = false, type = 'text', size = 0) {
+        function sendMsg(txt, isSys = false, type = 'text') {
+            // Если txt не передан (обычная отправка), берем из поля ввода
             const t = txt || document.getElementById('msgInput').value.trim();
+
             if (!t) return;
 
             const msgData = {
@@ -2638,14 +2612,14 @@
                 from: currentUser.uid,
                 to: currentFriendId,
                 sys: isSys,
-                type: type,
+                type: type, // <--- ВАЖНО: Мы сохраняем тип сообщения
                 read: false,
-                ts: firebase.firestore.FieldValue.serverTimestamp(),
-                fileSize: size // Сохраняем размер!
+                ts: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
 
+            // Если это был обычный текст (из поля ввода), очищаем поле
             if (!txt) {
                 document.getElementById('msgInput').value = '';
                 document.getElementById('sendBtn').style.display = 'none';
@@ -2653,19 +2627,23 @@
                 document.getElementById('msgInput').focus();
             }
 
-            // ... (Уведомления можно оставить как есть, они ниже)
+            // УВЕДОМЛЕНИЯ
             if (!isSys && currentFriendId) {
                 db.collection('users').doc(currentFriendId).get().then(doc => {
                     if (doc.exists) {
                         const friendData = doc.data();
+
+                        // Формируем красивый текст для уведомления
                         let notifText = t;
                         if (type === 'image') notifText = '📷 Фотография';
                         if (type === 'file') notifText = '📁 Файл';
-                        if (type === 'video') notifText = '🎥 Видео';
 
+                        // Telegram
                         if (friendData.tgChatId) {
                             sendTelegramNotification(friendData.tgChatId, `📩 *Сообщение*\nОт: ${currentUser.email}\n${notifText}`);
                         }
+
+                        // Push (OneSignal) - если есть
                         if (friendData.oneSignalId && typeof sendPush === 'function') {
                             sendPush(currentFriendId, notifText);
                         }
@@ -3089,14 +3067,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                                                                                                                                                                                                                    <div style="display:flex; align-items:center;">
-                                                                                                                                                                                                                                                                                        ${avatarHtml}
-                                                                                                                                                                                                                                                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                                                                                                                                                                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                                                                                                                                                                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
-                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                `;
+                                                            <div style="display:flex; align-items:center;">
+                                                                ${avatarHtml}
+                                                                <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                    <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                    <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                </div>
+                                                            </div>
+                                                        `;
 
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
@@ -3174,7 +3152,7 @@
             if (pingInterval) clearInterval(pingInterval);
 
             const statusText = document.getElementById('callStatusText');
-            statusText.innerText = "ЗВОНОК ЗАВЕ ШЕН"; statusText.style.color = "#ff4444"; statusText.style.fontWeight = "bold";
+            statusText.innerText = "ЗВОНОК ЗАВЕ� ШЕН"; statusText.style.color = "#ff4444"; statusText.style.fontWeight = "bold";
             playEndTone();
             const screen = document.getElementById('callScreen'); screen.style.pointerEvents = 'none';
             document.getElementById('incomingPopup').style.display = 'none';
@@ -3388,10 +3366,10 @@
         msgInput.addEventListener('input', function () {
             if (this.value.trim().length > 0) {
                 sendBtn.classList.remove('hidden'); // <-- ИСПРАВЛЕНО (было hidden-btn)
-                sendBtn.style.display = 'flex';      // Теперь это сработает
+                sendBtn.style.display = 'flex';     // Теперь это сработает
                 voiceBtn.style.display = 'none';
             } else {
-                sendBtn.classList.add('hidden');    // <-- ИСПРАВЛЕНО
+                sendBtn.classList.add('hidden');    // <-- ИСПРАВЛЕНО
                 sendBtn.style.display = 'none';
                 voiceBtn.style.display = 'flex';
             }
@@ -3408,15 +3386,15 @@
         // --- АВТОПОВОРОТ ОКОШКА СВОЕГО ВИДЕО ---
         // --- PIP: drag + resize (красиво и без багов) ---
         const localVidEl = document.getElementById('localVideo');
-        const pipEl = document.getElementById('localPip');              // новый id
+        const pipEl = document.getElementById('localPip');              // новый id
         const gridEl = document.querySelector('.video-grid');
         const controlsEl = document.querySelector('.controls');
         const resizeHandleEl = pipEl.querySelector('.pip-resize-handle');
 
         const PIP_STORAGE_KEY = 'pipState_v3';
 
-        let pipRatio = 2 / 3;      // width/height, дефолт как у тебя 140x210
-        let pipUserSized = false;  // станет true после ручного ресайза
+        let pipRatio = 2 / 3;      // width/height, дефолт как у тебя 140x210
+        let pipUserSized = false;  // станет true после ручного ресайза
 
         function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
@@ -3481,7 +3459,7 @@
             const controlsRect = controlsEl.getBoundingClientRect();
             const controlsH = Math.max(0, gridRect.bottom - controlsRect.top);
 
-            const defW = (pipRatio >= 1) ? 210 : 140;   // похоже на твою текущую логику landscape [по смыслу]
+            const defW = (pipRatio >= 1) ? 210 : 140;   // похоже на твою текущую логику landscape [по смыслу]
             const left = gridRect.width - defW - 20;
             const top = gridRect.height - controlsH - Math.round(defW / pipRatio) - 160; // твой bottom:160 [по смыслу]
             pipUserSized = false;
@@ -3710,6 +3688,7 @@
 
     </script>
 
+    <!-- OneSignal Push Logic (Вставь это в самый низ перед </body>) -->
     <script>
         // 1. Инициализация и сохранение ID пользователя
         window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -3903,9 +3882,9 @@
                     document.getElementById('activeChat').classList.remove('hidden');
 
                     document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                                                                                                                                            <div>${name}</div>
-                                                                                                                                                                                                                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                                                                                                                                        `;
+                                                <div>${name}</div>
+                                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                            `;
 
                     loadMessages();
                 } else {
@@ -3923,105 +3902,61 @@
 
 
 
-        // --- 1. Токен для доступа к Гуглу ---
-        let cachedToken = null;
-
-        async function getAuthToken() {
-            if (cachedToken) return cachedToken;
-            try {
-                // Запрашиваем токен у вашего Apps Script
-                const response = await fetch(GOOGLE_SCRIPT_URL);
-                const data = await response.json();
-                cachedToken = data.token;
-                // Токен живет час, сбрасываем через 50 мин
-                setTimeout(() => { cachedToken = null; }, 50 * 60 * 1000);
-                return cachedToken;
-            } catch (e) {
-                console.error("Ошибка токена:", e);
-                return null;
-            }
-        }
-
-        // --- 2. Красивый размер файла (14.5 MB) ---
-        function formatBytes(bytes, decimals = 1) {
-            if (!bytes || isNaN(bytes) || bytes === 0) return '???';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-        }
-
-        // --- 3. Логика скачивания с прогрессом (XHR) ---
-        async function downloadVideoWithProgress(fileId, containerId) {
-            const container = document.getElementById(containerId);
-            const btn = container.querySelector('.download-btn');
-            const circle = container.querySelector('circle');
-            const icon = container.querySelector('.icon-arrow');
-            const videoTag = container.querySelector('video');
-
-            // Прячем стрелку, показываем кольцо (если оно скрыто)
-            icon.style.display = 'none';
-            container.querySelector('.progress-ring').style.display = 'block';
-
-            const circumference = 2 * Math.PI * 22; // Длина окружности (r=22)
-
-            try {
-                const token = await getAuthToken();
-                if (!token) throw new Error("Нет доступа к Google");
-
-                const xhr = new XMLHttpRequest();
-                // Запрашиваем файл напрямую у Google Drive API
-                xhr.open('GET', `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, true);
-                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-                xhr.responseType = 'blob';
-
-                // Слушаем прогресс
-                xhr.onprogress = (event) => {
-                    if (event.lengthComputable) {
-                        const percent = event.loaded / event.total;
-                        // Анимация кольца (stroke-dashoffset)
-                        const offset = circumference - (percent * circumference);
-                        circle.style.strokeDashoffset = offset;
-                    }
-                };
-
-                // Готово
-                xhr.onload = () => {
-                    if (xhr.status === 200) {
-                        const blob = xhr.response;
-                        const localUrl = URL.createObjectURL(blob);
-
-                        // Скрываем загрузчик, показываем видео
-                        btn.style.display = 'none';
-                        container.querySelector('.size-badge').style.display = 'none';
-
-                        videoTag.src = localUrl;
-                        videoTag.style.display = 'block';
-                        videoTag.controls = true;
-                        videoTag.play();
-                    } else {
-                        alert("Ошибка загрузки: " + xhr.status);
-                        resetUI();
-                    }
-                };
-
-                xhr.onerror = () => { alert("Ошибка сети"); resetUI(); };
-                xhr.send();
-
-            } catch (e) {
-                console.error(e);
-                alert("Ошибка: " + e.message);
-                resetUI();
-            }
-
-            function resetUI() {
-                icon.style.display = 'block';
-                circle.style.strokeDashoffset = circumference; // Сброс круга
-            }
-        }
-
         // Функция показывает "фейковое" сообщение, пока файл грузится
+        function showTempMessage(file) {
+            const list = document.getElementById('msgList');
+            const tempId = 'temp-' + Date.now();
+            const div = document.createElement('div');
+            div.id = tempId;
+            div.className = 'msg msg-me';
+
+            let contentHtml = '';
+
+            // Создаем локальную временную ссылку на файл (Blob URL)
+            // Это и есть "кэширование": браузер читает файл прямо из памяти устройства
+            const localUrl = URL.createObjectURL(file);
+
+            if (file.type.startsWith('image/')) {
+                contentHtml = `
+            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                <img src="${localUrl}" class="chat-media-img" style="opacity: 1;">
+                <div class="upload-spinner"></div>
+            </div>
+        `;
+            }
+            else if (file.type.startsWith('video/')) {
+                // Блок для мгновенного воспроизведения видео
+                contentHtml = `
+            <div class="media-container loading-overlay video-wrapper" style="position: relative; display: inline-block;">
+                <video src="${localUrl}" class="chat-media-video" muted playsinline autoplay loop></video>
+                <div class="upload-spinner"></div>
+            </div>
+        `;
+            }
+            else {
+                contentHtml = `
+            <div class="chat-file-card" style="opacity: 0.7;">
+                <div class="file-icon">📄</div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-action">Загрузка...</div>
+                </div>
+                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+            </div>
+        `;
+            }
+
+            div.innerHTML = contentHtml;
+            list.appendChild(div);
+
+            // Скролл вниз
+            setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+
+            return tempId;
+        }
+
+
+        // --- 1. Функция для показа "временного" сообщения (превью) ---
         function showTempMessage(file) {
             const list = document.getElementById('msgList');
             const tempId = 'temp-' + Date.now();
@@ -4035,39 +3970,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                                                                                                                                                                                                                                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                                                                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                                                                                                        <div class="upload-spinner"></div>
-                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                `;
-            }
-            // Если это видео — показываем заглушку видео (можно тоже превью, если удастся)
-            else if (file.type.startsWith('video/')) {
-                // Для видео создаем объект URL, чтобы показать первый кадр (если браузер сможет)
-                // Или просто красивую заглушку
-                contentHtml = `
-                                                <div class="chat-file-card" style="opacity: 0.7;">
-                                                    <div class="file-icon">🎥</div>
-                                                    <div class="file-info">
-                                                        <div class="file-name">Видео загружается...</div>
-                                                        <div class="file-action">Пожалуйста, подождите</div>
-                                                    </div>
-                                                    <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                </div>
-                                            `;
+                                <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                    <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                    <div class="upload-spinner"></div>
+                                </div>
+                            `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                                                                                                                                                                                                                                    <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                                                                                                        <div class="file-icon">📄</div>
-                                                                                                                                                                                                                                                                        <div class="file-info">
-                                                                                                                                                                                                                                                                            <div class="file-name">${file.name}</div>
-                                                                                                                                                                                                                                                                            <div class="file-action">Загрузка...</div>
-                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                `;
+                                <div class="chat-file-card" style="opacity: 0.7;">
+                                    <div class="file-icon">📄</div>
+                                    <div class="file-info">
+                                        <div class="file-name">${file.name}</div>
+                                        <div class="file-action">Загрузка...</div>
+                                    </div>
+                                    <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                </div>
+                            `;
             }
 
             div.innerHTML = contentHtml;
@@ -4085,17 +4005,26 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (file.size > 45 * 1024 * 1024) {
-                alert("Файл слишком большой! Максимум 45 МБ.");
+            // Ограничение 20 МБ (Google Apps Script может не переварить больше из-за лимитов на POST)
+            if (file.size > 20 * 1024 * 1024) {
+                alert("Файл слишком большой! Максимум 20 МБ.");
                 return;
             }
 
+            // 1. ОПРЕДЕЛЯЕМ ТИП (Добавляем video)
+            const isImage = file.type.startsWith('image/');
+            const isVideo = file.type.startsWith('video/');
+            const type = isImage ? 'image' : isVideo ? 'video' : 'file';
+
+            // 2. ПОКАЗЫВАЕМ ПРЕВЬЮ МГНОВЕННО
+            // Мы передаем файл в showTempMessage, чтобы создать локальный Blob URL
             const tempMsgId = showTempMessage(file);
+
             const originalPlaceholder = document.getElementById('msgInput').placeholder;
-            document.getElementById('msgInput').disabled = true;
-            document.getElementById('msgInput').placeholder = "Загрузка на Диск...";
+            document.getElementById('msgInput').placeholder = "Загрузка файла...";
 
             try {
+                // Конвертируем в Base64 для передачи в Google Apps Script
                 const toBase64 = f => new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(f);
@@ -4105,6 +4034,7 @@
 
                 const base64Data = await toBase64(file);
 
+                // Отправляем на Google Drive через ваш скрипт
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     body: JSON.stringify({
@@ -4115,30 +4045,34 @@
                 });
 
                 const data = await response.json();
+
+                // 3. ЗАГРУЗКА ЗАВЕРШЕНА -> УДАЛЯЕМ ЛОКАЛЬНОЕ ПРЕВЬЮ
                 const tempEl = document.getElementById(tempMsgId);
-                if (tempEl) tempEl.remove();
+                if (tempEl) {
+                    // Если это было видео или картинка, освобождаем память от Blob URL
+                    const media = tempEl.querySelector('video, img');
+                    if (media && media.src.startsWith('blob:')) {
+                        URL.revokeObjectURL(media.src);
+                    }
+                    tempEl.remove();
+                }
 
                 if (data.result === "success") {
-                    let type = 'file';
-                    if (file.type.startsWith('image/')) type = 'image';
-                    if (file.type.startsWith('video/')) type = 'video';
-
-                    // !!! ПЕРЕДАЕМ file.size !!!
-                    sendMsg(data.url, false, type, file.size);
+                    // 4. ОТПРАВЛЯЕМ НАСТОЯЩЕЕ СООБЩЕНИЕ С СЕРВЕРНОЙ ССЫЛКОЙ
+                    sendMsg(data.url, false, type);
                 } else {
-                    throw new Error(data.message);
+                    throw new Error(data.message || "Ошибка скрипта");
                 }
 
             } catch (error) {
-                console.error("Ошибка:", error);
+                console.error("Ошибка загрузки:", error);
                 const tempEl = document.getElementById(tempMsgId);
                 if (tempEl) tempEl.remove();
-                alert("Не удалось загрузить. " + error.message);
+                alert("Не удалось загрузить файл.");
             } finally {
                 document.getElementById('msgInput').placeholder = originalPlaceholder;
                 document.getElementById('msgInput').disabled = false;
-                document.getElementById('msgInput').value = '';
-                document.getElementById('msgInput').focus();
+                input.value = '';
             }
         }
 
@@ -4166,13 +4100,28 @@
             }, 300);
         }
 
+        function toggleVideo(container) {
+            const video = container.querySelector('video');
+            const playBtn = container.querySelector('.video-play-overlay');
 
+            if (video.paused) {
+                // Telegram-style: открываем на весь экран при клике или просто играем?
+                // По умолчанию — просто играем внутри сообщения
+                video.play();
+                if (playBtn) playBtn.style.display = 'none';
+                video.controls = true; // Показываем ползунок только после начала игры
+            } else {
+                video.pause();
+                if (playBtn) playBtn.style.display = 'flex';
+                video.controls = false;
+            }
+        }
 
     </script>
 
 
     <div id="imageViewer" class="image-viewer" onclick="closeImageViewer()">
-        <span class="close-viewer-btn">×</span>
+        <span class="close-viewer-btn">&times;</span>
         <img id="imageViewerImg" src="" onclick="event.stopPropagation()">
     </div>
 
