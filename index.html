@@ -2390,8 +2390,8 @@
                     const batch = db.batch();
                     let needCommit = false;
 
-                    // 1. Создаем фрагмент в памяти (виртуальный контейнер)
-                    const fragment = document.createDocumentFragment();
+                    // Очищаем и перерисовываем
+                    list.innerHTML = '';
 
                     snap.docs.forEach(doc => {
                         const m = doc.data();
@@ -2401,8 +2401,6 @@
 
                         const div = document.createElement('div');
                         div.id = 'msg-' + msgId;
-
-                        // Настраиваем клик (как в вашем оригинальном коде)
                         div.onclick = (e) => {
                             if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
                                 e.stopPropagation();
@@ -2410,62 +2408,100 @@
                             }
                         };
 
-                        // Отмечаем как прочитанное
                         if (m.to === currentUser.uid && !m.read) {
                             batch.update(doc.ref, { read: true });
                             needCommit = true;
                         }
 
-                        // Определяем класс сообщения
-                        if (m.sys) div.className = 'msg msg-sys';
-                        else if (m.from === currentUser.uid) div.className = 'msg msg-me';
-                        else div.className = 'msg msg-other';
-
-                        // Формируем время
-                        let timeStr = "";
+                        let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
                             timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                        }
-
-                        // Логика контента (текст/фото/файл) — используем вашу текущую логику
-                        let contentHtml = "";
-                        if (m.type === 'image') {
-                            contentHtml = `<div class="media-container"><img src="${m.txt}" class="chat-media-img" referrerpolicy="no-referrer"></div>`;
-                        } else if (m.type === 'file') {
-                            contentHtml = `<div class="chat-file-card">📄 ${m.txt.split('/').pop()}</div>`;
                         } else {
-                            contentHtml = `<span class="msg-text">${m.txt}</span>`;
+                            const now = new Date();
+                            timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                         }
 
-                        // Галочки
                         let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
-                        let metaHtml = `
-                    <span class="msg-meta">
-                        <span class="msg-time">${timeStr}</span>
-                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                    </span>`;
 
-                        div.innerHTML = contentHtml + metaHtml;
+                        if (m.sys) {
+                            div.className = 'msg msg-sys';
+                        } else if (m.from === currentUser.uid) {
+                            div.className = 'msg msg-me';
+                        } else {
+                            div.className = 'msg msg-other';
+                        }
 
-                        // Добавляем во фрагмент, а не в реальный DOM
-                        fragment.appendChild(div);
+                        let contentHtml = '';
+                        const msgType = m.type || 'text';
+
+                        if (m.sys) {
+                            contentHtml = m.txt;
+                        } else if (msgType === 'image') {
+                            // --- ИСПРАВЛЕННАЯ ССЫЛКА ---
+                            let imgSrc = m.txt;
+                            if (m.txt.includes('id=')) {
+                                try {
+                                    const fileId = m.txt.split('id=')[1];
+                                    // Убираем лишние символы перед fileId
+                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
+                                } catch (e) { }
+                            }
+                            contentHtml = `
+                                    <div class="media-container">
+                                        <img src="${imgSrc}"
+                                             class="chat-media-img"
+                                             onclick="openImageViewer('${imgSrc}')"
+                                             referrerpolicy="no-referrer"
+                                             onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
+                                    </div>`;
+                        } else if (msgType === 'file') {
+                            contentHtml = `
+                                    <a href="${m.txt}" target="_blank" class="chat-file-card">
+                                        <div class="file-icon">📄</div>
+                                        <div class="file-info">
+                                            <div class="file-name">Скачать файл</div>
+                                            <div class="file-action">Нажмите для загрузки</div>
+                                        </div>
+                                    </a>`;
+                        } else {
+                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                            contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
+                        }
+
+                        if (!m.sys) {
+                            let metaStyle = "";
+                            if (msgType === 'image') {
+                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
+                                contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top;">${contentHtml}`;
+                            }
+
+                            let metaHtml = `
+                                    <span class="msg-meta" style="${metaStyle}">
+                                        <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
+                                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                    </span>`;
+
+                            if (msgType === 'image') contentHtml += metaHtml + `</div>`;
+                            else div.innerHTML = contentHtml + metaHtml;
+                            if (msgType === 'image') div.innerHTML = contentHtml;
+                        } else {
+                            div.innerHTML = contentHtml;
+                        }
+
+                        list.appendChild(div);
                     });
-
-                    // 2. КРИТИЧЕСКИЙ МОМЕНТ: 
-                    // Мы очищаем список и вставляем фрагмент ОДНОВРЕМЕННО.
-                    // Браузер не успеет отрисовать пустоту или "одинокое" сообщение.
-                    list.innerHTML = '';
-                    list.appendChild(fragment);
 
                     if (needCommit) batch.commit();
 
-                    // 3. Плавный скролл вниз
-                    // Используем requestAnimationFrame, чтобы скролл сработал сразу после отрисовки
-                    requestAnimationFrame(() => {
-                        list.scrollTop = list.scrollHeight;
-                    });
+                    // Скроллим вниз только если это новое сообщение или открытие чата
+                    list.scrollTop = list.scrollHeight;
                 });
+
+            setTimeout(() => {
+                const inp = document.getElementById('msgInput');
+                if (inp) inp.focus();
+            }, 100);
         }
 
 
