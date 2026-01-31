@@ -1456,24 +1456,10 @@
         };
 
 
-        if (firebase.apps.length === 0) {
-            firebase.initializeApp(firebaseConfig);
-        } else {
-            firebase.app();
-        }
+        if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-
-
-        // --- Ш�?Ф� ОВАН�?Е ТОКЕНА ТЕЛЕГ� АМА (Base64) ---
-        // Токен: 8387775107:AAGhXPcfytIcnh-_zD04HvlGXIJ_b-crPK4
-        const ENCRYPTED_TOKEN = "ODM4Nzc3NTEwNzpBQUdoWFBjZnl0SWNuaC1fekQwNEh2bEdYSUpfYi1jclBLNA==";
-
-        function getTgToken() {
-            // � асшифровка перед отправкой
-            return atob(ENCRYPTED_TOKEN);
-        }
 
         const iceServers = {
             iceServers: [
@@ -1491,19 +1477,24 @@
         };
 
      
-        let oldestMessageDoc = null; 
-        let isLoadingHistory = false; 
-        let isChatFullyLoaded = false; 
-        const MESSAGES_PER_PAGE = 20; 
         let currentUser = null;
         let currentFriendId = null;
-        let currentCallId = null;
         let currentChatId = null;
+        let usersCache = {};
+
+        // Переменные для чата и звонков
+        let msgUnsub = null;
+        let oldestMessageDoc = null;
+        let isLoadingHistory = false;
+        let isChatFullyLoaded = false;
+        const MESSAGES_PER_PAGE = 20;
+        let friendSortTimeout = null; // Для оптимизации списка друзей
+
+        // --- ВАШИ СТАРЫЕ ПЕРЕМЕННЫЕ ДЛЯ ЗВОНКОВ (оставляем без изменений) ---
+        let currentCallId = null;
         let pc = null;
         let localStream = null;
-        let usersCache = {};
         let currentFacingMode = "user";
-        let msgUnsub = null;
         let candidateQueue = [];
         let callTimerInt = null;
         let callStartTime = 0;
@@ -1511,12 +1502,20 @@
         let wasCallConnected = false;
         let amICaller = false;
         let pingInterval = null;
-        let selectedMsgId = null;
-        let selectedMsgIsMine = false;
-        let lastSeenInterval = null;
-        let unreadCounts = {};
         let audioCtx = null;
         let toneTimer = null;
+        let selectedMsgId = null;
+        let selectedMsgIsMine = false;
+        let unreadCounts = {};
+
+        const ENCRYPTED_TOKEN = "ODM4Nzc3NTEwNzpBQUdoWFBjZnl0SWNuaC1fekQwNEh2bEdYSUpfYi1jclBLNA==";
+        function getTgToken() { return atob(ENCRYPTED_TOKEN); }
+        const iceServers = {
+            iceServers: [
+                { urls: "stun:stun.relay.metered.ca:80" },
+                { urls: "stun:stun.l.google.com:19302" }
+            ]
+        };
 
         // --- НОВЫЙ ПОИСК ---
         let searchTimeout = null;
@@ -2029,99 +2028,161 @@
 
 
         // Вспомогательная функция для обновления текста последнего сообщения в списке
-        function startMessageListener(chatId, fid, createdTime) {
+        function startMessageListener(chatId, userDiv) {
             db.collection('chats').doc(chatId).collection('msgs')
                 .orderBy('ts', 'desc').limit(1)
-                .onSnapshot(msgSnap => {
+                .onSnapshot(snap => {
                     const lastEl = document.getElementById('last-' + chatId);
                     const dateEl = document.getElementById('date-' + chatId);
                     const statusEl = document.getElementById('status-' + chatId);
-                    const userDiv = document.getElementById('u-' + fid);
 
-                    // Время по умолчанию - когда добавили в друзья
-                    let timeToDisplay = createdTime;
+                    let sortTime = 0;
 
-                    if (!msgSnap.empty) {
-                        const lastData = msgSnap.docs[0].data();
+                    if (!snap.empty) {
+                        const m = snap.docs[0].data();
 
-                        // Текст сообщения
-                        if (lastEl) {
-                            let shortTxt = lastData.txt;
-                            if (shortTxt.length > 25) shortTxt = shortTxt.substring(0, 25) + '...';
-                            if (lastData.from === currentUser.uid) shortTxt = 'Вы: ' + shortTxt;
-                            lastEl.innerHTML = shortTxt;
+                        // Текст
+                        let txt = m.type === 'image' ? '📷 Фото' : (m.type === 'file' ? '📁 Файл' : m.txt);
+                        if (m.from === currentUser.uid) txt = 'Вы: ' + txt;
+                        if (lastEl) lastEl.innerText = txt;
+
+                        // Дата
+                        if (m.ts) {
+                            sortTime = m.ts.toMillis();
+                            const d = m.ts.toDate();
+                            const now = new Date();
+                            if (d.toDateString() === now.toDateString()) {
+                                if (dateEl) dateEl.innerText = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                            } else {
+                                if (dateEl) dateEl.innerText = d.getDate() + '.' + (d.getMonth() + 1);
+                            }
                         }
 
-                        // Время сообщения
-                        if (lastData.ts) timeToDisplay = lastData.ts.toMillis();
-
-                        // Галочки (статус)
+                        // Статус
                         if (statusEl) {
-                            if (lastData.from === currentUser.uid) {
-                                let ticksHtml = lastData.read
-                                    ? '<span style="margin-right:-4px;">✓</span>✓'
-                                    : '✓';
-                                statusEl.innerHTML = ticksHtml;
+                            if (m.from === currentUser.uid) {
+                                statusEl.innerHTML = m.read ? '<span style="margin-right:-4px;">✓</span>✓' : '✓';
                                 statusEl.style.display = 'inline-flex';
                             } else {
                                 statusEl.style.display = 'none';
                             }
                         }
                     } else {
-                        if (lastEl) lastEl.innerHTML = "Нет сообщений";
-                        if (statusEl) statusEl.style.display = 'none';
+                        if (lastEl) lastEl.innerText = "Нет сообщений";
                     }
 
-                    // Обновляем дату
-                    if (dateEl && timeToDisplay > 0) {
-                        const date = new Date(timeToDisplay);
-                        const now = new Date();
-                        // Простая логика даты: часы:минуты или день
-                        if (date.toDateString() === now.toDateString()) {
-                            dateEl.innerText = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                        } else {
-                            dateEl.innerText = date.getDate() + '.' + (date.getMonth() + 1);
-                        }
-                    }
+                    // Обновляем время сортировки на элементе
+                    if (sortTime > 0) userDiv.setAttribute('data-time', sortTime);
 
-                    // Обновляем сортировку списка
-                    if (userDiv) {
-                        userDiv.setAttribute('data-time', timeToDisplay);
-                        sortFriendsList();
-                    }
+                    // Сортируем список (DEBOUNCE - чтобы не тормозило при старте)
+                    if (friendSortTimeout) clearTimeout(friendSortTimeout);
+                    friendSortTimeout = setTimeout(sortFriendsList, 500); // Сортируем раз в полсекунды максимум
                 });
 
-            // Слушаем непрочитанные (Badge)
+            // Отдельный слушатель для счетчика непрочитанных
             db.collection('chats').doc(chatId).collection('msgs')
-                .where('to', '==', currentUser.uid)
-                .where('read', '==', false)
-                .onSnapshot(unreadSnap => {
-                    const badgeEl = document.getElementById('badge-' + chatId);
-                    const count = unreadSnap.size;
+                .where('to', '==', currentUser.uid).where('read', '==', false)
+                .onSnapshot(snap => {
+                    const badge = document.getElementById('badge-' + chatId);
+                    if (badge) {
+                        const count = snap.size;
+                        badge.innerText = count;
+                        if (count > 0) badge.classList.remove('hidden');
+                        else badge.classList.add('hidden');
 
-                    // Сохраняем в глобальный объект для общего счетчика (если он у вас есть)
-                    if (typeof unreadCounts !== 'undefined') {
                         unreadCounts[chatId] = count;
                         updateTotalFriendsBadge();
-                    }
-
-                    if (badgeEl) {
-                        if (count > 0) {
-                            badgeEl.innerText = count;
-                            badgeEl.classList.remove('hidden');
-                        } else {
-                            badgeEl.classList.add('hidden');
-                        }
                     }
                 });
         }
 
 
         function loadData() {
-            // 1. Запускаем прослушку заявок
-            if (typeof listenForFriendRequests === 'function') {
-                listenForFriendRequests();
+            // Заявки
+            listenForFriendRequests();
+
+            // Друзья
+            db.collection('friends')
+                .where('users', 'array-contains', currentUser.uid)
+                .onSnapshot(snap => {
+                    if (snap.empty) {
+                        document.getElementById('friendsList').innerHTML = '<div style="padding:20px;text-align:center;color:#888">Пусто</div>';
+                        return;
+                    }
+
+                    snap.docChanges().forEach(change => {
+                        const d = change.doc.data();
+                        const fid = d.users.find(id => id !== currentUser.uid);
+                        if (!fid) return;
+
+                        if (change.type === 'removed') {
+                            const el = document.getElementById('u-' + fid);
+                            if (el) el.remove();
+                            return;
+                        }
+
+                        // Создаем элемент друга, если нет
+                        createOrUpdateUserItem(fid, change.doc.createdAt ? change.doc.createdAt.toMillis() : 0);
+                    });
+                });
+        }
+
+
+        async function createOrUpdateUserItem(fid, createdTime) {
+            let div = document.getElementById('u-' + fid);
+            if (!div) {
+                div = document.createElement('div');
+                div.className = 'user-item';
+                div.id = 'u-' + fid;
+                // Временно ставим заглушки
+                div.innerHTML = `
+                    <div class="user-item-avatar" style="background:#333"></div>
+                    <div class="user-name">Загрузка...</div>
+                    <div class="last-msg-row"><span class="last-msg" id="last-${fid}"></span></div>
+                    <div class="meta-column">
+                        <span class="last-msg-date" id="date-${fid}"></span>
+                        <div class="meta-bottom-row">
+                            <span id="status-${fid}" class="list-ticks"></span>
+                            <div class="badge-count hidden" id="badge-${fid}">0</div>
+                        </div>
+                    </div>`;
+                document.getElementById('friendsList').appendChild(div);
+
+                // Загружаем данные профиля ОДИН раз (кешируем)
+                if (!usersCache[fid]) {
+                    const snap = await db.collection('users').doc(fid).get();
+                    if (snap.exists) usersCache[fid] = snap.data();
+                }
+                const u = usersCache[fid] || { username: 'Unknown' };
+                const name = u.name || u.username;
+                const nick = '@' + u.username;
+                const avatar = u.avatar || '';
+
+                // Обновляем HTML с данными
+                const avatarHtml = avatar
+                    ? `<img src="${avatar}" class="user-item-avatar">`
+                    : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>`;
+
+                div.querySelector('.user-item-avatar').outerHTML = avatarHtml;
+                div.querySelector('.user-name').innerText = name;
+                div.onclick = () => openChat(fid, name, nick);
+
+                // Запускаем слушатель сообщений
+                const chatId = [currentUser.uid, fid].sort().join('_');
+
+                // Трюк: чтобы ID элементов были уникальны и связаны с чатом
+                div.querySelector('.last-msg').id = 'last-' + chatId;
+                div.querySelector('.last-msg-date').id = 'date-' + chatId;
+                div.querySelector('.list-ticks').id = 'status-' + chatId;
+                div.querySelector('.badge-count').id = 'badge-' + chatId;
+
+                startMessageListener(chatId, div);
             }
+        }
+
+
+
+
 
             // 2. Слушаем список друзей (ОПТИМИЗИРОВАНО)
             db.collection('friends')
@@ -2214,11 +2275,6 @@
                     // Сортировка (небольшая задержка, чтобы элементы успели добавиться)
                     setTimeout(sortFriendsList, 100);
                 });
-        }
-
-
-
-
 
 
 
@@ -2227,10 +2283,11 @@
             const list = document.getElementById('friendsList');
             const items = Array.from(list.children);
             items.sort((a, b) => {
-                const timeA = parseInt(a.getAttribute('data-time') || 0);
-                const timeB = parseInt(b.getAttribute('data-time') || 0);
-                return timeB - timeA;
+                const ta = parseInt(a.getAttribute('data-time') || 0);
+                const tb = parseInt(b.getAttribute('data-time') || 0);
+                return tb - ta; // Новые сверху
             });
+            // Используем append, чтобы переместить элементы (это дешевая операция в DOM, если элементы уже там)
             items.forEach(item => list.appendChild(item));
         }
 
@@ -2303,99 +2360,74 @@
 
         function loadMessages() {
             const list = document.getElementById('msgList');
-            list.innerHTML = '';
+            list.innerHTML = ''; // Очистка
 
-            // Сброс переменных пагинации
+            // Сброс состояния
             oldestMessageDoc = null;
             isLoadingHistory = false;
             isChatFullyLoaded = false;
 
-            // Отписываемся от старого слушателя
-            if (msgUnsub) msgUnsub();
+            if (msgUnsub) msgUnsub(); // Отписка от старого чата
 
-            // Удаляем старый обработчик скролла (чтобы не дублировался)
-            list.onscroll = null;
+            list.onscroll = () => {
+                if (list.scrollTop === 0) loadHistory();
+            };
 
-            // === СЛУШАТЕЛЬ НОВЫХ СООБЩЕНИЙ (И ПЕРВЫХ 20) ===
-            // Мы слушаем только последние 20. Это очень быстро.
+            // Слушаем только последние 20 сообщений (для скорости)
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
-                .orderBy('ts') // По возрастанию (старые -> новые)
+                .orderBy('ts')
                 .limitToLast(MESSAGES_PER_PAGE)
                 .onSnapshot(snap => {
                     const batch = db.batch();
                     let needCommit = false;
-                    let hasNewMessages = false;
-                    let isFirstLoad = oldestMessageDoc === null;
+                    let scrollDown = false;
 
-                    // Если это первая загрузка, запоминаем самое старое сообщение (первое в списке)
+                    // Используем Fragment, чтобы не дергать экран 20 раз
+                    const fragment = document.createDocumentFragment();
+                    const isFirstLoad = (oldestMessageDoc === null);
+
                     if (isFirstLoad && !snap.empty) {
-                        oldestMessageDoc = snap.docs[0];
+                        oldestMessageDoc = snap.docs[0]; // Запоминаем самое старое для истории
+                        scrollDown = true;
                     }
 
                     snap.docChanges().forEach(change => {
                         const d = change.doc;
                         const m = d.data();
-                        const msgId = d.id;
-                        const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
-                        if (deletedLocal.includes(msgId)) return;
+                        if (change.type === 'added') {
+                            const div = createMessageElement(d.id, m);
+                            fragment.appendChild(div); // Добавляем во фрагмент
 
-                        if (change.type === 'removed') {
-                            const el = document.getElementById('msg-' + msgId);
-                            if (el) el.remove();
-                            return;
-                        }
-
-                        // Проверяем, есть ли уже такое сообщение (чтобы не дублировать при подгрузке истории)
-                        let div = document.getElementById('msg-' + msgId);
-                        const isNew = !div;
-
-                        if (isNew) {
-                            // Используем нашу новую функцию создания
-                            div = createMessageElement(msgId, m);
-
-                            // Если это новый входящий - отмечаем прочитанным
-                            if (change.type === 'added' && m.to === currentUser.uid && !m.read) {
+                            // Прочитано?
+                            if (m.to === currentUser.uid && !m.read) {
                                 batch.update(d.ref, { read: true });
                                 needCommit = true;
                             }
-
-                            list.appendChild(div);
-                            hasNewMessages = true;
-                        } else {
-                            // Если сообщение изменилось (например, стало прочитанным), можно обновить галочки
-                            if (change.type === 'modified') {
-                                const newDiv = createMessageElement(msgId, m);
-                                list.replaceChild(newDiv, div);
-                            }
+                            // Если это новое сообщение в реал-тайме, скроллим вниз
+                            if (!isFirstLoad) scrollDown = true;
+                        }
+                        else if (change.type === 'modified') {
+                            // Обновление (галочки и т.д.)
+                            const el = document.getElementById('msg-' + d.id);
+                            if (el) el.replaceWith(createMessageElement(d.id, m));
+                        }
+                        else if (change.type === 'removed') {
+                            const el = document.getElementById('msg-' + d.id);
+                            if (el) el.remove();
                         }
                     });
 
+                    // Вставляем все сообщения разом!
+                    list.appendChild(fragment);
+
                     if (needCommit) batch.commit();
 
-                    // Автоскролл вниз только при первой загрузке или если мы внизу
-                    if (hasNewMessages) {
-                        // Простая логика: если это первая загрузка или пользователь был внизу
-                        const isAtBottom = (list.scrollHeight - list.scrollTop - list.clientHeight) < 100;
-
-                        if (isFirstLoad || isAtBottom) {
-                            setTimeout(() => {
-                                list.scrollTop = list.scrollHeight;
-                            }, 50);
-                        }
+                    if (scrollDown) {
+                        // Небольшая задержка, чтобы картинки заняли место
+                        setTimeout(() => list.scrollTop = list.scrollHeight, 100);
                     }
                 });
-
-            // === ОБРАБОТЧИК СКРОЛЛА (ДЛЯ ИСТОРИИ) ===
-            list.onscroll = () => {
-                // Если скролл поднялся до самого верха (0)
-                if (list.scrollTop === 0) {
-                    loadHistory();
-                }
-            };
-
-            // Фокус на ввод
-            setTimeout(() => document.getElementById('msgInput').focus(), 100);
         }
 
 
@@ -2422,14 +2454,8 @@
             document.getElementById('mainChatArea').classList.remove('active');
             document.getElementById('activeChat').classList.add('hidden');
             document.getElementById('noChat').classList.remove('hidden');
-
             currentFriendId = null;
-            currentChatId = null;
-
-            if (msgUnsub) {
-                msgUnsub();
-                msgUnsub = null;
-            }
+            if (msgUnsub) msgUnsub();
         }
 
 
@@ -3649,61 +3675,27 @@
 
         // 1. Слушаем изменения в адресной строке (например, кнопка Назад)
         window.addEventListener('hashchange', handleHashChange);
-
         async function handleHashChange() {
             const hash = window.location.hash;
-
-            // Если ссылка пустая (мы в списке чатов)
             if (!hash || hash === '#') {
                 performCloseUI();
                 return;
             }
-
-            // Если ссылка вида #chat/USER_ID
             if (hash.startsWith('#chat/')) {
                 const userId = hash.replace('#chat/', '');
-
-                // Если мы уже в этом чате, ничего не делаем
                 if (currentFriendId === userId) return;
 
-                // Если мы только зашли на сайт, currentUser может еще не прогрузиться
-                // Проверка будет внутри auth listener, но здесь подстрахуемся
-                if (!currentUser) return;
-
-                // Нам нужно имя и ник для открытия чата.
-                // Пытаемся найти в кэше или загрузить из базы
-                let userData = usersCache[userId];
-
-                if (!userData) {
-                    try {
-                        // Показываем прелоадер в заголовке, пока грузим
-                        document.getElementById('mainChatArea').classList.add('active'); // для мобилок
-                        document.getElementById('noChat').classList.add('hidden');
-                        document.getElementById('activeChat').classList.remove('hidden');
-                        document.getElementById('chatTitle').innerText = "Загрузка...";
-
-                        const doc = await db.collection('users').doc(userId).get();
-                        if (doc.exists) {
-                            userData = doc.data();
-                            usersCache[userId] = userData; // Сохраняем в кэш
-                        }
-                    } catch (e) {
-                        console.error("Ошибка роутера", e);
-                    }
+                // Загрузка пользователя
+                if (!usersCache[userId]) {
+                    const doc = await db.collection('users').doc(userId).get();
+                    if (doc.exists) usersCache[userId] = doc.data();
                 }
+                const u = usersCache[userId];
+                if (u) {
+                    const name = u.name || u.username;
+                    const nick = '@' + u.username;
 
-                if (userData) {
-                    const name = userData.name || userData.username || 'User';
-                    const nick = userData.username ? '@' + userData.username : '';
-
-                    // Вызываем обычную функцию открытия, но она снова поставит хеш.
-                    // Это не страшно, но чтобы не зациклить, можно временно отключить слушатель,
-                    // но проще оставить как есть, браузер умный.
-
-                    // ВАЖНО: Мы вызываем openChat, но он сам ставит hash.
-                    // Чтобы не было двойной работы, код внутри openChat корректен.
-
-                    // Прямой вызов UI логики (дублируем часть openChat чтобы избежать рекурсии хеша)
+                    // UI
                     currentFriendId = userId;
                     currentChatId = [currentUser.uid, userId].sort().join('_');
 
@@ -3713,16 +3705,9 @@
                     }
                     document.getElementById('noChat').classList.add('hidden');
                     document.getElementById('activeChat').classList.remove('hidden');
-
-                    document.getElementById('chatTitle').innerHTML = `
-                                        <div>${name}</div>
-                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                    `;
+                    document.getElementById('chatTitle').innerHTML = `<div>${name}</div><div style="font-size:11px;color:#888;">${nick}</div>`;
 
                     loadMessages();
-                } else {
-                    // Юзер не найден, возвращаемся назад
-                    window.location.hash = '';
                 }
             }
         }
@@ -3909,27 +3894,22 @@
         }
 
         // Вспомогательная функция: создает HTML элемент сообщения
-        function createMessageElement(id, data, isHistory = false) {
+        function createMessageElement(id, data) {
             const div = document.createElement('div');
             div.id = 'msg-' + id;
 
-            // Обработчик клика (для меню действий)
+            // Определяем класс (свой/чужой)
+            const isMe = data.from === currentUser.uid;
+            if (data.sys) div.className = 'msg msg-sys';
+            else div.className = isMe ? 'msg msg-me' : 'msg msg-other';
+
+            // Клик для меню
             div.onclick = (e) => {
                 if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
                     e.stopPropagation();
-                    openActionSheet(id, data.from === currentUser.uid);
+                    openActionSheet(id, isMe);
                 }
             };
-
-            // Определение классов
-            const msgType = data.type || 'text';
-            if (data.sys) {
-                div.className = 'msg msg-sys';
-            } else if (data.from === currentUser.uid) {
-                div.className = 'msg msg-me';
-            } else {
-                div.className = 'msg msg-other';
-            }
 
             // Время
             let timeStr = '';
@@ -3939,59 +3919,51 @@
             }
 
             // Галочки
-            let ticksHtml = data.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
+            let ticksHtml = data.read ? '<span style="margin-right:-4px;">✓</span>✓' : '✓';
 
-            // Контент
+            // Контент сообщения
             let contentHtml = '';
+            const msgType = data.type || 'text';
 
             if (data.sys) {
                 contentHtml = data.txt;
             } else if (msgType === 'image') {
                 let imgSrc = data.txt;
+                // Оптимизация Google Drive ссылок (грузим маленькую версию для превью)
                 if (data.txt.includes('drive.google.com') && data.txt.includes('id=')) {
                     try {
                         const fileId = data.txt.split('id=')[1];
-                        imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
+                        imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; // w600 = ширина 600px
                     } catch (e) { }
                 }
-                contentHtml = `
-            <div class="media-container">
-                <img src="${imgSrc}" class="chat-media-img"
-                     onclick="openImageViewer('${imgSrc}')"
-                     referrerpolicy="no-referrer"
-                     onload="this.parentElement.style.background='transparent'"
-                     onerror="this.src='https://placehold.co/200x200?text=Error';">
-            </div>`;
+                contentHtml = `<div class="media-container">
+                    <img src="${imgSrc}" class="chat-media-img" loading="lazy" onclick="openImageViewer('${data.txt}')" onerror="this.src='https://placehold.co/200x200?text=Err'">
+                </div>`;
             } else if (msgType === 'file') {
-                contentHtml = `
-            <a href="${data.txt}" target="_blank" class="chat-file-card">
-                <div class="file-icon">📄</div>
-                <div class="file-info">
-                    <div class="file-name">Скачать файл</div>
-                    <div class="file-action">Нажмите для загрузки</div>
-                </div>
-            </a>`;
+                contentHtml = `<a href="${data.txt}" target="_blank" class="chat-file-card">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info"><div class="file-name">Файл</div><div class="file-action">Скачать</div></div>
+                </a>`;
             } else {
+                // Авто-ссылки
                 const txtWithLinks = data.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
                 contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
             }
 
-            // Сборка с метой
+            // Мета (время + галочки)
             if (!data.sys) {
-                let metaStyle = "";
-                if (msgType === 'image') {
-                    metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px);";
-                    contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
-                }
+                let metaStyle = msgType === 'image' ? "position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.4); padding:2px 8px; border-radius:12px;" : "";
 
-                let metaHtml = `
-            <span class="msg-meta" style="${metaStyle}">
-                <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
-                ${data.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
-            </span>`;
+                const metaHtml = `
+                    <span class="msg-meta" style="${metaStyle}">
+                        <span class="msg-time" style="color:rgba(255,255,255,0.9);">${timeStr}</span>
+                        ${isMe ? `<span class="msg-ticks" style="color:white;">${ticksHtml}</span>` : ''}
+                    </span>`;
 
-                if (msgType === 'image') contentHtml += metaHtml + `</div>`;
+                if (msgType === 'image') contentHtml += metaHtml; // Внутри контейнера
                 else div.innerHTML = contentHtml + metaHtml;
+
+                if (msgType === 'image') div.innerHTML = `<div style="position:relative; display:inline-block;">${contentHtml}</div>`;
             } else {
                 div.innerHTML = contentHtml;
             }
@@ -4004,64 +3976,39 @@
 
             isLoadingHistory = true;
             const list = document.getElementById('msgList');
-
-            // 1. Показываем лоадер сверху (опционально, но красиво)
-            const loader = document.createElement('div');
-            loader.innerText = "Загрузка истории...";
-            loader.style.textAlign = "center";
-            loader.style.fontSize = "12px";
-            loader.style.padding = "10px";
-            loader.style.color = "#888";
-            loader.id = "historyLoader";
-            list.prepend(loader);
-
-            // 2. Запоминаем текущую высоту скролла, чтобы не было скачка
-            const previousScrollHeight = list.scrollHeight;
-            const previousScrollTop = list.scrollTop;
+            const prevHeight = list.scrollHeight; // Запоминаем высоту до загрузки
 
             try {
-                // 3. Делаем запрос: взять сообщения СТАРШЕ (меньше по дате), чем oldestMessageDoc
                 const snap = await db.collection('chats').doc(currentChatId).collection('msgs')
-                    .orderBy('ts', 'desc') // Сортируем от новых к старым
-                    .startAfter(oldestMessageDoc) // Начинаем ПОСЛЕ самого старого, что у нас есть
+                    .orderBy('ts', 'desc') // Обратный порядок для истории
+                    .startAfter(oldestMessageDoc)
                     .limit(MESSAGES_PER_PAGE)
                     .get();
 
                 if (snap.empty) {
                     isChatFullyLoaded = true;
-                    loader.innerText = "История загружена полностью";
-                    setTimeout(() => loader.remove(), 2000);
+                    isLoadingHistory = false;
                     return;
                 }
 
-                // Обновляем курсор на самое старое из загруженных (последнее в массиве, т.к. desc)
-                oldestMessageDoc = snap.docs[snap.docs.length - 1];
+                oldestMessageDoc = snap.docs[snap.docs.length - 1]; // Обновляем курсор
 
-                // 4. Добавляем сообщения в DOM (в обратном порядке, чтобы они шли снизу вверх)
-                // snap.docs идет: [Вчера 23:59, Вчера 23:58 ...]. Нам нужно вставить их перед текущими.
-
-                // Удаляем лоадер перед вставкой
-                loader.remove();
-
-                // Фрагмент документа для оптимизации
                 const fragment = document.createDocumentFragment();
 
+                // Firestore возвращает от новых к старым (desc), нам нужно вставить их наоборот (чтобы хронология была верной)
+                // Но так как мы делаем prepend, мы идем по массиву.
                 snap.docs.forEach(doc => {
-                    const el = createMessageElement(doc.id, doc.data(), true);
-                    fragment.prepend(el); // Вставляем в начало фрагмента (чтобы сохранить хронологию)
+                    const div = createMessageElement(doc.id, doc.data());
+                    fragment.prepend(div); // Вставляем в начало фрагмента
                 });
 
-                list.prepend(fragment);
+                list.prepend(fragment); // Вставляем фрагмент в начало списка
 
-                // 5. КОРРЕКЦИЯ СКРОЛЛА (Магия Telegram)
-                // Вычисляем, насколько увеличилась высота контента
-                const newScrollHeight = list.scrollHeight;
-                // Смещаем скролл вниз на разницу, чтобы визуально пользователь остался на том же сообщении
-                list.scrollTop = newScrollHeight - previousScrollHeight;
+                // Корректируем скролл, чтобы пользователя не кинуло вверх
+                list.scrollTop = list.scrollHeight - prevHeight;
 
             } catch (e) {
-                console.error("Ошибка загрузки истории:", e);
-                loader.remove();
+                console.error(e);
             } finally {
                 isLoadingHistory = false;
             }
