@@ -2399,12 +2399,9 @@
         function loadMessages() {
             const list = document.getElementById('msgList');
 
-            // 1. Отписываемся от прослушивания старого чата
+            // 1. Отписываемся и очищаем (как договаривались)
             if (msgUnsub) msgUnsub();
-
-            // 2. ИСПРАВЛЕНИЕ: Очищаем экран СРАЗУ ЖЕ, не дожидаясь загрузки новых данных
             list.innerHTML = '';
-            // Можно добавить крутилку, если хочется: list.innerHTML = '<div style="text-align:center; padding:20px; color:#555;">Загрузка...</div>';
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
@@ -2413,13 +2410,13 @@
                 .limitToLast(50)
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
 
-                    // Пропуск "пустого" кэша (из предыдущего исправления)
+                    // Пропускаем "пустой" кэш
                     if (snap.metadata.fromCache && snap.docs.length < 2 && snap.docs.length > 0) return;
 
                     const batch = db.batch();
                     let needCommit = false;
 
-                    // Внутри тоже очищаем, чтобы при обновлении (приходе нового сообщения) не дублировалось
+                    // Снова очищаем перед рендером
                     list.innerHTML = '';
 
                     snap.docs.forEach(doc => {
@@ -2474,12 +2471,14 @@
                                     imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
                                 } catch (e) { }
                             }
+                            // --- ИСПРАВЛЕНИЕ: Добавлен onload ---
                             contentHtml = `
                         <div class="media-container">
                             <img src="${imgSrc}"
                                     class="chat-media-img"
                                     onclick="openImageViewer('${imgSrc}')"
                                     referrerpolicy="no-referrer"
+                                    onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight"
                                     onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
                         </div>`;
                         } else if (msgType === 'file') {
@@ -2521,8 +2520,10 @@
 
                     if (needCommit) batch.commit();
 
-                    // Скроллим вниз
-                    list.scrollTop = list.scrollHeight;
+                    // --- ИСПРАВЛЕНИЕ: Скроллим с небольшой задержкой для надежности ---
+                    setTimeout(() => {
+                        list.scrollTop = list.scrollHeight;
+                    }, 50);
                 });
 
             setTimeout(() => {
@@ -2530,6 +2531,7 @@
                 if (inp) inp.focus();
             }, 100);
         }
+
 
 
 
