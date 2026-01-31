@@ -1004,14 +1004,139 @@
             background: #222; /* Фон пока грузится */
         }
 
+        .custom-video-container {
+            position: relative;
+            display: inline-block;
+            overflow: hidden;
+            border-radius: 12px;
+            max-width: 320px;
+            background: #000;
+            line-height: 0;
+            cursor: pointer;
+        }
+
         /* --- СТИЛИ ДЛЯ ВИДЕО В ЧАТЕ --- */
         .chat-media-video {
             width: 100%;
             height: auto;
             max-height: 400px;
             display: block;
-            outline: none;
-            object-fit: cover; /* Чтобы видео заполняло контейнер красиво */
+            object-fit: cover;
+        }
+
+        .center-play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            padding-left: 4px; /* Визуальная центровка треугольника */
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 25px 10px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 15;
+        }
+
+        .custom-video-container:hover .video-controls,
+        .custom-video-container.paused .video-controls {
+            opacity: 1;
+        }
+
+        .video-progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .video-progress-bar {
+            height: 100%;
+            background: #2481cc; /* Цвет Телеграма */
+            width: 0%;
+            border-radius: 2px;
+            position: relative;
+        }
+
+            .video-progress-bar::after {
+                content: '';
+                position: absolute;
+                right: -4px;
+                top: -3px;
+                width: 10px;
+                height: 10px;
+                background: white;
+                border-radius: 50%;
+                transform: scale(0);
+                transition: transform 0.1s;
+            }
+
+        .video-progress-container:hover .video-progress-bar::after {
+            transform: scale(1);
+        }
+
+        .video-controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .fullscreen-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+        }
+
+        .video-msg-meta {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 8px;
+            border-radius: 12px;
+            backdrop-filter: blur(2px);
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: white;
+            font-size: 11px;
+            pointer-events: none;
+        }
+
+        .custom-video-container.playing .center-play-btn {
+            opacity: 0; /* Скрываем, когда играет */
+            transform: translate(-50%, -50%) scale(1.5); /* Эффект "взрыва" */
+            pointer-events: none;
         }
 
         .video-meta-overlay {
@@ -2405,6 +2530,75 @@
             }
         }
 
+
+
+        // --- ЛОГИКА КАСТОМНОГО ПЛЕЕРА ---
+
+        function toggleVideoPlay(container) {
+            const video = container.querySelector('video');
+            const btn = container.querySelector('.center-play-btn');
+
+            if (video.paused) {
+                // Ставим на паузу все остальные видео
+                document.querySelectorAll('video').forEach(v => {
+                    if (v !== video) {
+                        v.pause();
+                        v.parentElement.classList.remove('playing');
+                        v.parentElement.classList.add('paused');
+                    }
+                });
+
+                video.play();
+                container.classList.add('playing');
+                container.classList.remove('paused');
+            } else {
+                video.pause();
+                container.classList.remove('playing');
+                container.classList.add('paused');
+            }
+        }
+
+        function updateVideoProgress(video) {
+            const container = video.parentElement;
+            const bar = container.querySelector('.video-progress-bar');
+            const timeDisplay = container.querySelector('.video-time');
+
+            const percent = (video.currentTime / video.duration) * 100;
+            bar.style.width = `${percent}%`;
+
+            // Форматируем время 0:00
+            const curMins = Math.floor(video.currentTime / 60);
+            const curSecs = Math.floor(video.currentTime % 60).toString().padStart(2, '0');
+            const durMins = Math.floor((video.duration || 0) / 60);
+            const durSecs = Math.floor((video.duration || 0) % 60).toString().padStart(2, '0');
+
+            timeDisplay.innerText = `${curMins}:${curSecs} / ${durMins}:${durSecs}`;
+
+            if (video.ended) {
+                container.classList.remove('playing');
+                container.classList.add('paused');
+            }
+        }
+
+        function seekVideo(e, progressContainer) {
+            e.stopPropagation(); // Чтобы не сработал клик по контейнеру (пауза)
+            const video = progressContainer.parentElement.parentElement.querySelector('video');
+            const rect = progressContainer.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percent = clickX / rect.width;
+
+            video.currentTime = percent * video.duration;
+        }
+
+        function toggleFullscreen(btn) {
+            const container = btn.closest('.custom-video-container');
+            const video = container.querySelector('video');
+
+            if (video.requestFullscreen) video.requestFullscreen();
+            else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen(); // Safari
+            else if (video.msRequestFullscreen) video.msRequestFullscreen();
+        }
+
         function loadMessages() {
             const list = document.getElementById('msgList');
             list.innerHTML = '';
@@ -2441,8 +2635,8 @@
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
                             div.onclick = (e) => {
-                                // Игнорируем клики по плееру и картинкам, чтобы не открывалось меню
-                                if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG' && e.target.tagName !== 'VIDEO') {
+                                // Игнорируем клики по медиа и контролам
+                                if (!e.target.closest('.custom-video-container') && e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
                                     e.stopPropagation();
                                     openActionSheet(msgId, m.from === currentUser.uid);
                                 }
@@ -2454,21 +2648,23 @@
                             needCommit = true;
                         }
 
-                        // --- ДАННЫЕ ВРЕМЕНИ И ГАЛОЧКИ ---
+                        // --- МЕТА ДАННЫЕ ---
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
                             timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
                         }
                         let ticksHtml = m.read ? '<span style="margin-right: -2px;">✓</span>✓' : '✓';
-                        // Формируем HTML для меты, который будем вставлять в разные места
-                        const metaInsideMediaHtml = `
-                            <div class="video-meta-overlay">
+
+                        // Мета для видео (вверху справа)
+                        const metaVideoHtml = `
+                            <div class="video-msg-meta">
                                 <span class="msg-time">${timeStr}</span>
-                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
+                                ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
                             </div>
                         `;
 
+                        // Мета стандартная
                         const metaStandardHtml = `
                             <span class="msg-meta">
                                 <span class="msg-time" style="color: rgba(255,255,255,0.7);">${timeStr}</span>
@@ -2476,12 +2672,11 @@
                             </span>
                         `;
 
-                        // Классы сообщения
+                        // Классы
                         if (m.sys) { div.className = 'msg msg-sys'; }
                         else if (m.from === currentUser.uid) { div.className = 'msg msg-me'; }
                         else { div.className = 'msg msg-other'; }
 
-                        // === ГЕНЕРАЦИЯ КОНТЕНТА ===
                         let contentHtml = '';
                         const msgType = m.type || 'text';
 
@@ -2489,7 +2684,6 @@
                             contentHtml = m.txt;
                         }
                         else if (msgType === 'image') {
-                            // КАРТИНКА
                             let imgSrc = m.txt;
                             if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
                                 try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://googleusercontent.com/profile/picture/0{fileId}=w600`; } catch (e) { }
@@ -2497,51 +2691,48 @@
                             contentHtml = `
                                 <div class="media-container">
                                     <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" onload="this.parentElement.style.background='transparent'" onerror="this.src='https://placehold.co/200x200?text=Error';">
-                                    ${metaInsideMediaHtml}
+                                    <div class="video-msg-meta" style="bottom: 8px; top: auto; right: 8px;">
+                                        <span class="msg-time">${timeStr}</span>
+                                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                                    </div>
                                 </div>
                             `;
                         }
                         else if (msgType === 'video') {
-                            // ВИДЕО (ИСПРАВЛЕНО)
+                            // === КАСТОМНЫЙ ВИДЕО ПЛЕЕР ===
                             let vidSrc = m.txt;
 
-                            // ПРЕВРАЩАЕМ ССЫЛКУ DRIVE В ПРЯМУЮ ССЫЛКУ НА ВИДЕО
-                            // Было: .../view?usp=drivesdk (это веб-страница)
-                            // Стало: .../uc?export=download&id=XXX (это видео поток)
+                            // Фикс ссылок Google Drive
                             if (vidSrc.includes('drive.google.com') && vidSrc.includes('/file/d/')) {
                                 try {
-                                    // Вытаскиваем ID из ссылки вида /file/d/XXX/view
                                     const fileId = vidSrc.split('/file/d/')[1].split('/')[0];
                                     vidSrc = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                                } catch (e) { console.error("Ошибка парсинга видео URL", e); }
-                            }
-                            // Если ссылка старого формата (id=XXX)
-                            else if (vidSrc.includes('drive.google.com') && vidSrc.includes('id=')) {
-                                if (vidSrc.includes('/view')) {
-                                    vidSrc = vidSrc.replace('/view', ''); // Убираем view если есть, но лучше через ID
-                                    // Лучше оставить как есть, если это уже экспорт
-                                }
-                                // Принудительно меняем на export=download, если это view
-                                if (!vidSrc.includes('export=download')) {
-                                    vidSrc = vidSrc.replace('open?', 'uc?export=download&');
-                                }
+                                } catch (e) { }
+                            } else if (vidSrc.includes('drive.google.com') && !vidSrc.includes('export=download')) {
+                                if (vidSrc.includes('id=')) vidSrc = vidSrc.replace('/view', '').replace('open?', 'uc?export=download&');
                             }
 
                             contentHtml = `
-                                <div class="media-container">
-                                    <video src="${vidSrc}" 
-                                           class="chat-media-video" 
-                                           controls 
-                                           playsinline 
-                                           preload="metadata" 
-                                           style="background: black;">
-                                    </video>
-                                    ${metaInsideMediaHtml}
+                                <div class="custom-video-container paused" onclick="toggleVideoPlay(this)">
+                                    <video src="${vidSrc}" class="chat-media-video" playsinline ontimeupdate="updateVideoProgress(this)"></video>
+                                    
+                                    <div class="center-play-btn">▶</div>
+                                    
+                                    ${metaVideoHtml}
+
+                                    <div class="video-controls" onclick="event.stopPropagation()">
+                                        <div class="video-progress-container" onclick="seekVideo(event, this)">
+                                            <div class="video-progress-bar"></div>
+                                        </div>
+                                        <div class="video-controls-row">
+                                            <span class="video-time">0:00 / 0:00</span>
+                                            <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                                        </div>
+                                    </div>
                                 </div>
                             `;
                         }
                         else if (msgType === 'file') {
-                            // ФАЙЛ
                             contentHtml = `
                                 <a href="${m.txt}" target="_blank" class="chat-file-card">
                                     <div class="file-icon">📄</div>
@@ -2554,7 +2745,6 @@
                             `;
                         }
                         else {
-                            // ТЕКСТ
                             const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
                             contentHtml = `<span class="msg-text">${txtWithLinks}</span> ${metaStandardHtml}`;
                         }
