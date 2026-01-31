@@ -2377,63 +2377,60 @@
 
         function loadMessages() {
             const list = document.getElementById('msgList');
-            list.innerHTML = '';
+            list.innerHTML = ''; // Очищаем чат перед загрузкой
 
             if (msgUnsub) msgUnsub();
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
-                .orderBy('ts')
+                .orderBy('ts', 'asc') // Сортируем строго по времени по возрастанию
                 .limitToLast(50)
                 .onSnapshot(snap => {
                     const batch = db.batch();
                     let needCommit = false;
-                    let hasNewMessages = false;
 
-                    snap.docChanges().forEach(change => {
-                        const d = change.doc;
-                        const m = d.data();
-                        const msgId = d.id;
+                    // Вместо docChanges() перерисовываем актуальный список из snap.docs
+                    // Это гарантирует, что сообщения ВСЕГДА будут в правильном порядке
+                    list.innerHTML = '';
+
+                    snap.docs.forEach(doc => {
+                        const m = doc.data();
+                        const msgId = doc.id;
 
                         if (deletedLocal.includes(msgId)) return;
 
-                        if (change.type === 'removed') {
-                            const el = document.getElementById('msg-' + msgId);
-                            if (el) el.remove();
-                            return;
-                        }
+                        // Создаем элемент сообщения
+                        const div = document.createElement('div');
+                        div.id = 'msg-' + msgId;
+                        div.onclick = (e) => {
+                            if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
+                                e.stopPropagation();
+                                openActionSheet(msgId, m.from === currentUser.uid);
+                            }
+                        };
 
-                        let div = document.getElementById('msg-' + msgId);
-                        const isNew = !div;
-
-                        if (isNew) {
-                            div = document.createElement('div');
-                            div.id = 'msg-' + msgId;
-                            div.onclick = (e) => {
-                                if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
-                                    e.stopPropagation();
-                                    openActionSheet(msgId, m.from === currentUser.uid);
-                                }
-                            };
-                        }
-
-                        // 3. Отметка прочитанным
-                        if (change.type === 'added' && m.to === currentUser.uid && !m.read) {
-                            batch.update(d.ref, { read: true });
+                        // Отметка прочитанным (если сообщение входящее)
+                        if (m.to === currentUser.uid && !m.read) {
+                            batch.update(doc.ref, { read: true });
                             needCommit = true;
                         }
 
-                        // --- ГЕНЕРАЦИЯ HTML ---
+                        // Временная метка
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
                             timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                        } else {
+                            // Если сервер еще не вернул время, ставим текущее локальное, 
+                            // чтобы сообщение не "прыгало"
+                            const now = new Date();
+                            timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                         }
 
                         let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
-                        // Классы
+                        // Классы оформления
                         if (m.sys) {
                             div.className = 'msg msg-sys';
                         } else if (m.from === currentUser.uid) {
@@ -2442,95 +2439,66 @@
                             div.className = 'msg msg-other';
                         }
 
-                        // === КОНТЕНТ ===
+                        // Контент сообщения (текст/фото/файл)
                         let contentHtml = '';
                         const msgType = m.type || 'text';
 
                         if (m.sys) {
                             contentHtml = m.txt;
-                        }
-                        else if (msgType === 'image') {
-                            // === КАРТИНКА (ВЫСОКОЕ КАЧЕСТВО) ===
+                        } else if (msgType === 'image') {
                             let imgSrc = m.txt;
-
-                            // Парсим ID и делаем High-Res ссылку (lh3.../d/ID=w1000)
-                            if (m.txt.includes('drive.google.com') && m.txt.includes('id=')) {
+                            if (m.txt.includes('id=')) {
                                 try {
                                     const fileId = m.txt.split('id=')[1];
-                                    // =w600 - оптимально для чата (быстро грузит, четко выглядит)
-                                    // При клике откроется полная версия
-                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
+                                    imgSrc = `https://lh3.googleusercontent.com/d/$${fileId}=w600`;
                                 } catch (e) { }
                             }
-
-                            // Обрати внимание на onclick="openImageViewer(...)"
                             contentHtml = `
-                                                    <div class="media-container">
-                                                        <img src="${imgSrc}"
-                                                             class="chat-media-img"
-                                                             onclick="openImageViewer('${imgSrc}')"
-                                                             referrerpolicy="no-referrer"
-                                                             onload="this.parentElement.style.background='transparent'"
-                                                             onerror="this.src='https://placehold.co/200x200?text=Error';">
-                                                    </div>
-                                                `;
-                        }
-                        else if (msgType === 'file') {
-                            // ФАЙЛ
+                        <div class="media-container">
+                            <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer">
+                        </div>`;
+                        } else if (msgType === 'file') {
                             contentHtml = `
-                                                    <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                                        <div class="file-icon">📄</div>
-                                                        <div class="file-info">
-                                                            <div class="file-name">Скачать файл</div>
-                                                            <div class="file-action">Нажмите для загрузки</div>
-                                                        </div>
-                                                    </a>
-                                                `;
-                        }
-                        else {
-                            // ТЕКСТ
-                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                        <a href="${m.txt}" target="_blank" class="chat-file-card">
+                            <div class="file-icon">📄</div>
+                            <div class="file-info">
+                                <div class="file-name">Скачать файл</div>
+                                <div class="file-action">Нажмите для загрузки</div>
+                            </div>
+                        </a>`;
+                        } else {
+                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;">$1</a>');
                             contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
                         }
 
-                        // Мета
+                        // Мета-инфо
                         if (!m.sys) {
                             let metaStyle = "";
-                            // Для картинок мета-данные красивее смотрятся поверх, в углу (как в ТГ)
                             if (msgType === 'image') {
                                 metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(2px);";
-                                // Добавляем position: relative контейнеру, если это картинка
                                 contentHtml = `<div style="position: relative; display: inline-block;">${contentHtml}`;
                             }
 
                             let metaHtml = `
-                                                    <span class="msg-meta" style="${metaStyle}">
-                                                        <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
-                                                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
-                                                    </span>
-                                                `;
+                        <span class="msg-meta" style="${metaStyle}">
+                            <span class="msg-time" style="color: rgba(255,255,255,0.9);">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white;">${ticksHtml}</span>` : ''}
+                        </span>`;
 
-                            if (msgType === 'image') contentHtml += metaHtml + `</div>`; // Закрываем wrapper
+                            if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                             else div.innerHTML = contentHtml + metaHtml;
-
-                            if (msgType === 'image') div.innerHTML = contentHtml; // Для картинок HTML уже собран с метой
+                            if (msgType === 'image') div.innerHTML = contentHtml;
                         } else {
                             div.innerHTML = contentHtml;
                         }
 
-                        if (isNew) {
-                            list.appendChild(div);
-                            hasNewMessages = true;
-                        }
+                        list.appendChild(div);
                     });
 
                     if (needCommit) batch.commit();
 
-                    if (hasNewMessages) {
-                        setTimeout(() => {
-                            list.scrollTop = list.scrollHeight;
-                        }, 50);
-                    }
+                    // Всегда скроллим вниз при обновлении списка
+                    list.scrollTop = list.scrollHeight;
                 });
 
             setTimeout(() => document.getElementById('msgInput').focus(), 100);
