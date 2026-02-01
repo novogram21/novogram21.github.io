@@ -76,9 +76,9 @@
 
         /* Сайдбар */
         .sidebar {
-            width: 320px;
-            background: #1f1f1f;
-            border-right: 1px solid #333;
+            width: 350px; /* Немного шире, как в десктопной версии TG */
+            background: #1c242c; /* Более глубокий темный цвет */
+            border-right: 1px solid #0f161e;
             display: flex;
             flex-direction: column;
             z-index: 10;
@@ -128,6 +128,7 @@
         .list-container {
             flex: 1;
             overflow-y: auto;
+            padding: 8px; /* Отступы, чтобы элементы не прилипали к краям */
         }
 
 
@@ -135,42 +136,52 @@
 
         /* Элемент списка чатов */
         .user-item {
-            padding: 10px 15px;
-            border-bottom: 1px solid #333;
+            padding: 10px 12px;
+            margin-bottom: 2px;
+            border-radius: 10px; /* Скругление как в новом дизайне TG */
+            border-bottom: none; /* Убираем разделительные линии */
             display: grid;
-            grid-template-columns: 55px 1fr auto; /* Аватар | Имя+Текст | Мета (время, галочки, счетчик) */
-            grid-template-rows: auto auto;
-            column-gap: 10px;
+            grid-template-columns: 54px 1fr auto;
+            column-gap: 12px;
             align-items: center;
             cursor: pointer;
-            transition: 0.2s;
+            transition: background 0.15s ease;
             min-height: 72px;
         }
 
             .user-item:hover {
-                background: #2a2a2a;
+                background: #232e3c;
             }
 
+            .user-item.active-chat {
+                background-color: #3390ec !important; /* Фирменный синий цвет Telegram */
+            }
+
+                /* Меняем цвет текста на белый, когда чат активен, чтобы было лучше видно */
+                .user-item.active-chat .user-name,
+                .user-item.active-chat .last-msg,
+                .user-item.active-chat .last-msg-date {
+                    color: #ffffff !important;
+                }
+
+                /* Скрываем галочки в активном чате или тоже делаем их белыми */
+                .user-item.active-chat .list-ticks span {
+                    color: #ffffff !important;
+                }
+
         .user-item-avatar {
-            grid-column: 1;
-            grid-row: 1 / span 2;
-            width: 50px;
-            height: 50px;
+            width: 54px;
+            height: 54px;
             border-radius: 50%;
             object-fit: cover;
         }
-
         .user-name {
-            grid-column: 2;
-            grid-row: 1;
-            font-weight: 600;
             font-size: 16px;
-            color: white;
-            margin-bottom: 2px;
+            font-weight: 500;
+            color: #fff;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            align-self: end;
         }
 
         .last-msg-row {
@@ -184,13 +195,9 @@
 
         .last-msg {
             font-size: 14px;
-            color: #888;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100%;
+            color: #7f91a1;
+            line-height: 1.3;
         }
-
 
         /* Правая колонка: Время (сверху) и Галочки/Счетчик (снизу) */
         .meta-column {
@@ -2354,6 +2361,14 @@
             currentFriendId = fid;
             currentChatId = [currentUser.uid, fid].sort().join('_');
 
+            // --- ЛОГИКА ПОДСВЕТКИ (КАК В TELEGRAM) ---
+            // Убираем класс active-chat у всех элементов списка
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-chat'));
+            // Добавляем класс только тому чату, на который нажали
+            const activeItem = document.getElementById('u-' + fid);
+            if (activeItem) activeItem.classList.add('active-chat');
+
+            // Адаптив для мобилок
             if (window.innerWidth <= 768) {
                 document.getElementById('mainSidebar').classList.add('hidden-mobile');
                 document.getElementById('mainChatArea').classList.add('active');
@@ -2363,13 +2378,12 @@
 
             // Установка заголовка
             document.getElementById('chatTitle').innerHTML = `
-                    <div>${name}</div>
-                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                `;
+            <div>${name}</div>
+            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+        `;
 
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
-            // Сначала ставим "загрузка..." или пробуем взять из кэша, если он есть
             if (statusEl) {
                 if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
                     statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
@@ -2378,20 +2392,16 @@
                 }
             }
 
-            // 1. Если уже есть активный слушатель статуса — отключаем его
+            // 1. Отключаем старый слушатель статуса
             if (chatStatusUnsub) chatStatusUnsub();
 
-            // 2. Создаем новый слушатель
+            // 2. Создаем новый слушатель для обновления статуса "в сети / был недавно"
             chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
-                // Проверяем, что мы всё еще в чате именно с этим пользователем
                 if (userSnap.exists && currentFriendId === fid) {
                     const userData = userSnap.data();
-
-                    // Обновляем кэш
                     if (typeof usersCache !== 'undefined') {
                         usersCache[fid] = userData;
                     }
-
                     if (statusEl) {
                         statusEl.innerText = formatLastSeen(userData.lastSeen);
                     }
