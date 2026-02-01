@@ -194,16 +194,16 @@
             right: 2px;
             width: 12px;
             height: 12px;
-            background-color: #00E096; /* Яркий зеленый */
-            border: 2px solid #212121; /* Обводка под цвет фона сайдбара */
+            background-color: #00E096; /* Зеленый цвет */
+            border: 2px solid #212121; /* Обводка в цвет фона */
             border-radius: 50%;
-            display: none; /* Скрыт по умолчанию */
+            display: none; /* По умолчанию скрыто */
             z-index: 5;
         }
 
-            /* Класс, который делает индикатор видимым */
+            /* Это правило включает отображение */
             .online-badge.is-online {
-                display: block;
+                display: block !important;
             }
 
 
@@ -2314,7 +2314,6 @@
                         return;
                     }
 
-                    // Проходим по изменениям
                     snap.docChanges().forEach(async change => {
                         const d = change.doc.data();
                         const fid = d.users.find(id => id !== currentUser.uid);
@@ -2330,7 +2329,6 @@
                         const chatId = [currentUser.uid, fid].sort().join('_');
                         const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
 
-                        // Получаем данные друга
                         let friendData = usersCache[fid];
                         if (!friendData) {
                             try {
@@ -2347,20 +2345,15 @@
                         const fName = friendData ? (friendData.name || friendData.username) : 'Загрузка...';
                         const fNick = friendData ? ('@' + friendData.username) : '';
                         const fAvatar = friendData ? friendData.avatar : null;
-                        // Проверяем онлайн статус (время сейчас - lastSeen < 5 минут)
-                        const isOnline = friendData && friendData.lastSeen && (Date.now() - friendData.lastSeen < 5 * 60 * 1000);
 
-                        // Ищем существующий элемент
                         let div = document.getElementById('u-' + fid);
                         const isNew = !div;
 
                         if (isNew) {
-                            // Создаем элемент ТОЛЬКО если его нет
                             div = document.createElement('div');
                             div.id = 'u-' + fid;
                             div.onclick = () => openChat(fid, fName, fNick);
 
-                            // HTML структура (один раз!)
                             const avatarHtml = fAvatar
                                 ? `<img src="${fAvatar}" class="user-item-avatar">`
                                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
@@ -2370,13 +2363,10 @@
                             ${avatarHtml}
                             <div class="online-badge" id="online-${fid}"></div>
                         </div>
-                        
                         <div class="user-name">${fName}</div>
-                        
                         <div class="last-msg-row">
                             <span class="last-msg" id="last-${chatId}">...</span>
                         </div>
-                        
                         <div class="meta-column">
                             <div class="last-msg-date" id="date-${chatId}"></div>
                             <div class="meta-bottom-row">
@@ -2385,6 +2375,33 @@
                             </div>
                         </div>
                     `;
+                            list.appendChild(div);
+                            startMessageListener(chatId, fid, createdTime);
+
+                            // --- ЖИВОЕ ОБНОВЛЕНИЕ СТАТУСА ОНЛАЙН ---
+                            db.collection('users').doc(fid).onSnapshot(uSnap => {
+                                if (uSnap.exists) {
+                                    const uData = uSnap.data();
+                                    const badge = document.getElementById('online-' + fid);
+                                    if (badge) {
+                                        const ls = uData.lastSeen ? uData.lastSeen.toMillis() : 0;
+                                        const isOnlineRightNow = (Date.now() - ls) < 60000;
+                                        if (isOnlineRightNow) badge.classList.add('is-online');
+                                        else badge.classList.remove('is-online');
+                                    }
+                                }
+                            });
+                        }
+
+                        // Обновляем базовые свойства
+                        const isActive = (currentFriendId === fid);
+                        div.className = 'user-item' + (isActive ? ' active' : '');
+                        div.setAttribute('data-time', createdTime);
+                    });
+
+                    setTimeout(sortFriendsList, 100);
+                });
+        }
 
 
 
