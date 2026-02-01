@@ -131,50 +131,64 @@
         }
 
 
-        /* --- ИЗМЕНЕНИЯ ДЛЯ АВАТАРОК И ИНДИКАТОРА --- */
+        /* Элемент списка чатов (НОВЫЙ ДИЗАЙН) */
 
-        /* Обертка для аватарки, чтобы позиционировать точку */
-        .avatar-wrapper {
-            grid-column: 1;
-            grid-row: 1 / span 2;
-            position: relative;
-            width: 50px;
-            height: 50px;
-            align-self: center;
+        /* Элемент списка чатов */
+        .user-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #333;
+            display: grid;
+            grid-template-columns: 55px 1fr auto; /* Аватар | Имя+Текст | Мета (время, галочки, счетчик) */
+            grid-template-rows: auto auto;
+            column-gap: 10px;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+            min-height: 72px;
         }
 
-        /* Обновленный стиль аватарки (теперь она внутри обертки) */
-        .user-item-avatar {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            /* Убрали grid-column/row отсюда, так как они теперь у wrapper */
-        }
-
-        /* Зеленый индикатор (точка) */
-        .online-badge {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 12px;
-            height: 12px;
-            background-color: #4caf50; /* Зеленый цвет */
-            border: 2px solid #1f1f1f; /* Обводка под цвет фона меню */
-            border-radius: 50%;
-            display: none; /* Скрыт по умолчанию */
-            z-index: 5;
-        }
-
-            /* Класс для показа точки */
-            .online-badge.visible {
-                display: block;
+            .user-item:hover {
+                background: #2a2a2a;
             }
 
-        /* --- ПОДСВЕТКА АКТИВНОГО ДИАЛОГА --- */
-        .user-item.active-chat {
-            background: #2f2f2f; /* Чуть светлее фона */
-            border-left: 3px solid #736AF0; /* Фиолетовая полоска слева */
+        .user-item-avatar {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-name {
+            grid-column: 2;
+            grid-row: 1;
+            font-weight: 600;
+            font-size: 16px;
+            color: white;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            align-self: end;
+        }
+
+        .last-msg-row {
+            grid-column: 2;
+            grid-row: 2;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            align-self: start;
+        }
+
+        .last-msg {
+            font-size: 14px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
 
@@ -2196,7 +2210,7 @@
                 listenForFriendRequests();
             }
 
-            // 2. Слушаем список друзей
+            // 2. Слушаем список друзей (ОПТИМИЗИРОВАНО)
             db.collection('friends')
                 .where('users', 'array-contains', currentUser.uid)
                 .onSnapshot(async snap => {
@@ -2207,43 +2221,42 @@
                         return;
                     }
 
-                    // Используем for ... of для поддержки async/await внутри цикла
-                    for (const change of snap.docChanges()) {
+                    // Проходим только по ИЗМЕНЕНИЯМ, а не по всему списку
+                    snap.docChanges().forEach(async change => {
                         const d = change.doc.data();
                         const docId = change.doc.id;
                         const fid = d.users.find(id => id !== currentUser.uid);
-                        if (!fid) continue;
+                        if (!fid) return;
 
                         // Если друга удалили
                         if (change.type === 'removed') {
                             const el = document.getElementById('u-' + fid);
                             if (el) el.remove();
-                            continue;
+                            return;
                         }
 
                         // Получаем данные друга (из кэша или базы)
                         let friendData = usersCache[fid];
 
                         if (!friendData) {
+                            // Если нет в кэше, загружаем (один раз!)
                             try {
                                 const userSnap = await db.collection('users').doc(fid).get();
                                 if (userSnap.exists) {
                                     friendData = userSnap.data();
-                                    usersCache[fid] = friendData;
+                                    usersCache[fid] = friendData; // Сохраняем в кэш
                                 }
                             } catch (e) {
                                 console.error("Ошибка загрузки профиля", e);
                             }
                         }
 
+                        // Данные по умолчанию, если не удалось загрузить
                         const fName = friendData ? (friendData.name || friendData.username) : 'Загрузка...';
+                        const fNick = friendData ? ('@' + friendData.username) : '';
                         const fAvatar = friendData ? friendData.avatar : null;
                         const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
                         const chatId = [currentUser.uid, fid].sort().join('_');
-
-                        // --- ЛОГИКА ОНЛАЙНА ---
-                        const isOnline = friendData ? isUserOnline(friendData.lastSeen) : false;
-                        const badgeClass = isOnline ? 'online-badge visible' : 'online-badge';
 
                         // Создаем или обновляем элемент
                         let div = document.getElementById('u-' + fid);
@@ -2253,66 +2266,41 @@
                             div = document.createElement('div');
                             div.className = 'user-item';
                             div.id = 'u-' + fid;
-                            // При клике добавляем вызов openChat
-                            div.onclick = () => openChat(fid, fName, friendData ? '@' + friendData.username : '');
+                            div.onclick = () => openChat(fid, fName, fNick);
                         }
 
                         div.setAttribute('data-time', createdTime);
 
-                        // Формируем аватарку С ИНДИКАТОРОМ
-                        const imgTag = fAvatar
+                        const avatarHtml = fAvatar
                             ? `<img src="${fAvatar}" class="user-item-avatar">`
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
-                        const avatarHtml = `
-                    <div class="avatar-wrapper">
-                        ${imgTag}
-                        <div id="status-dot-${fid}" class="${badgeClass}"></div>
-                    </div>
-                `;
-
+                        // Вставляем HTML (Обрати внимание: id для last-msg и badge остались те же)
                         div.innerHTML = `
-                    ${avatarHtml}
-                    <div class="user-name">${fName}</div>
-                    <div class="last-msg-row">
-                        <span class="last-msg" id="last-${chatId}">...</span>
-                    </div>
-                    <div class="meta-column">
-                        <span class="last-msg-date" id="date-${chatId}"></span>
-                        <div class="meta-bottom-row">
-                            <span id="status-${chatId}" class="list-ticks"></span>
-                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                        </div>
-                    </div>
-                `;
+                                                                                        ${avatarHtml}
+                                                                                        <div class="user-name">${fName}</div>
+                                                                                        <div class="last-msg-row">
+                                                                                            <span class="last-msg" id="last-${chatId}">...</span>
+                                                                                        </div>
+                                                                                        <div class="meta-column">
+                                                                                            <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                            <div class="meta-bottom-row">
+                                                                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    `;
 
                         if (isNew) {
                             list.appendChild(div);
+                            // Запускаем слушатель сообщений ТОЛЬКО для новых элементов
                             startMessageListener(chatId, fid, createdTime);
                         }
+                    });
 
-                        // Проверяем, если этот чат сейчас открыт - подсвечиваем его
-                        if (currentFriendId === fid) {
-                            div.classList.add('active-chat');
-                        }
-                    }
-
+                    // Сортировка (небольшая задержка, чтобы элементы успели добавиться)
                     setTimeout(sortFriendsList, 100);
                 });
-
-            // Запускаем таймер, чтобы обновлять точки онлайна каждую минуту (без запроса к серверу, просто по времени)
-            setInterval(() => {
-                for (const [fid, data] of Object.entries(usersCache)) {
-                    const dot = document.getElementById('status-dot-' + fid);
-                    if (dot && data.lastSeen) {
-                        if (isUserOnline(data.lastSeen)) {
-                            dot.classList.add('visible');
-                        } else {
-                            dot.classList.remove('visible');
-                        }
-                    }
-                }
-            }, 30000); // Проверка каждые 30 сек
         }
 
 
@@ -2366,12 +2354,6 @@
             currentFriendId = fid;
             currentChatId = [currentUser.uid, fid].sort().join('_');
 
-            // --- ПОДСВЕТКА: Убираем у всех, добавляем текущему ---
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-chat'));
-            const activeItem = document.getElementById('u-' + fid);
-            if (activeItem) activeItem.classList.add('active-chat');
-            // ----------------------------------------------------
-
             if (window.innerWidth <= 768) {
                 document.getElementById('mainSidebar').classList.add('hidden-mobile');
                 document.getElementById('mainChatArea').classList.add('active');
@@ -2379,41 +2361,48 @@
             document.getElementById('noChat').classList.add('hidden');
             document.getElementById('activeChat').classList.remove('hidden');
 
+            // Установка заголовка
             document.getElementById('chatTitle').innerHTML = `
-        <div>${name}</div>
-        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-    `;
+                    <div>${name}</div>
+                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                `;
 
-            // --- ОБНОВЛЕНИЕ СТАТУСА ---
+            // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
-            if (statusEl) statusEl.innerText = 'загрузка...';
+            // Сначала ставим "загрузка..." или пробуем взять из кэша, если он есть
+            if (statusEl) {
+                if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
+                    statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
+                } else {
+                    statusEl.innerText = 'загрузка...';
+                }
+            }
 
+            // 1. Если уже есть активный слушатель статуса — отключаем его
             if (chatStatusUnsub) chatStatusUnsub();
 
-            // Слушаем статус пользователя в реальном времени
+            // 2. Создаем новый слушатель
             chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
+                // Проверяем, что мы всё еще в чате именно с этим пользователем
                 if (userSnap.exists && currentFriendId === fid) {
                     const userData = userSnap.data();
 
                     // Обновляем кэш
-                    usersCache[fid] = userData;
+                    if (typeof usersCache !== 'undefined') {
+                        usersCache[fid] = userData;
+                    }
 
-                    // Обновляем текст в заголовке
-                    if (statusEl) statusEl.innerText = formatLastSeen(userData.lastSeen);
-
-                    // Обновляем ЗЕЛЕНУЮ ТОЧКУ в сайдбаре прямо сейчас
-                    const dot = document.getElementById('status-dot-' + fid);
-                    if (dot) {
-                        if (isUserOnline(userData.lastSeen)) dot.classList.add('visible');
-                        else dot.classList.remove('visible');
+                    if (statusEl) {
+                        statusEl.innerText = formatLastSeen(userData.lastSeen);
                     }
                 }
-            });
+            }, err => console.error("Ошибка слушателя статуса:", err));
 
             loadMessages();
 
-            // Фокус на инпут
-            if (!/Android|webOS|iPhone|iPad/i.test(navigator.userAgent)) {
+            // Фокус на инпут (только для ПК)
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (!isMobile) {
                 setTimeout(() => {
                     const inp = document.getElementById('msgInput');
                     if (inp) inp.focus();
@@ -2569,9 +2558,6 @@
 
 
         function performCloseUI() {
-            // Убираем подсветку со всех элементов
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-chat'));
-
             document.getElementById('mainSidebar').classList.remove('hidden-mobile');
             document.getElementById('mainChatArea').classList.remove('active');
             document.getElementById('activeChat').classList.add('hidden');
@@ -2585,6 +2571,7 @@
                 msgUnsub = null;
             }
 
+            // --- ДОБАВЬТЕ ЭТО ---
             if (chatStatusUnsub) {
                 chatStatusUnsub();
                 chatStatusUnsub = null;
@@ -3642,12 +3629,6 @@
         }
 
 
-        // Функция проверки: онлайн ли пользователь (если был в сети менее 60 сек назад)
-        function isUserOnline(lastSeenTimestamp) {
-            if (!lastSeenTimestamp) return false;
-            const diff = Date.now() - lastSeenTimestamp.toMillis();
-            return diff < 60000; // Считаем онлайн, если активность была в последнюю минуту
-        }
 
         function updateCallControlsVisibility() {
             const isMobile = isMobileDevice();
