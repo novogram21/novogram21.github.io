@@ -2298,16 +2298,18 @@
         }
 
 
-        function loadData() {
-            // 1. Запускаем прослушку заявок
-            if (typeof listenForFriendRequests === 'function') {
-                listenForFriendRequests();
-            }
+        /* === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (Убедись, что они есть в начале скрипта) === */
+        let msgUnsub = null;        // Слушатель сообщений
+        let chatStatusUnsub = null; // Слушатель статуса собеседника ("был в сети...")
+        let onlineTimers = {};      // Таймеры для кружочков онлайн в сайдбаре
 
-            // 2. Слушаем список друзей
+        /* === 1. ГЛАВНАЯ ФУНКЦИЯ ЗАГРУЗКИ СПИСКА ЧАТОВ === */
+        function loadData() {
+            if (typeof listenForFriendRequests === 'function') listenForFriendRequests();
+
             db.collection('friends')
                 .where('users', 'array-contains', currentUser.uid)
-                .onSnapshot(async snap => {
+                .onSnapshot(snap => { // Убрали async, чтобы не было гонок
                     const list = document.getElementById('friendsList');
 
                     if (snap.empty) {
@@ -2315,17 +2317,16 @@
                         return;
                     }
 
-                    snap.docChanges().forEach(async change => {
+                    snap.docChanges().forEach(change => {
                         const d = change.doc.data();
                         const fid = d.users.find(id => id !== currentUser.uid);
                         if (!fid) return;
 
-                        // Если друга удалили
+                        // УДАЛЕНИЕ ДРУГА
                         if (change.type === 'removed') {
                             const el = document.getElementById('u-' + fid);
                             if (el) {
-                                // Очищаем таймер перед удалением, чтобы не висел в памяти
-                                if (el.onlineTimer) clearInterval(el.onlineTimer);
+                                if (onlineTimers[fid]) clearInterval(onlineTimers[fid]); // Чистим таймер
                                 el.remove();
                             }
                             return;
@@ -2334,7 +2335,7 @@
                         const chatId = [currentUser.uid, fid].sort().join('_');
                         const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
 
-                        // Создаем элемент, если его нет
+                        // СОЗДАНИЕ ЭЛЕМЕНТА (Если его нет)
                         let div = document.getElementById('u-' + fid);
                         const isNew = !div;
 
@@ -2342,89 +2343,277 @@
                             div = document.createElement('div');
                             div.id = 'u-' + fid;
                             div.className = 'user-item';
-                            div.onclick = () => openChat(fid, 'Загрузка...', '');
+
+                            // Рисуем "скелет" (заглушку), пока грузятся реальные данные
+                            div.innerHTML = `
+                        <div class="avatar-container">
+                            <div class="user-item-avatar" id="ava-${fid}" style="background:#333;display:flex;align-items:center;justify-content:center;color:#888">👤</div>
+                            <div class="online-badge" id="badge-online-${fid}"></div>
+                        </div>
+                        <div class="user-name" id="name-${fid}">Загрузка...</div>
+                        <div class="last-msg-row">
+                            <span class="last-msg" id="last-${chatId}">...</span>
+                        </div>
+                        <div class="meta-column">
+                            <div class="last-msg-date" id="date-${chatId}"></div>
+                            <div class="meta-bottom-row">
+                                <span id="status-${chatId}" class="list-ticks" style="display:none"></span>
+                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                            </div>
+                        </div>
+                    `;
+
+                            // КЛИК ПО ЧАТУ
+                            div.onclick = () => {
+                                // Берем имя прямо из элемента, чтобы не зависеть от кэша
+                                const currentName = document.getElementById(`name-${fid}`).innerText;
+                                openChat(fid, currentName);
+                            };
+
                             list.appendChild(div);
-
-                            // Загружаем последнее сообщение
                             startMessageListener(chatId, fid, createdTime);
-                        }
 
-                        // --- ЖИВОЕ ОБНОВЛЕНИЕ СТАТУСА ОНЛАЙН (ИМЯ, ФОТО, СТАТУС) ---
-                        // Подписываемся на каждого друга отдельно
-                        // Проверка: чтобы не вешать кучу слушателей, можно проверить атрибут
-                        if (!div.hasAttribute('data-listening')) {
-                            div.setAttribute('data-listening', 'true');
-
+                            // --- ПОДПИСКА НА ДАННЫЕ ДРУГА (Имя, Аватар, Онлайн) ---
+                            // Это выполняется отдельно и безопасно обновляет интерфейс
                             db.collection('users').doc(fid).onSnapshot(uSnap => {
                                 if (uSnap.exists) {
                                     const u = uSnap.data();
-                                    usersCache[fid] = u; // Обновляем кэш
+                                    usersCache[fid] = u; // Сохраняем в кэш
 
-                                    const badge = document.getElementById('online-' + fid);
+                                    // 1. Обновляем Имя
+                                    const nameEl = document.getElementById(`name-${fid}`);
+                                    if (nameEl) nameEl.innerText = u.name || u.username || 'User';
 
-                                    // Если HTML еще не отрисован полностью (первый запуск)
-                                    if (!badge) {
-                                        const fName = u.name || u.username || 'User';
-                                        const avatarHtml = u.avatar
-                                            ? `<img src="${u.avatar}" class="user-item-avatar">`
-                                            : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
-
-                                        div.innerHTML = `
-                                    <div class="avatar-container">
-                                        ${avatarHtml}
-                                        <div class="online-badge" id="online-${fid}"></div>
-                                    </div>
-                                    <div class="user-name">${fName}</div>
-                                    <div class="last-msg-row">
-                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                    </div>
-                                    <div class="meta-column">
-                                        <div class="last-msg-date" id="date-${chatId}"></div>
-                                        <div class="meta-bottom-row">
-                                            <span id="status-${chatId}" class="list-ticks" style="display:none"></span>
-                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                        </div>
-                                    </div>
-                                `;
-                                    } else {
-                                        // Если элемент уже есть, обновляем имя (на случай если друг его сменил)
-                                        const nameEl = div.querySelector('.user-name');
-                                        if (nameEl) nameEl.innerText = u.name || u.username;
+                                    // 2. Обновляем Аватар
+                                    const avaEl = document.getElementById(`ava-${fid}`);
+                                    if (avaEl && u.avatar) {
+                                        // Заменяем div на img или обновляем src
+                                        if (avaEl.tagName === 'IMG') {
+                                            avaEl.src = u.avatar;
+                                        } else {
+                                            const parent = avaEl.parentNode;
+                                            parent.innerHTML = `<img src="${u.avatar}" class="user-item-avatar" id="ava-${fid}"><div class="online-badge" id="badge-online-${fid}"></div>`;
+                                        }
                                     }
 
-                                    // --- ЛОГИКА ТАЙМЕРА ОНЛАЙН ---
-                                    const checkOnline = () => {
-                                        const badgeEl = document.getElementById('online-' + fid);
-                                        if (!badgeEl) return;
-
-                                        const ls = u.lastSeen ? u.lastSeen.toMillis() : 0;
-                                        // 60000 мс = 1 минута. Если время меньше минуты назад — он онлайн.
-                                        const isOnlineNow = (Date.now() - ls) < 60000;
-
-                                        if (isOnlineNow) badgeEl.classList.add('is-online');
-                                        else badgeEl.classList.remove('is-online');
+                                    // 3. Логика Онлайна (с самоочисткой)
+                                    const updateOnlineBadge = () => {
+                                        const badge = document.getElementById(`badge-online-${fid}`);
+                                        if (badge) {
+                                            const ls = u.lastSeen ? u.lastSeen.toMillis() : 0;
+                                            // Если был меньше 60 сек назад
+                                            const isOn = (Date.now() - ls) < 60000;
+                                            if (isOn) badge.classList.add('is-online');
+                                            else badge.classList.remove('is-online');
+                                        }
                                     };
 
-                                    // Запускаем проверку сразу
-                                    checkOnline();
+                                    updateOnlineBadge(); // Проверяем сейчас
 
-                                    // Очищаем старый таймер и ставим новый
-                                    if (div.onlineTimer) clearInterval(div.onlineTimer);
-                                    // Проверяем каждые 10 секунд, не ушел ли он в офлайн
-                                    div.onlineTimer = setInterval(checkOnline, 10000);
+                                    // Запускаем интервал проверки каждые 10 сек
+                                    if (onlineTimers[fid]) clearInterval(onlineTimers[fid]);
+                                    onlineTimers[fid] = setInterval(updateOnlineBadge, 10000);
                                 }
                             });
                         }
 
-                        // Обновляем активность и сортировку
-                        const isActive = (currentFriendId === fid);
-                        if (isActive) div.classList.add('active');
+                        // ОБНОВЛЕНИЕ АКТИВНОГО КЛАССА
+                        if (currentFriendId === fid) div.classList.add('active');
                         else div.classList.remove('active');
 
                         div.setAttribute('data-time', createdTime);
                     });
 
                     setTimeout(sortFriendsList, 100);
+                });
+        }
+
+        /* === 2. ОТКРЫТИЕ ЧАТА (Исправлено падение при пустом кэше) === */
+        function openChat(fid, name) {
+            // Снимаем выделение со всех
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+
+            // Выделяем текущий
+            const currentEl = document.getElementById('u-' + fid);
+            if (currentEl) currentEl.classList.add('active');
+
+            window.location.hash = "chat/" + fid;
+            currentFriendId = fid;
+            currentChatId = [currentUser.uid, fid].sort().join('_');
+
+            // UI переключение (мобилки/ПК)
+            if (window.innerWidth <= 768) {
+                document.getElementById('mainSidebar').classList.add('hidden-mobile');
+                document.getElementById('mainChatArea').classList.add('active');
+            }
+            document.getElementById('noChat').classList.add('hidden');
+            document.getElementById('activeChat').classList.remove('hidden');
+
+            // Заголовок
+            // Берем никнейм безопасно
+            let nick = '';
+            if (usersCache[fid] && usersCache[fid].username) {
+                nick = '@' + usersCache[fid].username;
+            }
+
+            document.getElementById('chatTitle').innerHTML = `
+        <div>${name}</div>
+        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+    `;
+
+            // Статус в шапке (Был в сети...)
+            const statusEl = document.getElementById('chatStatus');
+            if (statusEl) statusEl.innerText = 'загрузка...';
+
+            // Отписываемся от старого статуса
+            if (chatStatusUnsub) chatStatusUnsub();
+
+            // Подписываемся на статус текущего собеседника
+            chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(doc => {
+                if (doc.exists) {
+                    const d = doc.data();
+                    // Обновляем кэш на всякий случай
+                    usersCache[fid] = d;
+                    if (statusEl) statusEl.innerText = formatLastSeen(d.lastSeen);
+                }
+            });
+
+            // Загружаем сообщения
+            loadMessages();
+
+            // Фокус
+            if (!/Android|iPhone/i.test(navigator.userAgent)) {
+                setTimeout(() => document.getElementById('msgInput').focus(), 100);
+            }
+        }
+
+        /* === 3. ВЫХОД В МЕНЮ (Исправлено авто-прочтение) === */
+        function backToMenu() {
+            // СБРОС ID — это предотвращает чтение сообщений
+            currentChatId = null;
+            currentFriendId = null;
+
+            // Отписываемся от сообщений
+            if (msgUnsub) { msgUnsub(); msgUnsub = null; }
+            // Отписываемся от статуса в шапке
+            if (chatStatusUnsub) { chatStatusUnsub(); chatStatusUnsub = null; }
+
+            // UI
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+
+            if (window.innerWidth <= 768) {
+                document.getElementById('mainChatArea').classList.remove('active');
+                document.getElementById('mainSidebar').classList.remove('hidden-mobile');
+            } else {
+                document.getElementById('noChat').classList.remove('hidden');
+                document.getElementById('activeChat').classList.add('hidden');
+            }
+
+            history.pushState("", document.title, window.location.pathname + window.location.search);
+        }
+
+        /* === 4. ЗАГРУЗКА СООБЩЕНИЙ (Безопасная проверка прочтения) === */
+        function loadMessages() {
+            const list = document.getElementById('msgList');
+            if (msgUnsub) msgUnsub();
+            list.innerHTML = ''; // Чистим сразу
+
+            const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
+
+            msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
+                .orderBy('ts', 'asc')
+                .limitToLast(50)
+                .onSnapshot({ includeMetadataChanges: true }, snap => {
+                    // Игнорируем пустой кэш при первой загрузке
+                    if (snap.metadata.fromCache && snap.docs.length === 0) return;
+
+                    const batch = db.batch();
+                    let needCommit = false;
+
+                    // Используем фрагмент для плавной отрисовки
+                    const fragment = document.createDocumentFragment();
+
+                    snap.docs.forEach(doc => {
+                        const m = doc.data();
+                        const msgId = doc.id;
+
+                        if (deletedLocal.includes(msgId)) return;
+
+                        const div = document.createElement('div');
+                        div.id = 'msg-' + msgId;
+
+                        // Клик для меню действий
+                        div.onclick = (e) => {
+                            if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
+                                e.stopPropagation();
+                                openActionSheet(msgId, m.from === currentUser.uid);
+                            }
+                        };
+
+                        // !! ГЛАВНОЕ ИСПРАВЛЕНИЕ: Читаем ТОЛЬКО если пользователь СЕЙЧАС в этом чате !!
+                        if (m.to === currentUser.uid && !m.read && currentFriendId === m.from) {
+                            batch.update(doc.ref, { read: true });
+                            needCommit = true;
+                        }
+
+                        // ВРЕМЯ
+                        let timeStr = '--:--';
+                        if (m.ts) {
+                            const date = m.ts.toDate();
+                            timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                        }
+
+                        // Галочки
+                        let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
+
+                        // Классы
+                        if (m.sys) {
+                            div.className = 'msg msg-sys';
+                            div.innerHTML = m.txt;
+                        } else {
+                            div.className = m.from === currentUser.uid ? 'msg msg-me' : 'msg msg-other';
+
+                            let contentHtml = '';
+                            if (m.type === 'image') {
+                                contentHtml = `<div class="media-container"><img src="${m.txt}" class="chat-media-img" referrerpolicy="no-referrer" onload="this.scrollIntoView()"></div>`;
+                            } else if (m.type === 'file') {
+                                contentHtml = `<a href="${m.txt}" target="_blank" class="chat-file-card"><div class="file-icon">📄</div><div class="file-info"><div class="file-name">Файл</div><div class="file-action">Скачать</div></div></a>`;
+                            } else {
+                                // Ссылки
+                                const txtWithLinks = (m.txt || "").replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                                contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
+                            }
+
+                            // Мета (время + галочки)
+                            // Для картинок мета накладывается сверху (absolute), для текста - inline
+                            let metaStyle = "";
+                            if (m.type === 'image') {
+                                metaStyle = "position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:10px;";
+                                contentHtml = `<div style="position:relative; display:inline-block;">${contentHtml}`;
+                            }
+
+                            const metaHtml = `
+                        <span class="msg-meta" style="${metaStyle}">
+                            <span class="msg-time" style="font-size:11px; color:rgba(255,255,255,0.7);">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="font-size:12px; margin-left:3px; color:white;">${ticksHtml}</span>` : ''}
+                        </span>
+                    `;
+
+                            if (m.type === 'image') contentHtml += metaHtml + `</div>`;
+                            else contentHtml += metaHtml;
+
+                            div.innerHTML = contentHtml;
+                        }
+                        fragment.appendChild(div);
+                    });
+
+                    list.innerHTML = '';
+                    list.appendChild(fragment);
+
+                    if (needCommit) batch.commit();
+
+                    // Скролл вниз
+                    setTimeout(() => { list.scrollTop = list.scrollHeight; }, 10);
                 });
         }
 
@@ -2474,71 +2663,7 @@
         function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
 
 
-        function openChat(fid, name, nick) {
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-            // 2. Добавляем класс 'active' текущему
-            const currentEl = document.getElementById('u-' + fid);
-            if (currentEl) currentEl.classList.add('active');
-
-            window.location.hash = "chat/" + fid;
-            currentFriendId = fid;
-            currentChatId = [currentUser.uid, fid].sort().join('_');
-
-            if (window.innerWidth <= 768) {
-                document.getElementById('mainSidebar').classList.add('hidden-mobile');
-                document.getElementById('mainChatArea').classList.add('active');
-            }
-            document.getElementById('noChat').classList.add('hidden');
-            document.getElementById('activeChat').classList.remove('hidden');
-
-            // Установка заголовка
-            document.getElementById('chatTitle').innerHTML = `
-                    <div>${name}</div>
-                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                `;
-
-            // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
-            const statusEl = document.getElementById('chatStatus');
-            // Сначала ставим "загрузка..." или пробуем взять из кэша, если он есть
-            if (statusEl) {
-                if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
-                    statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
-                } else {
-                    statusEl.innerText = 'загрузка...';
-                }
-            }
-
-            // 1. Если уже есть активный слушатель статуса — отключаем его
-            if (chatStatusUnsub) chatStatusUnsub();
-
-            // 2. Создаем новый слушатель
-            chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
-                // Проверяем, что мы всё еще в чате именно с этим пользователем
-                if (userSnap.exists && currentFriendId === fid) {
-                    const userData = userSnap.data();
-
-                    // Обновляем кэш
-                    if (typeof usersCache !== 'undefined') {
-                        usersCache[fid] = userData;
-                    }
-
-                    if (statusEl) {
-                        statusEl.innerText = formatLastSeen(userData.lastSeen);
-                    }
-                }
-            }, err => console.error("Ошибка слушателя статуса:", err));
-
-            loadMessages();
-
-            // Фокус на инпут (только для ПК)
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            if (!isMobile) {
-                setTimeout(() => {
-                    const inp = document.getElementById('msgInput');
-                    if (inp) inp.focus();
-                }, 100);
-            }
-        }
+        
 
 
 
@@ -4141,43 +4266,7 @@
         }
 
 
-        function backToMenu() {
-            // 1. САМОЕ ВАЖНОЕ: Отключаем слушатель сообщений
-            if (msgUnsub) {
-                msgUnsub();
-                msgUnsub = null;
-            }
-
-            // 2. Сбрасываем ID
-            currentChatId = null;
-            currentFriendId = null;
-
-            // 3. Убираем выделение в списке
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-
-            // 4. Управляем отображением блоков (ПК / Мобильный)
-            const chatArea = document.getElementById('mainChatArea');
-            const sidebar = document.getElementById('mainSidebar');
-
-            if (window.innerWidth <= 768) {
-                if (chatArea) chatArea.classList.remove('active');
-                if (sidebar) sidebar.classList.remove('hidden-mobile');
-            } else {
-                const noChat = document.getElementById('noChat');
-                const activeChat = document.getElementById('activeChat');
-                if (noChat) noChat.classList.remove('hidden');
-                if (activeChat) activeChat.classList.add('hidden');
-            }
-
-            // 5. Останавливаем слушатель статуса (текст "был в сети")
-            if (chatStatusUnsub) {
-                chatStatusUnsub();
-                chatStatusUnsub = null;
-            }
-
-            // Очищаем хеш в URL
-            history.pushState("", document.title, window.location.pathname + window.location.search);
-        }
+       
 
         // Слушаем нажатие клавиши ESC для выхода из чата
         document.addEventListener('keydown', (e) => {
