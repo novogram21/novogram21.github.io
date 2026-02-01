@@ -188,6 +188,7 @@
         }
 
         /* Индикатор онлайн */
+        /* Базовый стиль: точка скрыта и спозиционирована */
         .online-badge {
             position: absolute;
             bottom: 2px;
@@ -2379,6 +2380,8 @@
                             startMessageListener(chatId, fid, createdTime);
 
                             // --- ЖИВОЕ ОБНОВЛЕНИЕ СТАТУСА ОНЛАЙН ---
+                            // Добавьте это внутри if (isNew) в функции loadData:
+
                             db.collection('users').doc(fid).onSnapshot(uSnap => {
                                 if (uSnap.exists) {
                                     const uData = uSnap.data();
@@ -2399,37 +2402,6 @@
                         div.setAttribute('data-time', createdTime);
                     });
 
-                    setTimeout(sortFriendsList, 100);
-                });
-        }
-
-
-
-
-                            list.appendChild(div);
-
-                            // Запускаем слушатель сообщений
-                            startMessageListener(chatId, fid, createdTime);
-                        }
-
-                        // ОБНОВЛЯЕМ (это происходит всегда, и при создании, и при update)
-
-                        // 1. Классы активности
-                        const isActive = (typeof currentChatId !== 'undefined' && fid === currentChatId); // Исправленная проверка
-                        div.className = 'user-item' + (isActive ? ' active' : '');
-
-                        // 2. Время сортировки
-                        div.setAttribute('data-time', createdTime);
-
-                        // 3. Статус онлайн
-                        const onlineBadge = document.getElementById('online-' + fid);
-                        if (onlineBadge) {
-                            if (isOnline) onlineBadge.classList.add('is-online');
-                            else onlineBadge.classList.remove('is-online');
-                        }
-                    });
-
-                    // Сортировка
                     setTimeout(sortFriendsList, 100);
                 });
         }
