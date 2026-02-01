@@ -2366,25 +2366,25 @@
                                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                             div.innerHTML = `
-                        <div class="avatar-container">
-                            ${avatarHtml}
-                            <div class="online-badge" id="online-${fid}"></div>
-                        </div>
-                        
-                        <div class="user-name">${fName}</div>
-                        
-                        <div class="last-msg-row">
-                            <span class="last-msg" id="last-${chatId}">...</span>
-                        </div>
-                        
-                        <div class="meta-column">
-                            <div class="last-msg-date" id="date-${chatId}"></div>
-                            <div class="meta-bottom-row">
-                                <span id="status-${chatId}" class="list-ticks" style="display:none"></span>
-                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                            </div>
-                        </div>
-                    `;
+                <div class="avatar-container">
+                    ${avatarHtml}
+                    <div class="online-badge" id="online-${fid}"></div>
+                </div>
+                
+                <div class="user-name">${fName}</div>
+                
+                <div class="last-msg-row">
+                    <span class="last-msg" id="last-${chatId}">...</span>
+                </div>
+                
+                <div class="meta-column">
+                    <div class="last-msg-date" id="date-${chatId}"></div>
+                    <div class="meta-bottom-row">
+                        <span id="status-${chatId}" class="list-ticks" style="display:none"></span>
+                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                    </div>
+                </div>
+            `;
                             list.appendChild(div);
 
                             // Запускаем слушатель сообщений
@@ -2394,17 +2394,25 @@
                         // ОБНОВЛЯЕМ (это происходит всегда, и при создании, и при update)
 
                         // 1. Классы активности
-                        const isActive = (typeof currentChatId !== 'undefined' && fid === currentChatId); // Исправленная проверка
+                        const isActive = (typeof currentChatId !== 'undefined' && fid === currentChatId);
                         div.className = 'user-item' + (isActive ? ' active' : '');
 
                         // 2. Время сортировки
                         div.setAttribute('data-time', createdTime);
 
-                        // 3. Статус онлайн
-                        const onlineBadge = document.getElementById('online-' + fid);
+                        // 3. Статус онлайн (ИСПРАВЛЕНО: ищем внутри div, так как элемент уже в памяти)
+                        // Мы ищем элемент по классу внутри текущего div, чтобы не зависеть от DOM
+                        const onlineBadge = div.querySelector('.online-badge');
+
                         if (onlineBadge) {
-                            if (isOnline) onlineBadge.classList.add('is-online');
-                            else onlineBadge.classList.remove('is-online');
+                            if (isOnline) {
+                                onlineBadge.classList.add('is-online');
+                                // Принудительно ставим стиль display: block для надежности
+                                onlineBadge.style.display = 'block';
+                            } else {
+                                onlineBadge.classList.remove('is-online');
+                                onlineBadge.style.display = 'none';
+                            }
                         }
                     });
 
@@ -2412,6 +2420,7 @@
                     setTimeout(sortFriendsList, 100);
                 });
         }
+
 
 
 
