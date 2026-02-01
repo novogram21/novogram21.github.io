@@ -131,177 +131,83 @@
         }
 
 
-        /* --- НОВЫЙ ДИЗАЙН САЙДБАРА (Telegram Style) --- */
+        /* Элемент списка чатов (НОВЫЙ ДИЗАЙН) */
 
-        .sidebar {
-            width: 420px; /* Делаем чуть шире, как в десктопном ТГ */
-            background: #212121;
-            border-right: 1px solid #101010;
-        }
-
+        /* Элемент списка чатов */
         .user-item {
-            padding: 10px;
-            margin: 2px 8px; /* Отступы по бокам для эффекта "карточки" при наведении */
-            border-radius: 10px; /* Скругленные углы у элемента списка */
-            border-bottom: none; /* Убираем линии разделители */
+            padding: 10px 15px;
+            border-bottom: 1px solid #333;
             display: grid;
-            grid-template-columns: 54px 1fr auto;
+            grid-template-columns: 55px 1fr auto; /* Аватар | Имя+Текст | Мета (время, галочки, счетчик) */
             grid-template-rows: auto auto;
-            column-gap: 12px;
+            column-gap: 10px;
             align-items: center;
             cursor: pointer;
-            transition: background 0.2s ease;
-            position: relative;
+            transition: 0.2s;
+            min-height: 72px;
         }
 
             .user-item:hover {
-                background: #2c2c2c; /* Цвет при наведении */
+                background: #2a2a2a;
             }
-
-            /* Активный чат (как на скриншоте - фиолетовый) */
-            .user-item.active {
-                background: #736AF0 !important;
-            }
-
-                /* При активном чате текст меняет цвет на белый */
-                .user-item.active .user-name,
-                .user-item.active .last-msg,
-                .user-item.active .last-msg-date,
-                .user-item.active .list-ticks {
-                    color: white !important;
-                }
-
-        /* Аватарка */
-        .avatar-container {
-            grid-column: 1;
-            grid-row: 1 / span 2;
-            position: relative;
-            width: 54px;
-            height: 54px;
-        }
 
         .user-item-avatar {
-            width: 100%;
-            height: 100%;
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             object-fit: cover;
         }
 
-        /* Индикатор онлайн */
-        /* Базовый стиль: точка скрыта и спозиционирована */
-        .online-badge {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 12px;
-            height: 12px;
-            background-color: #00E096; /* Зеленый цвет */
-            border: 2px solid #212121; /* Обводка в цвет фона */
-            border-radius: 50%;
-            display: none; /* По умолчанию скрыто */
-            z-index: 5;
-        }
-
-            /* Это правило включает отображение */
-            .online-badge.is-online {
-                display: block !important;
-            }
-
-
-        /* Имя пользователя */
         .user-name {
             grid-column: 2;
             grid-row: 1;
             font-weight: 600;
-            font-size: 15px;
-            color: #fff;
-            margin-bottom: 4px;
+            font-size: 16px;
+            color: white;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             align-self: end;
         }
 
-        /* Последнее сообщение */
         .last-msg-row {
             grid-column: 2;
             grid-row: 2;
             display: flex;
             align-items: center;
-            align-self: start;
             overflow: hidden;
+            align-self: start;
         }
 
         .last-msg {
             font-size: 14px;
-            color: #aaaaaa;
+            color: #888;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 100%;
         }
 
-        /* Приставка "Вы:" */
-        .prefix-you {
-            color: #736AF0; /* Фиолетовый цвет для "Вы:" */
-            margin-right: 4px;
-        }
 
-        .user-item.active .prefix-you {
-            color: white; /* Белый на активном фоне */
-        }
-
-        /* Правая колонка: Время и Бейдж */
+        /* Правая колонка: Время (сверху) и Галочки/Счетчик (снизу) */
         .meta-column {
             grid-column: 3;
             grid-row: 1 / span 2;
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
-            justify-content: space-between;
-            height: 42px; /* Растягиваем на высоту контента */
+            align-items: flex-end; /* Все прижато вправо */
+            justify-content: center;
+            gap: 5px;
+            min-width: 65px;
         }
 
         .last-msg-date {
-            font-size: 12px;
-            color: #777;
-            margin-top: 2px;
+            font-size: 13px;
+            color: #888;
         }
-
-        .meta-bottom-row {
-            height: 20px;
-            display: flex;
-            align-items: center;
-        }
-
-        /* Бейдж (счетчик) - серый по умолчанию, зеленый/синий если нужно */
-        .badge-count {
-            background: #3e3e3e; /* Серый фон, как в ТГ для обычных чатов */
-            color: white;
-            font-size: 12px;
-            padding: 0 9px;
-            border-radius: 12px;
-            min-width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-        }
-
-            /* Активный бейдж (яркий) */
-            .badge-count.unread {
-                background: #736AF0; /* Фиолетовый или синий */
-            }
-
-        .user-item.active .badge-count {
-            background: white;
-            color: #736AF0;
-        }
-
-        /* Галочки */
-        .list-ticks {
-            font-size: 16px; /* Чуть крупнее */
-            line-height: 1;
-        }
-
 
 
 
@@ -1541,7 +1447,7 @@
         <div id="noChat" style="height:100%; display:flex; align-items:center; justify-content:center; color:#555;"></div>
         <div id="activeChat" class="hidden" style="height:100%; display:flex; flex-direction:column;">
             <div class="chat-header">
-                <button class="back-btn" onclick="backToMenu()" style="background: none; border: none; cursor: pointer; padding: 0 15px 0 0; display: flex; align-items: center;">
+                <button class="back-btn" onclick="closeChat()" style="background: none; border: none; cursor: pointer; padding: 0 15px 0 0; display: flex; align-items: center;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#007bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
@@ -1763,12 +1669,12 @@
                         const displayNick = user.username ? `@${user.username}` : 'none';
 
                         div.innerHTML = `
-                                                                                                                                                                                                                                                    ${avatarSrc}
-                                                                                                                                                                                                                                                    <div>
-                                                                                                                                                                                                                                                        <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                ${avatarSrc}
+                                                                                                                                                                                                                                                <div>
+                                                                                                                                                                                                                                                    <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                            `;
 
                         div.onclick = () => {
                             sendFriendRequestToId(user.id); // Новая функция отправки
@@ -2177,16 +2083,16 @@
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
 
                         div.innerHTML = `
-                                                                                                                                                                                                            ${avatar}
-                                                                                                                                                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                        `;
+                                                                                                                                                                                                        ${avatar}
+                                                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                    `;
                         list.appendChild(div);
                     });
                 });
@@ -2298,18 +2204,16 @@
         }
 
 
-        /* === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (Убедись, что они есть в начале скрипта) === */
-        let msgUnsub = null;        // Слушатель сообщений
-        let chatStatusUnsub = null; // Слушатель статуса собеседника ("был в сети...")
-        let onlineTimers = {};      // Таймеры для кружочков онлайн в сайдбаре
-
-        /* === 1. ГЛАВНАЯ ФУНКЦИЯ ЗАГРУЗКИ СПИСКА ЧАТОВ === */
         function loadData() {
-            if (typeof listenForFriendRequests === 'function') listenForFriendRequests();
+            // 1. Запускаем прослушку заявок
+            if (typeof listenForFriendRequests === 'function') {
+                listenForFriendRequests();
+            }
 
+            // 2. Слушаем список друзей (ОПТИМИЗИРОВАНО)
             db.collection('friends')
                 .where('users', 'array-contains', currentUser.uid)
-                .onSnapshot(snap => { // Убрали async, чтобы не было гонок
+                .onSnapshot(async snap => {
                     const list = document.getElementById('friendsList');
 
                     if (snap.empty) {
@@ -2317,305 +2221,88 @@
                         return;
                     }
 
-                    snap.docChanges().forEach(change => {
+                    // Проходим только по ИЗМЕНЕНИЯМ, а не по всему списку
+                    snap.docChanges().forEach(async change => {
                         const d = change.doc.data();
+                        const docId = change.doc.id;
                         const fid = d.users.find(id => id !== currentUser.uid);
                         if (!fid) return;
 
-                        // УДАЛЕНИЕ ДРУГА
+                        // Если друга удалили
                         if (change.type === 'removed') {
                             const el = document.getElementById('u-' + fid);
-                            if (el) {
-                                if (onlineTimers[fid]) clearInterval(onlineTimers[fid]); // Чистим таймер
-                                el.remove();
-                            }
+                            if (el) el.remove();
                             return;
                         }
 
-                        const chatId = [currentUser.uid, fid].sort().join('_');
-                        const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
+                        // Получаем данные друга (из кэша или базы)
+                        let friendData = usersCache[fid];
 
-                        // СОЗДАНИЕ ЭЛЕМЕНТА (Если его нет)
+                        if (!friendData) {
+                            // Если нет в кэше, загружаем (один раз!)
+                            try {
+                                const userSnap = await db.collection('users').doc(fid).get();
+                                if (userSnap.exists) {
+                                    friendData = userSnap.data();
+                                    usersCache[fid] = friendData; // Сохраняем в кэш
+                                }
+                            } catch (e) {
+                                console.error("Ошибка загрузки профиля", e);
+                            }
+                        }
+
+                        // Данные по умолчанию, если не удалось загрузить
+                        const fName = friendData ? (friendData.name || friendData.username) : 'Загрузка...';
+                        const fNick = friendData ? ('@' + friendData.username) : '';
+                        const fAvatar = friendData ? friendData.avatar : null;
+                        const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
+                        const chatId = [currentUser.uid, fid].sort().join('_');
+
+                        // Создаем или обновляем элемент
                         let div = document.getElementById('u-' + fid);
                         const isNew = !div;
 
                         if (isNew) {
                             div = document.createElement('div');
-                            div.id = 'u-' + fid;
                             div.className = 'user-item';
-
-                            // Рисуем "скелет" (заглушку), пока грузятся реальные данные
-                            div.innerHTML = `
-                        <div class="avatar-container">
-                            <div class="user-item-avatar" id="ava-${fid}" style="background:#333;display:flex;align-items:center;justify-content:center;color:#888">👤</div>
-                            <div class="online-badge" id="badge-online-${fid}"></div>
-                        </div>
-                        <div class="user-name" id="name-${fid}">Загрузка...</div>
-                        <div class="last-msg-row">
-                            <span class="last-msg" id="last-${chatId}">...</span>
-                        </div>
-                        <div class="meta-column">
-                            <div class="last-msg-date" id="date-${chatId}"></div>
-                            <div class="meta-bottom-row">
-                                <span id="status-${chatId}" class="list-ticks" style="display:none"></span>
-                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                            </div>
-                        </div>
-                    `;
-
-                            // КЛИК ПО ЧАТУ
-                            div.onclick = () => {
-                                // Берем имя прямо из элемента, чтобы не зависеть от кэша
-                                const currentName = document.getElementById(`name-${fid}`).innerText;
-                                openChat(fid, currentName);
-                            };
-
-                            list.appendChild(div);
-                            startMessageListener(chatId, fid, createdTime);
-
-                            // --- ПОДПИСКА НА ДАННЫЕ ДРУГА (Имя, Аватар, Онлайн) ---
-                            // Это выполняется отдельно и безопасно обновляет интерфейс
-                            db.collection('users').doc(fid).onSnapshot(uSnap => {
-                                if (uSnap.exists) {
-                                    const u = uSnap.data();
-                                    usersCache[fid] = u; // Сохраняем в кэш
-
-                                    // 1. Обновляем Имя
-                                    const nameEl = document.getElementById(`name-${fid}`);
-                                    if (nameEl) nameEl.innerText = u.name || u.username || 'User';
-
-                                    // 2. Обновляем Аватар
-                                    const avaEl = document.getElementById(`ava-${fid}`);
-                                    if (avaEl && u.avatar) {
-                                        // Заменяем div на img или обновляем src
-                                        if (avaEl.tagName === 'IMG') {
-                                            avaEl.src = u.avatar;
-                                        } else {
-                                            const parent = avaEl.parentNode;
-                                            parent.innerHTML = `<img src="${u.avatar}" class="user-item-avatar" id="ava-${fid}"><div class="online-badge" id="badge-online-${fid}"></div>`;
-                                        }
-                                    }
-
-                                    // 3. Логика Онлайна (с самоочисткой)
-                                    const updateOnlineBadge = () => {
-                                        const badge = document.getElementById(`badge-online-${fid}`);
-                                        if (badge) {
-                                            const ls = u.lastSeen ? u.lastSeen.toMillis() : 0;
-                                            // Если был меньше 60 сек назад
-                                            const isOn = (Date.now() - ls) < 60000;
-                                            if (isOn) badge.classList.add('is-online');
-                                            else badge.classList.remove('is-online');
-                                        }
-                                    };
-
-                                    updateOnlineBadge(); // Проверяем сейчас
-
-                                    // Запускаем интервал проверки каждые 10 сек
-                                    if (onlineTimers[fid]) clearInterval(onlineTimers[fid]);
-                                    onlineTimers[fid] = setInterval(updateOnlineBadge, 10000);
-                                }
-                            });
+                            div.id = 'u-' + fid;
+                            div.onclick = () => openChat(fid, fName, fNick);
                         }
 
-                        // ОБНОВЛЕНИЕ АКТИВНОГО КЛАССА
-                        if (currentFriendId === fid) div.classList.add('active');
-                        else div.classList.remove('active');
-
                         div.setAttribute('data-time', createdTime);
+
+                        const avatarHtml = fAvatar
+                            ? `<img src="${fAvatar}" class="user-item-avatar">`
+                            : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
+
+                        // Вставляем HTML (Обрати внимание: id для last-msg и badge остались те же)
+                        div.innerHTML = `
+                                                                                    ${avatarHtml}
+                                                                                    <div class="user-name">${fName}</div>
+                                                                                    <div class="last-msg-row">
+                                                                                        <span class="last-msg" id="last-${chatId}">...</span>
+                                                                                    </div>
+                                                                                    <div class="meta-column">
+                                                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                        <div class="meta-bottom-row">
+                                                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                `;
+
+                        if (isNew) {
+                            list.appendChild(div);
+                            // Запускаем слушатель сообщений ТОЛЬКО для новых элементов
+                            startMessageListener(chatId, fid, createdTime);
+                        }
                     });
 
+                    // Сортировка (небольшая задержка, чтобы элементы успели добавиться)
                     setTimeout(sortFriendsList, 100);
                 });
         }
 
-        /* === 2. ОТКРЫТИЕ ЧАТА (Исправлено падение при пустом кэше) === */
-        function openChat(fid, name) {
-            // Снимаем выделение со всех
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-
-            // Выделяем текущий
-            const currentEl = document.getElementById('u-' + fid);
-            if (currentEl) currentEl.classList.add('active');
-
-            window.location.hash = "chat/" + fid;
-            currentFriendId = fid;
-            currentChatId = [currentUser.uid, fid].sort().join('_');
-
-            // UI переключение (мобилки/ПК)
-            if (window.innerWidth <= 768) {
-                document.getElementById('mainSidebar').classList.add('hidden-mobile');
-                document.getElementById('mainChatArea').classList.add('active');
-            }
-            document.getElementById('noChat').classList.add('hidden');
-            document.getElementById('activeChat').classList.remove('hidden');
-
-            // Заголовок
-            // Берем никнейм безопасно
-            let nick = '';
-            if (usersCache[fid] && usersCache[fid].username) {
-                nick = '@' + usersCache[fid].username;
-            }
-
-            document.getElementById('chatTitle').innerHTML = `
-        <div>${name}</div>
-        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-    `;
-
-            // Статус в шапке (Был в сети...)
-            const statusEl = document.getElementById('chatStatus');
-            if (statusEl) statusEl.innerText = 'загрузка...';
-
-            // Отписываемся от старого статуса
-            if (chatStatusUnsub) chatStatusUnsub();
-
-            // Подписываемся на статус текущего собеседника
-            chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(doc => {
-                if (doc.exists) {
-                    const d = doc.data();
-                    // Обновляем кэш на всякий случай
-                    usersCache[fid] = d;
-                    if (statusEl) statusEl.innerText = formatLastSeen(d.lastSeen);
-                }
-            });
-
-            // Загружаем сообщения
-            loadMessages();
-
-            // Фокус
-            if (!/Android|iPhone/i.test(navigator.userAgent)) {
-                setTimeout(() => document.getElementById('msgInput').focus(), 100);
-            }
-        }
-
-        /* === 3. ВЫХОД В МЕНЮ (Исправлено авто-прочтение) === */
-        function backToMenu() {
-            // СБРОС ID — это предотвращает чтение сообщений
-            currentChatId = null;
-            currentFriendId = null;
-
-            // Отписываемся от сообщений
-            if (msgUnsub) { msgUnsub(); msgUnsub = null; }
-            // Отписываемся от статуса в шапке
-            if (chatStatusUnsub) { chatStatusUnsub(); chatStatusUnsub = null; }
-
-            // UI
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-
-            if (window.innerWidth <= 768) {
-                document.getElementById('mainChatArea').classList.remove('active');
-                document.getElementById('mainSidebar').classList.remove('hidden-mobile');
-            } else {
-                document.getElementById('noChat').classList.remove('hidden');
-                document.getElementById('activeChat').classList.add('hidden');
-            }
-
-            history.pushState("", document.title, window.location.pathname + window.location.search);
-        }
-
-        /* === 4. ЗАГРУЗКА СООБЩЕНИЙ (Безопасная проверка прочтения) === */
-        function loadMessages() {
-            const list = document.getElementById('msgList');
-            if (msgUnsub) msgUnsub();
-            list.innerHTML = ''; // Чистим сразу
-
-            const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
-
-            msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
-                .orderBy('ts', 'asc')
-                .limitToLast(50)
-                .onSnapshot({ includeMetadataChanges: true }, snap => {
-                    // Игнорируем пустой кэш при первой загрузке
-                    if (snap.metadata.fromCache && snap.docs.length === 0) return;
-
-                    const batch = db.batch();
-                    let needCommit = false;
-
-                    // Используем фрагмент для плавной отрисовки
-                    const fragment = document.createDocumentFragment();
-
-                    snap.docs.forEach(doc => {
-                        const m = doc.data();
-                        const msgId = doc.id;
-
-                        if (deletedLocal.includes(msgId)) return;
-
-                        const div = document.createElement('div');
-                        div.id = 'msg-' + msgId;
-
-                        // Клик для меню действий
-                        div.onclick = (e) => {
-                            if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
-                                e.stopPropagation();
-                                openActionSheet(msgId, m.from === currentUser.uid);
-                            }
-                        };
-
-                        // !! ГЛАВНОЕ ИСПРАВЛЕНИЕ: Читаем ТОЛЬКО если пользователь СЕЙЧАС в этом чате !!
-                        if (m.to === currentUser.uid && !m.read && currentFriendId === m.from) {
-                            batch.update(doc.ref, { read: true });
-                            needCommit = true;
-                        }
-
-                        // ВРЕМЯ
-                        let timeStr = '--:--';
-                        if (m.ts) {
-                            const date = m.ts.toDate();
-                            timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                        }
-
-                        // Галочки
-                        let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
-
-                        // Классы
-                        if (m.sys) {
-                            div.className = 'msg msg-sys';
-                            div.innerHTML = m.txt;
-                        } else {
-                            div.className = m.from === currentUser.uid ? 'msg msg-me' : 'msg msg-other';
-
-                            let contentHtml = '';
-                            if (m.type === 'image') {
-                                contentHtml = `<div class="media-container"><img src="${m.txt}" class="chat-media-img" referrerpolicy="no-referrer" onload="this.scrollIntoView()"></div>`;
-                            } else if (m.type === 'file') {
-                                contentHtml = `<a href="${m.txt}" target="_blank" class="chat-file-card"><div class="file-icon">📄</div><div class="file-info"><div class="file-name">Файл</div><div class="file-action">Скачать</div></div></a>`;
-                            } else {
-                                // Ссылки
-                                const txtWithLinks = (m.txt || "").replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
-                                contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
-                            }
-
-                            // Мета (время + галочки)
-                            // Для картинок мета накладывается сверху (absolute), для текста - inline
-                            let metaStyle = "";
-                            if (m.type === 'image') {
-                                metaStyle = "position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:10px;";
-                                contentHtml = `<div style="position:relative; display:inline-block;">${contentHtml}`;
-                            }
-
-                            const metaHtml = `
-                        <span class="msg-meta" style="${metaStyle}">
-                            <span class="msg-time" style="font-size:11px; color:rgba(255,255,255,0.7);">${timeStr}</span>
-                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="font-size:12px; margin-left:3px; color:white;">${ticksHtml}</span>` : ''}
-                        </span>
-                    `;
-
-                            if (m.type === 'image') contentHtml += metaHtml + `</div>`;
-                            else contentHtml += metaHtml;
-
-                            div.innerHTML = contentHtml;
-                        }
-                        fragment.appendChild(div);
-                    });
-
-                    list.innerHTML = '';
-                    list.appendChild(fragment);
-
-                    if (needCommit) batch.commit();
-
-                    // Скролл вниз
-                    setTimeout(() => { list.scrollTop = list.scrollHeight; }, 10);
-                });
-        }
 
 
 
@@ -2662,13 +2349,73 @@
 
         function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
 
+        function openChat(fid, name, nick) {
+            window.location.hash = "chat/" + fid;
+            currentFriendId = fid;
+            currentChatId = [currentUser.uid, fid].sort().join('_');
 
-        
+            if (window.innerWidth <= 768) {
+                document.getElementById('mainSidebar').classList.add('hidden-mobile');
+                document.getElementById('mainChatArea').classList.add('active');
+            }
+            document.getElementById('noChat').classList.add('hidden');
+            document.getElementById('activeChat').classList.remove('hidden');
+
+            // Установка заголовка
+            document.getElementById('chatTitle').innerHTML = `
+                <div>${name}</div>
+                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+            `;
+
+            // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
+            const statusEl = document.getElementById('chatStatus');
+            // Сначала ставим "загрузка..." или пробуем взять из кэша, если он есть
+            if (statusEl) {
+                if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
+                    statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
+                } else {
+                    statusEl.innerText = 'загрузка...';
+                }
+            }
+
+            // 1. Если уже есть активный слушатель статуса — отключаем его
+            if (chatStatusUnsub) chatStatusUnsub();
+
+            // 2. Создаем новый слушатель
+            chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
+                // Проверяем, что мы всё еще в чате именно с этим пользователем
+                if (userSnap.exists && currentFriendId === fid) {
+                    const userData = userSnap.data();
+
+                    // Обновляем кэш
+                    if (typeof usersCache !== 'undefined') {
+                        usersCache[fid] = userData;
+                    }
+
+                    if (statusEl) {
+                        statusEl.innerText = formatLastSeen(userData.lastSeen);
+                    }
+                }
+            }, err => console.error("Ошибка слушателя статуса:", err));
+
+            loadMessages();
+
+            // Фокус на инпут (только для ПК)
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (!isMobile) {
+                setTimeout(() => {
+                    const inp = document.getElementById('msgInput');
+                    if (inp) inp.focus();
+                }, 100);
+            }
+        }
 
 
 
         function loadMessages() {
             const list = document.getElementById('msgList');
+
+            // 1. Отписываемся и очищаем (как договаривались)
             if (msgUnsub) msgUnsub();
             list.innerHTML = '';
 
@@ -2678,10 +2425,14 @@
                 .orderBy('ts', 'asc')
                 .limitToLast(50)
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
+
+                    // Пропускаем "пустой" кэш
                     if (snap.metadata.fromCache && snap.docs.length < 2 && snap.docs.length > 0) return;
 
                     const batch = db.batch();
                     let needCommit = false;
+
+                    // Снова очищаем перед рендером
                     list.innerHTML = '';
 
                     snap.docs.forEach(doc => {
@@ -2699,42 +2450,102 @@
                             }
                         };
 
-                        // --- ИСПРАВЛЕНИЕ: Читаем только если мы в этом чате ---
-                        if (m.to === currentUser.uid && !m.read && currentFriendId === m.from) {
+                        if (m.to === currentUser.uid && !m.read) {
                             batch.update(doc.ref, { read: true });
                             needCommit = true;
                         }
 
-                        let timeStr = m.ts ? m.ts.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                        let timeStr = '';
+                        if (m.ts) {
+                            const date = m.ts.toDate();
+                            timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                        } else {
+                            const now = new Date();
+                            timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                        }
+
                         let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
                         if (m.sys) {
                             div.className = 'msg msg-sys';
-                            div.innerHTML = m.txt;
+                        } else if (m.from === currentUser.uid) {
+                            div.className = 'msg msg-me';
                         } else {
-                            div.className = m.from === currentUser.uid ? 'msg msg-me' : 'msg msg-other';
-                            let contentHtml = '';
-                            if (m.type === 'image') {
-                                contentHtml = `<div class="media-container"><img src="${m.txt}" class="chat-media-img" referrerpolicy="no-referrer" onload="this.closest('.messages').scrollTop = this.closest('.messages').scrollHeight"></div>`;
-                            } else if (m.type === 'file') {
-                                contentHtml = `<a href="${m.txt}" target="_blank" class="chat-file-card">📄 Файл</a>`;
-                            } else {
-                                contentHtml = `<span class="msg-text">${m.txt}</span>`;
+                            div.className = 'msg msg-other';
+                        }
+
+                        let contentHtml = '';
+                        const msgType = m.type || 'text';
+
+                        if (m.sys) {
+                            contentHtml = m.txt;
+                        } else if (msgType === 'image') {
+                            let imgSrc = m.txt;
+                            if (m.txt.includes('id=')) {
+                                try {
+                                    const fileId = m.txt.split('id=')[1];
+                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
+                                } catch (e) { }
+                            }
+                            // --- ИСПРАВЛЕНИЕ: Добавлен onload ---
+                            contentHtml = `
+                            <div class="media-container">
+                                <img src="${imgSrc}"
+                                        class="chat-media-img"
+                                        onclick="openImageViewer('${imgSrc}')"
+                                        referrerpolicy="no-referrer"
+                                        onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight"
+                                        onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
+                            </div>`;
+                        } else if (msgType === 'file') {
+                            contentHtml = `
+                            <a href="${m.txt}" target="_blank" class="chat-file-card">
+                                <div class="file-icon">📄</div>
+                                <div class="file-info">
+                                    <div class="file-name">Скачать файл</div>
+                                    <div class="file-action">Нажмите для загрузки</div>
+                                </div>
+                            </a>`;
+                        } else {
+                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                            contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
+                        }
+
+                        if (!m.sys) {
+                            let metaStyle = "";
+                            if (msgType === 'image') {
+                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
+                                contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top;">${contentHtml}`;
                             }
 
                             let metaHtml = `
-                        <span class="msg-meta">
-                            <span class="msg-time">${timeStr}</span>
-                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                        </span>`;
-                            div.innerHTML = contentHtml + metaHtml;
+                            <span class="msg-meta" style="${metaStyle}">
+                                <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
+                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                            </span>`;
+
+                            if (msgType === 'image') contentHtml += metaHtml + `</div>`;
+                            else div.innerHTML = contentHtml + metaHtml;
+                            if (msgType === 'image') div.innerHTML = contentHtml;
+                        } else {
+                            div.innerHTML = contentHtml;
                         }
+
                         list.appendChild(div);
                     });
 
                     if (needCommit) batch.commit();
-                    setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+
+                    // --- ИСПРАВЛЕНИЕ: Скроллим с небольшой задержкой для надежности ---
+                    setTimeout(() => {
+                        list.scrollTop = list.scrollHeight;
+                    }, 50);
                 });
+
+            setTimeout(() => {
+                const inp = document.getElementById('msgInput');
+                if (inp) inp.focus();
+            }, 100);
         }
 
 
@@ -3235,14 +3046,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                        <div style="display:flex; align-items:center;">
-                                                                                            ${avatarHtml}
-                                                                                            <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
-                                                                                            </div>
+                                                                                    <div style="display:flex; align-items:center;">
+                                                                                        ${avatarHtml}
+                                                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
                                                                                         </div>
-                                                                                    `;
+                                                                                    </div>
+                                                                                `;
 
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
@@ -3521,17 +3332,9 @@
                 }
             });
         }
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                // Если открыт просмотрщик картинок - закрываем его
-                const viewer = document.getElementById('imageViewer');
-                if (viewer && viewer.style.display === 'flex') {
-                    closeImageViewer();
-                }
-                // Иначе выходим в меню
-                else {
-                    backToMenu();
-                }
+        document.addEventListener('keydown', function (event) {
+            if (event.key === "Escape" && currentChatId) {
+                closeChat();
             }
         });
 
@@ -4058,9 +3861,9 @@
                     document.getElementById('activeChat').classList.remove('hidden');
 
                     document.getElementById('chatTitle').innerHTML = `
-                                                                            <div>${name}</div>
-                                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                        `;
+                                                                        <div>${name}</div>
+                                                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                    `;
 
                     loadMessages();
                 } else {
@@ -4091,22 +3894,22 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file); // Берем картинку локально
                 contentHtml = `
-                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                <div class="upload-spinner"></div>
-                                                            </div>
-                                                        `;
+                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                            <div class="upload-spinner"></div>
+                                                        </div>
+                                                    `;
             } else {
                 contentHtml = `
-                                                            <div class="chat-file-card" style="opacity: 0.7;">
-                                                                <div class="file-icon">📄</div>
-                                                                <div class="file-info">
-                                                                    <div class="file-name">${file.name}</div>
-                                                                    <div class="file-action">Загрузка...</div>
-                                                                </div>
-                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                        <div class="chat-file-card" style="opacity: 0.7;">
+                                                            <div class="file-icon">📄</div>
+                                                            <div class="file-info">
+                                                                <div class="file-name">${file.name}</div>
+                                                                <div class="file-action">Загрузка...</div>
                                                             </div>
-                                                        `;
+                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                        </div>
+                                                    `;
             }
 
             div.innerHTML = contentHtml;
@@ -4133,24 +3936,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                <div class="upload-spinner"></div>
-                                                            </div>
-                                                        `;
+                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                            <div class="upload-spinner"></div>
+                                                        </div>
+                                                    `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                            <div class="chat-file-card" style="opacity: 0.7;">
-                                                                <div class="file-icon">📄</div>
-                                                                <div class="file-info">
-                                                                    <div class="file-name">${file.name}</div>
-                                                                    <div class="file-action">Загрузка...</div>
-                                                                </div>
-                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                        <div class="chat-file-card" style="opacity: 0.7;">
+                                                            <div class="file-icon">📄</div>
+                                                            <div class="file-info">
+                                                                <div class="file-name">${file.name}</div>
+                                                                <div class="file-action">Загрузка...</div>
                                                             </div>
-                                                        `;
+                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                        </div>
+                                                    `;
             }
 
             div.innerHTML = contentHtml;
@@ -4264,23 +4067,6 @@
                 performCloseUI();
             }
         }
-
-
-       
-
-        // Слушаем нажатие клавиши ESC для выхода из чата
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                // Если открыт просмотрщик картинок, закрываем его (если есть такая функция)
-                const viewer = document.getElementById('imageViewer');
-                if (viewer && getComputedStyle(viewer).display !== 'none') {
-                    if (typeof closeImageViewer === 'function') closeImageViewer();
-                } else {
-                    // Иначе выходим из чата
-                    backToMenu();
-                }
-            }
-        });
 
 
     </script>
