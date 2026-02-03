@@ -3376,9 +3376,17 @@
                 }
             });
         }
-        document.addEventListener('keydown', function (event) {
-            if (event.key === "Escape" && currentChatId) {
-                closeChat();
+        // Обработка нажатия клавиши Esc
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") {
+                const searchInput = document.getElementById('searchInput');
+                const searchResults = document.getElementById('searchResults');
+
+                // Логика: если окно поиска открыто ИЛИ в поле есть текст ИЛИ фокус стоит в поле поиска
+                if (searchResults.classList.contains('active') || searchInput.value.trim() !== '' || document.activeElement === searchInput) {
+                    e.preventDefault(); // Предотвращаем потерю фокуса браузером (если нужно)
+                    closeSearch();      // Вызываем функцию полного сброса
+                }
             }
         });
 
@@ -4118,20 +4126,18 @@
             const resBox = document.getElementById('searchResults');
             const searchInput = document.getElementById('searchInput');
 
-            // Прячем окно
+            // 1. Прячем окно результатов
             resBox.classList.remove('active');
-            resBox.innerHTML = '';
+            resBox.style.display = 'none'; // Принудительно скрываем
+            resBox.innerHTML = '';         // Очищаем результаты
 
-            // Сбрасываем инпут и убираем фокус
+            // 2. Очищаем поле ввода и убираем фокус
             searchInput.value = '';
             searchInput.blur();
 
-            // Возвращаем аватарку
+            // 3. Возвращаем кнопку профиля и скрываем кнопку "назад"
             document.getElementById('profileBtn').style.display = 'flex';
             document.getElementById('searchBackBtn').style.display = 'none';
-
-            // На всякий случай принудительно скрываем через стили, если класс не сработал
-            resBox.style.display = 'none';
         }
 
         // И обнови openSearchUI, чтобы display переключался
