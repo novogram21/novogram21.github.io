@@ -1457,6 +1457,102 @@
             .tg-bio-input::placeholder {
                 color: rgba(255, 255, 255, 0.4);
             }
+
+
+        /* Стили для элементов меню (как в Telegram) */
+        .action-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            background: #252525;
+            transition: background 0.2s;
+        }
+
+            .action-item:hover {
+                background: #2f2f2f;
+            }
+
+        .action-icon {
+            font-size: 20px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .action-text {
+            font-size: 16px;
+            color: white;
+        }
+
+        /* Панель ответа над вводом */
+        .reply-bar {
+            width: 100%;
+            background: #1f1f1f;
+            border-top: 1px solid #333;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            border-left: 3px solid #736AF0; /* Фиолетовая полоска слева */
+        }
+
+            .reply-bar.editing {
+                border-left: 3px solid #007bff; /* Синяя для редактирования */
+            }
+
+        .reply-content {
+            flex: 1;
+            margin-left: 10px;
+            overflow: hidden;
+        }
+
+        .reply-title {
+            color: #736AF0;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .reply-text {
+            color: #ccc;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .reply-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        /* Стили для цитаты внутри сообщения */
+        .msg-reply-quote {
+            border-left: 2px solid white;
+            padding-left: 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+
+        .msg-reply-name {
+            font-size: 11px;
+            color: rgba(255,255,255,0.7);
+            font-weight: bold;
+        }
+
+        .msg-reply-text {
+            font-size: 12px;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -1522,10 +1618,33 @@
     <!-- ШТО� К�? -->
     <div id="overlaySheet" class="overlay-sheet" onclick="closeAllSheets()"></div>
     <!-- Шторка сообщения -->
-    <div id="actionSheet" class="action-sheet">
-        <div class="sheet-title">Сообщение</div>
-        <button class="action-btn delete" onclick="openDeleteSheet()">Удалить</button>
-        <button class="action-btn" onclick="closeAllSheets()">Отмена</button>
+    <div id="actionSheet" class="action-sheet" style="padding: 10px;">
+        <div class="sheet-content" style="background: #252525; border-radius: 14px; overflow: hidden;">
+
+            <div class="action-item" onclick="handleReply()">
+                <div class="action-icon">↩️</div>
+                <div class="action-text">Ответить</div>
+            </div>
+
+            <div id="btnEditMsg" class="action-item" onclick="handleEdit()">
+                <div class="action-icon">✏️</div>
+                <div class="action-text">Изменить</div>
+            </div>
+
+            <div class="action-item" onclick="handleCopy()">
+                <div class="action-icon">Cc</div>
+                <div class="action-text">Копировать</div>
+            </div>
+
+            <div style="height: 1px; background: #333; margin: 0 15px;"></div>
+
+            <div class="action-item delete" onclick="openDeleteSheet()">
+                <div class="action-icon">🗑️</div>
+                <div class="action-text" style="color: #ff595a;">Удалить</div>
+            </div>
+        </div>
+
+        <button class="action-btn" onclick="closeAllSheets()" style="margin-top: 10px; background: #252525; border-radius: 14px; font-weight: bold;">Отмена</button>
     </div>
     <!-- Шторка удаления -->
     <div id="deleteSheet" class="action-sheet">
@@ -1693,6 +1812,27 @@
             </div>
             <div id="msgList" class="messages"></div>
             <div class="input-bar">
+                <div class="input-bar" style="flex-direction: column; gap: 0; padding: 0;">
+
+                    <div id="replyBar" class="reply-bar hidden">
+                        <div class="reply-icon">↩️</div>
+                        <div class="reply-content">
+                            <div id="replyTitle" class="reply-title">Reply Name</div>
+                            <div id="replyText" class="reply-text">Message text...</div>
+                        </div>
+                        <button class="reply-close" onclick="cancelReplyOrEdit()">✖</button>
+                    </div>
+
+                    <div style="display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 20px;">
+                        <div class="input-container">
+                            <input type="text" id="msgInput" placeholder="Сообщение" onkeypress="if(event.key==='Enter') sendMsg()">
+                            <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
+                            <button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+                        </div>
+                        <button class="voice-btn" onclick="alert('Голосовые сообщения скоро будут!')">🎤</button>
+                        <button class="send-btn hidden" id="sendBtn" onclick="sendMsg()">➤</button>
+                    </div>
+                </div>
                 <div class="input-container">
                     <input type="text" id="msgInput" placeholder="Сообщение" onkeypress="if(event.key==='Enter') sendMsg()">
                     <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
@@ -1916,13 +2056,13 @@
                 : `<div style="width:35px;height:35px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
             const displayNick = user.username ? `@${user.username}` : user.email;
             div.innerHTML = `
-                                                ${avatarSrc}
-                                                <div style="flex:1; overflow:hidden;">
-                                                    <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
-                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                </div>
-                                                <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
-                                            `;
+                                                    ${avatarSrc}
+                                                    <div style="flex:1; overflow:hidden;">
+                                                        <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
+                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                    </div>
+                                                    <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
+                                                `;
             div.onclick = () => {
                 document.getElementById('searchResults').style.display = 'none';
                 document.getElementById('searchInput').value = '';
@@ -2268,16 +2408,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                                                                                                                                                                                                                    ${avatar}
-                                                                                                                                                                                                                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                        ${avatar}
+                                                                                                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    `;
                         list.appendChild(div);
                     });
                 });
@@ -2432,19 +2572,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
                         // Вставляем HTML (Обрати внимание: id для last-msg и badge остались те же)
                         div.innerHTML = `
-                                                                                                                                ${avatarHtml}
-                                                                                                                                <div class="user-name">${fName}</div>
-                                                                                                                                <div class="last-msg-row">
-                                                                                                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                                                                </div>
-                                                                                                                                <div class="meta-column">
-                                                                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                                                                    <div class="meta-bottom-row">
-                                                                                                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                                                    ${avatarHtml}
+                                                                                                                                    <div class="user-name">${fName}</div>
+                                                                                                                                    <div class="last-msg-row">
+                                                                                                                                        <span class="last-msg" id="last-${chatId}">...</span>
                                                                                                                                     </div>
-                                                                                                                                </div>
-                                                                                                                            `;
+                                                                                                                                    <div class="meta-column">
+                                                                                                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                                                                        <div class="meta-bottom-row">
+                                                                                                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                                                                        </div>
+                                                                                                                                    </div>
+                                                                                                                                `;
                         if (isNew) {
                             list.appendChild(div);
                             // Запускаем слушатель сообщений ТОЛЬКО для новых элементов
@@ -2499,9 +2639,9 @@
             document.getElementById('activeChat').classList.remove('hidden');
             // Установка заголовка
             document.getElementById('chatTitle').innerHTML = `
-                                                            <div>${name}</div>
-                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                        `;
+                                                                <div>${name}</div>
+                                                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                            `;
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
             // Сначала ставим "загрузка..." или пробуем взять из кэша, если он есть
@@ -2538,38 +2678,65 @@
                 }, 100);
             }
         }
+
+        function scrollToMsg(id) {
+            const el = document.getElementById('msg-' + id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.background = '#444'; // Подсветка
+                setTimeout(() => { el.style.background = ''; }, 1000);
+            } else {
+                showToast("Сообщение не найдено (возможно, старое)");
+            }
+        }
+
         function loadMessages() {
             const list = document.getElementById('msgList');
+
             // 1. Отписываемся и очищаем (как договаривались)
             if (msgUnsub) msgUnsub();
             list.innerHTML = '';
+
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
+
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
                 .orderBy('ts', 'asc')
                 .limitToLast(50)
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
+
                     // Пропускаем "пустой" кэш
                     if (snap.metadata.fromCache && snap.docs.length < 2 && snap.docs.length > 0) return;
+
                     const batch = db.batch();
                     let needCommit = false;
+
                     // Снова очищаем перед рендером
                     list.innerHTML = '';
+
                     snap.docs.forEach(doc => {
                         const m = doc.data();
                         const msgId = doc.id;
+
                         if (deletedLocal.includes(msgId)) return;
+
                         const div = document.createElement('div');
                         div.id = 'msg-' + msgId;
+
+                        // Обработчик клика для меню действий
                         div.onclick = (e) => {
                             if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
                                 e.stopPropagation();
                                 openActionSheet(msgId, m.from === currentUser.uid);
                             }
                         };
+
+                        // Чтение сообщения
                         if (m.to === currentUser.uid && !m.read) {
                             batch.update(doc.ref, { read: true });
                             needCommit = true;
                         }
+
+                        // Формирование времени
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
@@ -2578,7 +2745,10 @@
                             const now = new Date();
                             timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                         }
+
                         let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
+
+                        // Классы стилей
                         if (m.sys) {
                             div.className = 'msg msg-sys';
                         } else if (m.from === currentUser.uid) {
@@ -2586,11 +2756,26 @@
                         } else {
                             div.className = 'msg msg-other';
                         }
+
+                        // --- ГЕНЕРАЦИЯ КОНТЕНТА ---
                         let contentHtml = '';
+
+                        // 1. ДОБАВЛЯЕМ ОТОБРАЖЕНИЕ ОТВЕТА (ЕСЛИ ЕСТЬ)
+                        if (m.replyTo) {
+                            contentHtml += `
+                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                        <div class="msg-reply-name">${m.replyTo.name}</div>
+                        <div class="msg-reply-text">${m.replyTo.text}</div>
+                    </div>
+                    `;
+                        }
+
                         const msgType = m.type || 'text';
+
                         if (m.sys) {
-                            contentHtml = m.txt;
-                        } else if (msgType === 'image') {
+                            contentHtml += m.txt;
+                        }
+                        else if (msgType === 'image') {
                             let imgSrc = m.txt;
                             if (m.txt.includes('id=')) {
                                 try {
@@ -2598,54 +2783,85 @@
                                     imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
                                 } catch (e) { }
                             }
-                            // --- ИСПРАВЛЕНИЕ: Добавлен onload ---
-                            contentHtml = `
-                                                                        <div class="media-container">
-                                                                            <img src="${imgSrc}"
-                                                                                    class="chat-media-img"
-                                                                                    onclick="openImageViewer('${imgSrc}')"
-                                                                                    referrerpolicy="no-referrer"
-                                                                                    onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight"
-                                                                                    onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
-                                                                        </div>`;
-                        } else if (msgType === 'file') {
-                            contentHtml = `
-                                                                        <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                                                            <div class="file-icon">📄</div>
-                                                                            <div class="file-info">
-                                                                                <div class="file-name">Скачать файл</div>
-                                                                                <div class="file-action">Нажмите для загрузки</div>
-                                                                            </div>
-                                                                        </a>`;
-                        } else {
-                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
-                            contentHtml = `<span class="msg-text">${txtWithLinks}</span>`;
+                            // Используем += чтобы не стереть ответ
+                            contentHtml += `
+                        <div class="media-container">
+                            <img src="${imgSrc}"
+                                class="chat-media-img"
+                                onclick="openImageViewer('${imgSrc}')"
+                                referrerpolicy="no-referrer"
+                                onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight"
+                                onerror="this.src='https://placehold.co/200x200?text=Ошибка+загрузки';">
+                        </div>`;
                         }
+                        else if (msgType === 'file') {
+                            // Используем += чтобы не стереть ответ
+                            contentHtml += `
+                        <a href="${m.txt}" target="_blank" class="chat-file-card">
+                            <div class="file-icon">📄</div>
+                            <div class="file-info">
+                                <div class="file-name">Скачать файл</div>
+                                <div class="file-action">Нажмите для загрузки</div>
+                            </div>
+                        </a>`;
+                        }
+                        else {
+                            // ТЕКСТОВОЕ СООБЩЕНИЕ
+                            // Подсветка ссылок
+                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                            contentHtml += `<span class="msg-text">${txtWithLinks}</span>`;
+
+                            // Если сообщение отредактировано
+                            if (m.edited) {
+                                contentHtml += `<span style="font-size:10px; color:#aaa; margin-left:4px;">(изм.)</span>`;
+                            }
+                        }
+
+                        // --- ДОБАВЛЕНИЕ МЕТА-ИНФОРМАЦИИ (ВРЕМЯ И ГАЛОЧКИ) ---
                         if (!m.sys) {
                             let metaStyle = "";
+
+                            // Если картинка - позиционируем время поверх неё
                             if (msgType === 'image') {
                                 metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
-                                contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top;">${contentHtml}`;
+                                // Оборачиваем весь контент (ответ + картинка) в relative div
+                                contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top; min-width: 200px;">${contentHtml}`;
                             }
+
                             let metaHtml = `
-                                                                        <span class="msg-meta" style="${metaStyle}">
-                                                                            <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
-                                                                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                                                        </span>`;
-                            if (msgType === 'image') contentHtml += metaHtml + `</div>`;
-                            else div.innerHTML = contentHtml + metaHtml;
-                            if (msgType === 'image') div.innerHTML = contentHtml;
+                        <span class="msg-meta" style="${metaStyle}">
+                            <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                        </span>`;
+
+                            if (msgType === 'image') {
+                                contentHtml += metaHtml + `</div>`;
+                            } else {
+                                // Для текста/файла просто добавляем в конец
+                                div.innerHTML = contentHtml + metaHtml;
+                                // Если просто текст - присваивание выше работает. 
+                                // Но если div.innerHTML перезаписывается ниже, нужно быть аккуратным.
+                            }
+
+                            // Финальная установка HTML
+                            if (msgType === 'image') {
+                                div.innerHTML = contentHtml;
+                            }
                         } else {
                             div.innerHTML = contentHtml;
                         }
+
                         list.appendChild(div);
                     });
+
                     if (needCommit) batch.commit();
-                    // --- ИСПРАВЛЕНИЕ: Скроллим с небольшой задержкой для надежности ---
+
+                    // Скролл вниз
                     setTimeout(() => {
                         list.scrollTop = list.scrollHeight;
                     }, 50);
                 });
+
             setTimeout(() => {
                 const inp = document.getElementById('msgInput');
                 if (inp) inp.focus();
@@ -2670,25 +2886,49 @@
         }
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
         function sendMsg(txt, isSys = false, type = 'text') {
-            // Если txt не передан (обычная отправка), берем из поля ввода
-            const t = txt || document.getElementById('msgInput').value.trim();
+            const inputEl = document.getElementById('msgInput');
+            const t = txt || inputEl.value.trim();
             if (!t) return;
+
+            // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
+            if (isEditingMode && editMessageId) {
+                db.collection('chats').doc(currentChatId).collection('msgs').doc(editMessageId).update({
+                    txt: t,
+                    edited: true // Метка, что сообщение изменено
+                }).then(() => {
+                    cancelReplyOrEdit();
+                });
+                return; // Выходим, не создаем новое
+            }
+
+            // --- ОБЫЧНАЯ ОТПРАВКА ---
             const msgData = {
                 txt: t,
                 from: currentUser.uid,
                 to: currentFriendId,
                 sys: isSys,
-                type: type, // <--- ВАЖНО: Мы сохраняем тип сообщения
+                type: type,
                 read: false,
                 ts: firebase.firestore.FieldValue.serverTimestamp()
             };
+
+            // Если есть ответ на сообщение
+            if (replyMessageData) {
+                msgData.replyTo = {
+                    id: replyMessageData.id,
+                    name: replyMessageData.name,
+                    text: replyMessageData.text
+                };
+                cancelReplyOrEdit(); // Сбрасываем ответ после отправки
+            }
+
             db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
-            // Если это был обычный текст (из поля ввода), очищаем поле
+
             if (!txt) {
-                document.getElementById('msgInput').value = '';
+                inputEl.value = '';
                 document.getElementById('sendBtn').style.display = 'none';
                 document.querySelector('.voice-btn').style.display = 'flex';
-                document.getElementById('msgInput').focus();
+                inputEl.focus();
             }
             // УВЕДОМЛЕНИЯ
             if (!isSys && currentFriendId) {
@@ -2711,11 +2951,139 @@
                 });
             }
         }
+        let isEditingMode = false;
+        let editMessageId = null;
+        let replyMessageData = null; // { id, name, text }
+
+
         function openActionSheet(msgId, isMine) {
-            selectedMsgId = msgId; selectedMsgIsMine = isMine;
+            selectedMsgId = msgId;
+            selectedMsgIsMine = isMine;
+
+            // Показываем/скрываем кнопку "Изменить"
+            const editBtn = document.getElementById('btnEditMsg');
+            if (isMine) {
+                editBtn.style.display = 'flex';
+            } else {
+                editBtn.style.display = 'none';
+            }
+
             document.getElementById('overlaySheet').style.display = 'block';
             setTimeout(() => { document.getElementById('actionSheet').classList.add('open'); }, 10);
         }
+
+        // --- КОПИРОВАТЬ ---
+        function handleCopy() {
+            const msgEl = document.getElementById('msg-' + selectedMsgId);
+            if (msgEl) {
+                // Пытаемся найти текст сообщения (исключая мета-инфо и время)
+                let text = "";
+                const textSpan = msgEl.querySelector('.msg-text');
+                if (textSpan) {
+                    text = textSpan.innerText;
+                } else {
+                    // Если это просто текст без span
+                    text = msgEl.innerText.replace(/\n\d{2}:\d{2}.*/s, ''); // Грубая очистка времени
+                }
+
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast("Текст скопирован");
+                });
+            }
+            closeAllSheets();
+        }
+
+        // --- ОТВЕТИТЬ ---
+        function handleReply() {
+            const msgEl = document.getElementById('msg-' + selectedMsgId);
+            if (!msgEl) return closeAllSheets();
+
+            // Получаем имя того, кому отвечаем
+            // В твоем коде имя не хранится в сообщении, берем из контекста или заглушку
+            // Для простоты: если isMine - "Вы", если нет - имя собеседника из заголовка
+            const name = selectedMsgIsMine ? "Вы" : document.getElementById('chatTitle').firstElementChild.innerText;
+
+            // Получаем текст
+            let text = "Вложение";
+            const textSpan = msgEl.querySelector('.msg-text');
+            if (textSpan) text = textSpan.innerText;
+            else if (msgEl.querySelector('.chat-media-img')) text = "Фотография";
+            else if (msgEl.querySelector('.chat-file-card')) text = "Файл";
+
+            startReplyUI(selectedMsgId, name, text);
+            closeAllSheets();
+        }
+
+        // --- ИЗМЕНИТЬ ---
+        function handleEdit() {
+            const msgEl = document.getElementById('msg-' + selectedMsgId);
+            if (!msgEl) return closeAllSheets();
+
+            let text = "";
+            const textSpan = msgEl.querySelector('.msg-text');
+            if (textSpan) text = textSpan.innerText;
+
+            // Если это картинка, редактирование текста пока не делаем сложным
+            if (!text && (msgEl.querySelector('img') || msgEl.querySelector('a'))) {
+                alert("Редактирование медиа пока недоступно");
+                return closeAllSheets();
+            }
+
+            startEditUI(selectedMsgId, text);
+            closeAllSheets();
+        }
+
+        function startReplyUI(id, name, text) {
+            cancelReplyOrEdit(); // Сброс
+            replyMessageData = { id, name, text };
+
+            const bar = document.getElementById('replyBar');
+            const title = document.getElementById('replyTitle');
+            const txt = document.getElementById('replyText');
+            const icon = bar.querySelector('.reply-icon');
+
+            bar.classList.remove('hidden', 'editing');
+            title.innerText = name;
+            txt.innerText = text;
+            icon.innerText = "↩️";
+
+            document.getElementById('msgInput').focus();
+        }
+
+        function startEditUI(id, text) {
+            cancelReplyOrEdit(); // Сброс
+            isEditingMode = true;
+            editMessageId = id;
+
+            const bar = document.getElementById('replyBar');
+            const title = document.getElementById('replyTitle');
+            const txt = document.getElementById('replyText');
+            const icon = bar.querySelector('.reply-icon');
+            const input = document.getElementById('msgInput');
+
+            bar.classList.remove('hidden');
+            bar.classList.add('editing'); // Синий цвет
+            title.innerText = "Редактирование";
+            txt.innerText = text;
+            icon.innerText = "✏️";
+
+            input.value = text;
+            input.focus();
+        }
+
+        function cancelReplyOrEdit() {
+            isEditingMode = false;
+            editMessageId = null;
+            replyMessageData = null;
+
+            const bar = document.getElementById('replyBar');
+            if (bar) bar.classList.add('hidden');
+
+            document.getElementById('msgInput').value = '';
+        }
+
+
+
         function openDeleteSheet() {
             document.getElementById('actionSheet').classList.remove('open');
             const btnAll = document.getElementById('btnDelAll');
@@ -3134,14 +3502,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                                                                <div style="display:flex; align-items:center;">
-                                                                                                                                    ${avatarHtml}
-                                                                                                                                    <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                                                        <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                                                        <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                    <div style="display:flex; align-items:center;">
+                                                                                                                                        ${avatarHtml}
+                                                                                                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                                                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                                                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                        </div>
                                                                                                                                     </div>
-                                                                                                                                </div>
-                                                                                                                            `;
+                                                                                                                                `;
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
                                 }
@@ -3879,9 +4247,9 @@
                     document.getElementById('noChat').classList.add('hidden');
                     document.getElementById('activeChat').classList.remove('hidden');
                     document.getElementById('chatTitle').innerHTML = `
-                                                                                                                    <div>${name}</div>
-                                                                                                                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                `;
+                                                                                                                        <div>${name}</div>
+                                                                                                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                                                                    `;
                     loadMessages();
                 } else {
                     // Юзер не найден, возвращаемся назад
@@ -3903,22 +4271,22 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file); // Берем картинку локально
                 contentHtml = `
-                                                                                                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                        <div class="upload-spinner"></div>
-                                                                                                    </div>
-                                                                                                `;
+                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                            <div class="upload-spinner"></div>
+                                                                                                        </div>
+                                                                                                    `;
             } else {
                 contentHtml = `
-                                                                                                    <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                        <div class="file-icon">📄</div>
-                                                                                                        <div class="file-info">
-                                                                                                            <div class="file-name">${file.name}</div>
-                                                                                                            <div class="file-action">Загрузка...</div>
+                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                            <div class="file-icon">📄</div>
+                                                                                                            <div class="file-info">
+                                                                                                                <div class="file-name">${file.name}</div>
+                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                            </div>
+                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                         </div>
-                                                                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                    </div>
-                                                                                                `;
+                                                                                                    `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -3938,24 +4306,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                                                                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                        <div class="upload-spinner"></div>
-                                                                                                    </div>
-                                                                                                `;
+                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                            <div class="upload-spinner"></div>
+                                                                                                        </div>
+                                                                                                    `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                                                                    <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                        <div class="file-icon">📄</div>
-                                                                                                        <div class="file-info">
-                                                                                                            <div class="file-name">${file.name}</div>
-                                                                                                            <div class="file-action">Загрузка...</div>
+                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                            <div class="file-icon">📄</div>
+                                                                                                            <div class="file-info">
+                                                                                                                <div class="file-name">${file.name}</div>
+                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                            </div>
+                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                         </div>
-                                                                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                    </div>
-                                                                                                `;
+                                                                                                    `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
