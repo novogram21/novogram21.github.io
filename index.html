@@ -1363,7 +1363,20 @@
                 color: rgba(255, 255, 255, 0.4);
             }
 
+        /* Стиль для полей в режиме редактирования */
+        .editing .editable-field {
+            background: rgba(0, 0, 0, 0.2); /* Слегка затемненный фон */
+            border-bottom: 1px solid #007bff; /* Синяя линия снизу */
+            pointer-events: auto !important; /* Разрешаем клики */
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
 
+        /* В обычном режиме (когда нет класса editing) */
+        .editable-field {
+            pointer-events: none; /* Запрещаем клики и выделение */
+            border-bottom: 1px solid transparent;
+        }
 
 
 
@@ -1452,7 +1465,7 @@
             <div class="tg-header-top">
                 <button onclick="closeAllSheets()" class="tg-icon-btn">←</button>
                 <div style="flex:1; font-weight: 500; font-size: 18px;">Профиль</div>
-                <button onclick="saveProfile()" class="tg-icon-btn">✓</button>
+                <button id="editProfileBtn" onclick="toggleEditMode()" class="tg-icon-btn" style="font-size: 24px;">✎</button>
                 <button onclick="logout()" class="tg-icon-btn" style="margin-left: 5px;">⋮</button>
             </div>
 
@@ -1465,8 +1478,8 @@
                 <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="handleAvatarSelect(this)">
 
                 <div class="tg-profile-name-block">
-                    <input type="text" id="profileName" class="tg-name-input" placeholder="Имя" onblur="if(this.value.trim() === '') this.value = 'User'">
-                    <input type="text" id="profileSurname" class="tg-name-input" placeholder="Фамилия" style="font-size: 16px; margin-top: 2px; font-weight: normal;">
+                    <input type="text" id="profileName" class="tg-name-input editable-field" placeholder="Имя" readonly>
+                    <input type="text" id="profileSurname" class="tg-name-input editable-field" placeholder="Фамилия" style="font-size: 16px; margin-top: 2px; font-weight: normal;" readonly>
                     <div class="tg-profile-status">в сети</div>
                 </div>
             </div>
@@ -1495,7 +1508,7 @@
             <div class="tg-item">
                 <div class="tg-item-icon">ℹ️</div>
                 <div class="tg-item-content">
-                    <textarea id="profileBio" class="tg-bio-input" placeholder="Не указано" rows="1" readonly style="pointer-events: none;"></textarea>
+                    <textarea id="profileBio" class="tg-bio-input editable-field" placeholder="Не указано" rows="1" readonly></textarea>
                     <div class="tg-item-label">О себе</div>
                 </div>
             </div>
@@ -3238,8 +3251,9 @@
 
             db.collection('users').doc(currentUser.uid).set(updateData, { merge: true })
                 .then(() => {
-                    showToast("Сохранено ✓");
-                    closeAllSheets();
+                    showToast("Данные обновлены ✓");
+                    // Мы НЕ закрываем шторку (closeAllSheets), чтобы пользователь видел результат
+                    // closeAllSheets(); <--- Эту строку убрали или закомментировали
                 })
                 .catch(err => {
                     console.error(err);
@@ -3980,6 +3994,61 @@
             resBox.classList.add('active');
             document.getElementById('profileBtn').style.display = 'none';
             document.getElementById('searchBackBtn').style.display = 'block';
+        }
+
+
+        let isEditingProfile = false;
+
+        function toggleEditMode() {
+            const sheet = document.getElementById('profileSheet');
+            const btn = document.getElementById('editProfileBtn');
+            const inputs = document.querySelectorAll('.editable-field');
+
+            if (!isEditingProfile) {
+                // --- ВКЛЮЧАЕМ РЕЖИМ РЕДАКТИРОВАНИЯ ---
+                isEditingProfile = true;
+
+                // 1. Меняем иконку на галочку
+                btn.innerText = '✓';
+                btn.style.color = '#4caf50'; // Зеленый цвет для галочки
+
+                // 2. Добавляем класс для стилей
+                sheet.classList.add('editing');
+
+                // 3. Убираем readonly у полей
+                inputs.forEach(input => {
+                    input.removeAttribute('readonly');
+                });
+
+                // 4. Меняем placeholder у Био, чтобы было понятно, что писать
+                const bio = document.getElementById('profileBio');
+                if (bio.value === '') bio.placeholder = "Расскажите о себе...";
+
+                // 5. Фокус на имя
+                document.getElementById('profileName').focus();
+
+            } else {
+                // --- СОХРАНЯЕМ И ВЫКЛЮЧАЕМ ---
+                saveProfile(); // Вызываем сохранение
+
+                isEditingProfile = false;
+
+                // 1. Возвращаем иконку карандаша
+                btn.innerText = '✎';
+                btn.style.color = 'white';
+
+                // 2. Убираем класс стилей
+                sheet.classList.remove('editing');
+
+                // 3. Возвращаем readonly
+                inputs.forEach(input => {
+                    input.setAttribute('readonly', 'true');
+                });
+
+                // 4. Возвращаем красивый placeholder если пусто
+                const bio = document.getElementById('profileBio');
+                if (bio.value.trim() === '') bio.placeholder = "Не указано";
+            }
         }
     </script>
     <div id="imageViewer" class="image-viewer" onclick="closeImageViewer()">
