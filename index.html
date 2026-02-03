@@ -1478,20 +1478,23 @@
         <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
         <!-- Профиль -->
         <div class="profile-bar" style="padding: 12px 15px; gap: 12px; position: relative;">
+
             <button id="searchBackBtn" onclick="closeSearch()" style="display: none; background: none; border: none; color: #007bff; font-size: 20px; cursor: pointer; flex-shrink: 0;">
                 ←
             </button>
+
             <button id="profileBtn" onclick="openProfileSheet()" style="width: 44px; height: 44px; border-radius: 50%; background: #2d2d2d; border: 1px solid #444; color: #fff; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s;">
                 <span id="myAvatarSmall">👤</span>
             </button>
+
             <div style="flex: 1;">
                 <input type="text" id="searchInput" placeholder="Поиск..."
-                                   style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
-                                   onfocus="openSearchUI()"
-                                   oninput="handleSearchInput(this)">
+                       style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
+                       onfocus="openSearchUI()"
+                       oninput="handleSearchInput(this)">
             </div>
-            <div id="searchResults">
-            </div>
+
+            <div id="searchResults"></div>
         </div>
         <!-- Выпадающий список результатов -->
         <div id="searchResults" style="position: absolute; top: 45px; left: 10px; right: 10px; background: #2d2d2d; border: 1px solid #444; border-radius: 6px; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
@@ -1638,25 +1641,34 @@
         let searchTimeout = null;
         function handleSearchInput(input) {
             const val = input.value.trim();
-            const resultsBox = document.getElementById('searchResults');
-            // Если пусто — скрываем
-            if (val.length < 3) {
-                resultsBox.style.display = 'none';
+
+            // Если поле очистили, очищаем и результаты, но окно не закрываем (пока фокус там)
+            if (val === '') {
+                document.getElementById('searchResults').innerHTML = '';
                 return;
             }
+
             if (searchTimeout) clearTimeout(searchTimeout);
+
+            // Ищем через 300мс после окончания ввода
             searchTimeout = setTimeout(() => {
                 performSearch(val);
-            }, 500); // Ищем через 0.5 сек после остановки ввода
+            }, 300);
         }
         async function performSearch(query) {
             const resultsBox = document.getElementById('searchResults');
-            resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Поиск...</div>';
-            resultsBox.style.display = 'block';
+            resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Поиск...</div>';
+
+            // Убеждаемся, что окно открыто (класс active из CSS)
+            if (!resultsBox.classList.contains('active')) {
+                openSearchUI();
+            }
+
             const cleanQuery = query.startsWith('@') ? query.slice(1).toLowerCase() : query.toLowerCase();
+
             try {
-                // 1. ПОИСК СРЕДИ ДРУЗЕЙ (Локальный)
-                // Мы берем данные из usersCache, которые наполнились при загрузке списка друзей
+                // --- А. ЛОКАЛЬНЫЙ ПОИСК (СРЕДИ ДРУЗЕЙ) ---
+                // Ищем в кэше загруженных пользователей
                 const localHits = Object.keys(usersCache)
                     .map(id => ({ id, ...usersCache[id] }))
                     .filter(u =>
@@ -1664,50 +1676,62 @@
                         (u.username && u.username.toLowerCase().includes(cleanQuery)) ||
                         (u.email && u.email.toLowerCase().includes(cleanQuery))
                     );
-                // 2. ГЛОБАЛЬНЫЙ ПОИСК (В Firebase)
+
+                // --- Б. ГЛОБАЛЬНЫЙ ПОИСК (БАЗА ДАННЫХ) ---
                 const globalHits = [];
-                // Поиск по никнейму
-                const snapUser = await db.collection('users')
-                    .where('username', '>=', cleanQuery)
-                    .where('username', '<=', cleanQuery + '\uf8ff')
-                    .limit(5)
-                    .get();
-                snapUser.forEach(doc => {
-                    if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
-                        globalHits.push({ id: doc.id, ...doc.data() });
-                    }
-                });
-                // Поиск по почте (если глобальных результатов мало)
-                if (globalHits.length < 3) {
-                    const snapEmail = await db.collection('users')
-                        .where('email', '>=', cleanQuery)
-                        .where('email', '<=', cleanQuery + '\uf8ff')
+
+                // Если запрос длиннее 2 символов, ищем в базе
+                if (cleanQuery.length >= 2) {
+                    // Ищем по username
+                    const snapUser = await db.collection('users')
+                        .where('username', '>=', cleanQuery)
+                        .where('username', '<=', cleanQuery + '\uf8ff')
                         .limit(5)
                         .get();
-                    snapEmail.forEach(doc => {
-                        if (doc.id !== currentUser.uid &&
-                            !localHits.find(h => h.id === doc.id) &&
-                            !globalHits.find(h => h.id === doc.id)) {
+
+                    snapUser.forEach(doc => {
+                        // Исключаем себя и тех, кто уже есть в локальном поиске
+                        if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
                             globalHits.push({ id: doc.id, ...doc.data() });
                         }
                     });
+
+                    // Ищем по email (если мало результатов)
+                    if (globalHits.length < 3) {
+                        const snapEmail = await db.collection('users')
+                            .where('email', '>=', cleanQuery)
+                            .where('email', '<=', cleanQuery + '\uf8ff')
+                            .limit(5)
+                            .get();
+
+                        snapEmail.forEach(doc => {
+                            if (doc.id !== currentUser.uid &&
+                                !localHits.find(h => h.id === doc.id) &&
+                                !globalHits.find(h => h.id === doc.id)) {
+                                globalHits.push({ id: doc.id, ...doc.data() });
+                            }
+                        });
+                    }
                 }
-                // 3. ОТРИСОВКА РЕЗУЛЬТАТОВ
+
+                // --- В. ОТРИСОВКА ---
+                resultsBox.innerHTML = '';
+
                 if (localHits.length === 0 && globalHits.length === 0) {
-                    resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Ничего не найдено</div>';
+                    resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
                     return;
                 }
-                resultsBox.innerHTML = '';
-                // Выводим "Мои контакты"
+
                 if (localHits.length > 0) {
-                    resultsBox.innerHTML += `<div class="search-section-title">Мои контакты</div>`;
+                    resultsBox.innerHTML += `<div class="search-section-title">Ваши контакты</div>`;
                     localHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, true)));
                 }
-                // Выводим "Глобальный поиск"
+
                 if (globalHits.length > 0) {
                     resultsBox.innerHTML += `<div class="search-section-title">Глобальный поиск</div>`;
                     globalHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, false)));
                 }
+
             } catch (e) {
                 console.error(e);
                 resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
