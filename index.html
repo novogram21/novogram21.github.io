@@ -1438,7 +1438,6 @@
 
         <!-- Выпадающий список результатов -->
         <div id="searchResults" style="position: absolute; top: 45px; left: 10px; right: 10px; background: #2d2d2d; border: 1px solid #444; border-radius: 6px; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-            <!-- Сюда JS будет вставлять найденных людей -->
         </div>
 
         <div class="tabs">
@@ -4115,31 +4114,34 @@
 
 
 
-        function openSearchUI() {
-            // Показываем окно результатов
-            document.getElementById('searchResults').classList.add('active');
-            // Меняем аватарку на кнопку "назад" (как в TG)
-            document.getElementById('profileBtn').style.display = 'none';
-            document.getElementById('searchBackBtn').style.display = 'block';
-        }
-
         function closeSearch() {
+            const resBox = document.getElementById('searchResults');
+            const searchInput = document.getElementById('searchInput');
+
             // Прячем окно
-            document.getElementById('searchResults').classList.remove('active');
-            document.getElementById('searchResults').innerHTML = '';
-            // Сбрасываем инпут
-            document.getElementById('searchInput').value = '';
+            resBox.classList.remove('active');
+            resBox.innerHTML = '';
+
+            // Сбрасываем инпут и убираем фокус
+            searchInput.value = '';
+            searchInput.blur();
+
             // Возвращаем аватарку
             document.getElementById('profileBtn').style.display = 'flex';
             document.getElementById('searchBackBtn').style.display = 'none';
+
+            // На всякий случай принудительно скрываем через стили, если класс не сработал
+            resBox.style.display = 'none';
         }
 
-        // Если нажать Esc - поиск закроется
-        document.addEventListener('keydown', (e) => {
-            if (e.key === "Escape" && document.getElementById('searchResults').classList.contains('active')) {
-                closeSearch();
-            }
-        });
+        // И обнови openSearchUI, чтобы display переключался
+        function openSearchUI() {
+            const resBox = document.getElementById('searchResults');
+            resBox.style.display = 'flex';
+            resBox.classList.add('active');
+            document.getElementById('profileBtn').style.display = 'none';
+            document.getElementById('searchBackBtn').style.display = 'block';
+        }
 
     </script>
 
