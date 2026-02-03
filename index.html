@@ -568,6 +568,15 @@
             display: none;
         }
 
+        .search-section-title {
+            padding: 8px 15px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #007bff;
+            background: #2a2a2a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
 
         .action-sheet {
@@ -863,6 +872,79 @@
             }
         }
 
+
+        /* Полноэкранный контейнер результатов поиска (стиль Telegram) */
+        #searchResults {
+            position: absolute;
+            top: 65px; /* Высота profile-bar */
+            left: 0;
+            width: 100%;
+            /* Вычисляем высоту: всё окно минус высота шапки */
+            height: calc(100dvh - 65px);
+            background: #1f1f1f;
+            z-index: 999; /* Поверх вкладок и списка чатов */
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+            /* Когда поиск активен */
+            #searchResults.active {
+                display: flex;
+            }
+
+        /* Заголовки разделов в поиске */
+        .search-section-title {
+            padding: 10px 15px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #007bff;
+            background: rgba(0, 123, 255, 0.05);
+            text-transform: uppercase;
+        }
+
+        /* Стилизация каждого найденного человека */
+        .search-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+            .search-item:hover {
+                background: #2a2a2a;
+            }
+
+            .search-item img, .search-avatar-placeholder {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                object-fit: cover;
+            }
+
+        .search-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .search-name {
+            font-weight: bold;
+            color: white;
+            font-size: 15px;
+        }
+
+        .search-sub {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .search-action {
+            color: #007bff;
+            font-size: 20px;
+            padding-right: 5px;
+        }
 
         /* 1. Общий фон для всего приложения */
         #app-background {
@@ -1331,97 +1413,25 @@
     <div id="mainSidebar" class="sidebar">
         <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
         <!-- Профиль -->
-        <div class="profile-bar" style="padding: 12px 15px; gap: 12px;">
+        <div class="profile-bar" style="padding: 12px 15px; gap: 12px; position: relative;">
 
-            <!-- 1. Круглая кнопка профиля (только смайлик/фото) -->
-            <button onclick="openProfileSheet()" style="
-
-        width: 44px;
-
-        height: 44px;
-
-        border-radius: 50%;
-
-        background: #2d2d2d;
-
-        border: 1px solid #444;
-
-        color: #fff;
-
-        font-size: 22px;
-
-        cursor: pointer;
-
-        display: flex;
-
-        align-items: center;
-
-        justify-content: center;
-
-        flex-shrink: 0;
-
-        transition: 0.2s;
-
-    " onmouseover="this.style.background='#383838'" onmouseout="this.style.background='#2d2d2d'">
-
-                <!-- Сюда подставится ваша аватарка или смайлик -->
-
-                <span id="myAvatarSmall">👤</span>
-
+            <button id="searchBackBtn" onclick="closeSearch()" style="display: none; background: none; border: none; color: #007bff; font-size: 20px; cursor: pointer; flex-shrink: 0;">
+                ←
             </button>
 
-            <!-- 2. Скругленный поиск (справа) -->
-            <div style="flex: 1; position: relative;">
+            <button id="profileBtn" onclick="openProfileSheet()" style="width: 44px; height: 44px; border-radius: 50%; background: #2d2d2d; border: 1px solid #444; color: #fff; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s;">
+                <span id="myAvatarSmall">👤</span>
+            </button>
+
+            <div style="flex: 1;">
                 <input type="text" id="searchInput" placeholder="Поиск..."
-                                   style="
-                   width: 100%;
-                   height: 44px;
-                   padding: 0 15px;
-                   border-radius: 22px; /* Полное скругление */
-                   border: 1px solid #333;
-                   background: #181818;
-                   color: white;
-                   outline: none;
-                   font-size: 14px;
-                   transition: 0.2s;
-               "
-                                   onfocus="this.style.background='#222'; this.style.borderColor='#555'"
-                                   onblur="this.style.background='#181818'; this.style.borderColor='#333'"
-                                   oninput="handleSearchInput(this)">
-
-                <!-- Выпадающий список результатов -->
-                <div id="searchResults" style="
-
-            position: absolute;
-
-            top: 50px;
-
-            left: 0;
-
-            right: 0;
-
-            background: #252525;
-
-            border: 1px solid #333;
-
-            border-radius: 12px;
-
-            z-index: 100;
-
-            display: none;
-
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-
-            overflow: hidden;
-
-        ">
-
-                    <!-- JS вставит сюда результаты -->
-
-                </div>
-
+                       style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
+                       onfocus="openSearchUI()"
+                       oninput="handleSearchInput(this)">
             </div>
 
+            <div id="searchResults">
+            </div>
         </div>
 
 
@@ -1614,76 +1624,70 @@
             resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Поиск...</div>';
             resultsBox.style.display = 'block';
 
-            // Убираем @ если есть
-            const cleanQuery = query.startsWith('@') ? query.slice(1) : query;
+            const cleanQuery = query.startsWith('@') ? query.slice(1).toLowerCase() : query.toLowerCase();
 
             try {
-                const hits = [];
+                // 1. ПОИСК СРЕДИ ДРУЗЕЙ (Локальный)
+                // Мы берем данные из usersCache, которые наполнились при загрузке списка друзей
+                const localHits = Object.keys(usersCache)
+                    .map(id => ({ id, ...usersCache[id] }))
+                    .filter(u =>
+                        (u.name && u.name.toLowerCase().includes(cleanQuery)) ||
+                        (u.username && u.username.toLowerCase().includes(cleanQuery)) ||
+                        (u.email && u.email.toLowerCase().includes(cleanQuery))
+                    );
 
-                // 1. Ищем по username
+                // 2. ГЛОБАЛЬНЫЙ ПОИСК (В Firebase)
+                const globalHits = [];
+
+                // Поиск по никнейму
                 const snapUser = await db.collection('users')
                     .where('username', '>=', cleanQuery)
                     .where('username', '<=', cleanQuery + '\uf8ff')
-                    .limit(3)
+                    .limit(5)
                     .get();
 
                 snapUser.forEach(doc => {
-                    if (doc.id !== currentUser.uid) hits.push({ id: doc.id, ...doc.data() });
+                    if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
+                        globalHits.push({ id: doc.id, ...doc.data() });
+                    }
                 });
 
-                // 2. Если мало результатов, ищем по email
-                if (hits.length < 3) {
+                // Поиск по почте (если глобальных результатов мало)
+                if (globalHits.length < 3) {
                     const snapEmail = await db.collection('users')
-                        .where('email', '>=', query)
-                        .where('email', '<=', query + '\uf8ff')
-                        .limit(3)
+                        .where('email', '>=', cleanQuery)
+                        .where('email', '<=', cleanQuery + '\uf8ff')
+                        .limit(5)
                         .get();
 
                     snapEmail.forEach(doc => {
-                        if (doc.id !== currentUser.uid && !hits.find(h => h.id === doc.id)) {
-                            hits.push({ id: doc.id, ...doc.data() });
+                        if (doc.id !== currentUser.uid &&
+                            !localHits.find(h => h.id === doc.id) &&
+                            !globalHits.find(h => h.id === doc.id)) {
+                            globalHits.push({ id: doc.id, ...doc.data() });
                         }
                     });
                 }
 
-                // Отрисовка результатов (максимум 3)
-                const finalHits = hits.slice(0, 3);
+                // 3. ОТРИСОВКА РЕЗУЛЬТАТОВ
+                if (localHits.length === 0 && globalHits.length === 0) {
+                    resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Ничего не найдено</div>';
+                    return;
+                }
 
-                if (finalHits.length === 0) {
-                    resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Никого не найдено</div>';
-                } else {
-                    resultsBox.innerHTML = '';
-                    finalHits.forEach(user => {
-                        const div = document.createElement('div');
-                        div.style.padding = '10px';
-                        div.style.borderBottom = '1px solid #333';
-                        div.style.cursor = 'pointer';
-                        div.style.display = 'flex';
-                        div.style.alignItems = 'center';
-                        div.style.gap = '10px';
+                resultsBox.innerHTML = '';
 
-                        // Аватарка или заглушка
-                        const avatarSrc = user.avatar ? `<img src="${user.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;">👤</div>`;
+                // Выводим "Мои контакты"
+                if (localHits.length > 0) {
+                    resultsBox.innerHTML += `<div class="search-section-title">Мои контакты</div>`;
+                    localHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, true)));
+                }
 
-                        // Никнейм (или none)
-                        const displayNick = user.username ? `@${user.username}` : 'none';
-
-                        div.innerHTML = `
-                                                                                                                                                                                                                                                    ${avatarSrc}
-                                                                                                                                                                                                                                                    <div>
-                                                                                                                                                                                                                                                        <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
-                                                                                                                                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                `;
-
-                        div.onclick = () => {
-                            sendFriendRequestToId(user.id); // Новая функция отправки
-                            resultsBox.style.display = 'none';
-                            document.getElementById('searchInput').value = '';
-                        };
-
-                        resultsBox.appendChild(div);
-                    });
+                // Выводим "Глобальный поиск"
+                if (globalHits.length > 0) {
+                    resultsBox.innerHTML += `<div class="search-section-title">Глобальный поиск</div>`;
+                    globalHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, false)));
                 }
 
             } catch (e) {
@@ -1692,20 +1696,61 @@
             }
         }
 
+        // Вспомогательная функция для создания HTML элемента результата
+        function renderSearchResult(user, isFriend) {
+            const div = document.createElement('div');
+            div.style.padding = '10px';
+            div.style.borderBottom = '1px solid #333';
+            div.style.cursor = 'pointer';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.gap = '10px';
+            div.className = 'search-item-row';
+
+            const avatarSrc = user.avatar
+                ? `<img src="${user.avatar}" style="width:35px;height:35px;border-radius:50%;object-fit:cover;">`
+                : `<div style="width:35px;height:35px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
+
+            const displayNick = user.username ? `@${user.username}` : user.email;
+
+            div.innerHTML = `
+        ${avatarSrc}
+        <div style="flex:1; overflow:hidden;">
+            <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
+            <div style="font-size:12px; color:#888;">${displayNick}</div>
+        </div>
+        <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
+    `;
+
+            div.onclick = () => {
+                document.getElementById('searchResults').style.display = 'none';
+                document.getElementById('searchInput').value = '';
+
+                if (isFriend) {
+                    // Если друг — просто открываем чат
+                    openChat(user.id, user.name || user.username, user.username ? '@' + user.username : '');
+                } else {
+                    // Если не друг — кидаем заявку
+                    sendFriendRequestToId(user.id);
+                }
+            };
+            return div;
+        }
+
         // Новая функция отправки заявки по ID (а не email)
         async function sendFriendRequestToId(targetUid) {
-            // Проверяем, не друзья ли уже
-            // Это сложнее в текущей схеме, но пока просто отправим заявку
             try {
+                const myUsername = await getCurrentUsername();
                 await db.collection('friend_requests').add({
                     from: currentUser.uid,
-                    fromEmail: currentUser.email, // Оставляем email как тех. поле
-                    fromUsername: (await getCurrentUsername()) || 'none', // Добавляем username
-                    to: targetUid
+                    fromEmail: currentUser.email,
+                    fromUsername: myUsername || 'none',
+                    to: targetUid,
+                    ts: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert('Заявка отправлена!');
+                alert('Заявка в друзья отправлена!');
             } catch (e) {
-                alert('Ошибка: ' + e.message);
+                alert('Ошибка при отправке заявки');
             }
         }
 
@@ -4068,6 +4113,33 @@
             }
         }
 
+
+
+        function openSearchUI() {
+            // Показываем окно результатов
+            document.getElementById('searchResults').classList.add('active');
+            // Меняем аватарку на кнопку "назад" (как в TG)
+            document.getElementById('profileBtn').style.display = 'none';
+            document.getElementById('searchBackBtn').style.display = 'block';
+        }
+
+        function closeSearch() {
+            // Прячем окно
+            document.getElementById('searchResults').classList.remove('active');
+            document.getElementById('searchResults').innerHTML = '';
+            // Сбрасываем инпут
+            document.getElementById('searchInput').value = '';
+            // Возвращаем аватарку
+            document.getElementById('profileBtn').style.display = 'flex';
+            document.getElementById('searchBackBtn').style.display = 'none';
+        }
+
+        // Если нажать Esc - поиск закроется
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && document.getElementById('searchResults').classList.contains('active')) {
+                closeSearch();
+            }
+        });
 
     </script>
 
