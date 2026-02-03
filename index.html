@@ -1419,6 +1419,95 @@
             }
 
 
+
+        /* Контекстное меню (скрыто по умолчанию) */
+        .context-menu {
+            position: fixed;
+            z-index: 10000;
+            width: 220px;
+            background: transparent;
+            display: none; /* Скрыто */
+            flex-direction: column;
+            gap: 8px;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+            .context-menu.active {
+                display: flex;
+                opacity: 1;
+                transform: scale(1);
+            }
+
+        /* Бар реакций сверху */
+        .reactions-bar {
+            background: #252525;
+            padding: 8px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+            .reactions-bar span {
+                font-size: 20px;
+                cursor: pointer;
+                transition: transform 0.2s;
+            }
+
+                .reactions-bar span:hover {
+                    transform: scale(1.2);
+                }
+
+        /* Основной список действий */
+        .context-list {
+            background: #252525; /* Цвет фона меню как в TG */
+            border-radius: 14px;
+            padding: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .context-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.1s;
+        }
+
+            .context-item:hover {
+                background: #333; /* Подсветка при наведении */
+            }
+
+        .context-icon {
+            margin-right: 12px;
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Красная кнопка удаления */
+        .context-item.delete {
+            color: #ff595a;
+        }
+
+            .context-item.delete .context-icon {
+                filter: grayscale(0) !important; /* Чтобы иконка не была серой */
+            }
+
+        .context-divider {
+            height: 1px;
+            background: #383838;
+            margin: 4px 10px;
+        }
+
         /* Всплывающее уведомление (Toast) */
         #toast-notification {
             position: fixed;
@@ -1618,34 +1707,37 @@
     <!-- ШТО� К�? -->
     <div id="overlaySheet" class="overlay-sheet" onclick="closeAllSheets()"></div>
     <!-- Шторка сообщения -->
-    <div id="actionSheet" class="action-sheet" style="padding: 10px;">
-        <div class="sheet-content" style="background: #252525; border-radius: 14px; overflow: hidden;">
-
-            <div class="action-item" onclick="handleReply()">
-                <div class="action-icon">↩️</div>
-                <div class="action-text">Ответить</div>
-            </div>
-
-            <div id="btnEditMsg" class="action-item" onclick="handleEdit()">
-                <div class="action-icon">✏️</div>
-                <div class="action-text">Изменить</div>
-            </div>
-
-            <div class="action-item" onclick="handleCopy()">
-                <div class="action-icon">Cc</div>
-                <div class="action-text">Копировать</div>
-            </div>
-
-            <div style="height: 1px; background: #333; margin: 0 15px;"></div>
-
-            <div class="action-item delete" onclick="openDeleteSheet()">
-                <div class="action-icon">🗑️</div>
-                <div class="action-text" style="color: #ff595a;">Удалить</div>
-            </div>
+    <div id="contextMenu" class="context-menu">
+        <div class="reactions-bar">
+            <span>🔥</span><span>👍</span><span>❤️</span><span>🥰</span><span>👏</span><span>💩</span>
         </div>
 
-        <button class="action-btn" onclick="closeAllSheets()" style="margin-top: 10px; background: #252525; border-radius: 14px; font-weight: bold;">Отмена</button>
+        <div class="context-list">
+            <div class="context-item" onclick="handleReply()">
+                <span class="context-icon">↩️</span> Ответить
+            </div>
+
+            <div id="ctxEdit" class="context-item" onclick="handleEdit()">
+                <span class="context-icon">✏️</span> Изменить
+            </div>
+
+            <div class="context-item" onclick="handleCopy()">
+                <span class="context-icon">📄</span> Копировать текст
+            </div>
+
+            <div class="context-item" onclick="alert('Функция закрепления скоро будет!')">
+                <span class="context-icon">📌</span> Закрепить
+            </div>
+
+            <div class="context-divider"></div>
+
+            <div class="context-item delete" onclick="openDeleteSheet()">
+                <span class="context-icon">🗑️</span> Удалить
+            </div>
+        </div>
     </div>
+
+
     <!-- Шторка удаления -->
     <div id="deleteSheet" class="action-sheet">
         <div class="sheet-title">Удалить сообщение?</div>
@@ -2686,11 +2778,9 @@
         function loadMessages() {
             const list = document.getElementById('msgList');
 
-            // 1. Отписываемся от старого слушателя, если есть
             if (msgUnsub) msgUnsub();
             list.innerHTML = '';
 
-            // Получаем список удаленных локально сообщений
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
@@ -2698,41 +2788,48 @@
                 .limitToLast(50)
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
 
-                    // Пропускаем пустые обновления из кэша при первом запуске
                     if (snap.metadata.fromCache && snap.docs.length < 2 && snap.docs.length > 0) return;
 
                     const batch = db.batch();
                     let needCommit = false;
 
-                    // Очищаем список перед перерисовкой
                     list.innerHTML = '';
 
                     snap.docs.forEach(doc => {
                         const m = doc.data();
                         const msgId = doc.id;
 
-                        // Если сообщение удалено локально - пропускаем
                         if (deletedLocal.includes(msgId)) return;
 
                         const div = document.createElement('div');
                         div.id = 'msg-' + msgId;
 
-                        // Обработчик клика для открытия меню действий
-                        div.onclick = (e) => {
-                            // Не открываем меню при клике на картинку или ссылку (чтобы работало увеличение)
-                            if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
-                                e.stopPropagation();
-                                openActionSheet(msgId, m.from === currentUser.uid);
-                            }
+                        // === ЛОГИКА ОТКРЫТИЯ МЕНЮ ===
+
+                        // 1. Для ПК: Правая кнопка мыши (как в Telegram)
+                        div.oncontextmenu = (e) => {
+                            e.preventDefault(); // Блокируем стандартное меню браузера
+                            // Открываем наше красивое меню
+                            openContextMenu(e, msgId, m.from === currentUser.uid);
                         };
 
-                        // Помечаем сообщение как прочитанное
+                        // 2. Для Телефонов: Обычный клик (открывает меню по центру)
+                        div.onclick = (e) => {
+                            // Проверяем ширину экрана (мобилка) + клик не по картинке/ссылке
+                            if (window.innerWidth <= 768) {
+                                if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
+                                    // Передаем true последним аргументом (isMobile = true)
+                                    openContextMenu(e, msgId, m.from === currentUser.uid, true);
+                                }
+                            }
+                        };
+                        // ============================
+
                         if (m.to === currentUser.uid && !m.read) {
                             batch.update(doc.ref, { read: true });
                             needCommit = true;
                         }
 
-                        // Формируем время
                         let timeStr = '';
                         if (m.ts) {
                             const date = m.ts.toDate();
@@ -2742,10 +2839,8 @@
                             timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                         }
 
-                        // Галочки
                         let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
 
-                        // CSS классы
                         if (m.sys) {
                             div.className = 'msg msg-sys';
                         } else if (m.from === currentUser.uid) {
@@ -2754,10 +2849,9 @@
                             div.className = 'msg msg-other';
                         }
 
-                        // --- СБОРКА HTML КОНТЕНТА ---
                         let contentHtml = '';
 
-                        // 1. ВСТАВКА ЦИТАТЫ (ОТВЕТА)
+                        // Отображение цитаты (Ответа)
                         if (m.replyTo) {
                             contentHtml += `
                     <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
@@ -2773,55 +2867,36 @@
                             contentHtml += m.txt;
                         }
                         else if (msgType === 'image') {
-                            // КАРТИНКА
                             let imgSrc = m.txt;
-                            // Поддержка старых ссылок гугла
                             if (m.txt.includes('id=')) {
-                                try {
-                                    const fileId = m.txt.split('id=')[1];
-                                    imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`;
-                                } catch (e) { }
+                                try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { }
                             }
                             contentHtml += `
                         <div class="media-container">
-                            <img src="${imgSrc}"
-                                class="chat-media-img"
-                                onclick="openImageViewer('${imgSrc}')"
-                                referrerpolicy="no-referrer"
-                                onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight"
-                                onerror="this.src='https://placehold.co/200x200?text=Ошибка';">
+                            <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer" onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">
                         </div>`;
                         }
                         else if (msgType === 'file') {
-                            // ФАЙЛ
                             contentHtml += `
                         <a href="${m.txt}" target="_blank" class="chat-file-card">
                             <div class="file-icon">📄</div>
-                            <div class="file-info">
-                                <div class="file-name">Скачать файл</div>
-                                <div class="file-action">Нажмите для загрузки</div>
-                            </div>
+                            <div class="file-info"><div class="file-name">Скачать файл</div><div class="file-action">Нажмите для загрузки</div></div>
                         </a>`;
                         }
                         else {
-                            // ТЕКСТ
+                            // Текст + ссылки + пометка (изм.)
                             const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
                             contentHtml += `<span class="msg-text">${txtWithLinks}</span>`;
 
-                            // Метка "изменено"
                             if (m.edited) {
                                 contentHtml += `<span style="font-size:10px; color:#aaa; margin-left:4px;">(изм.)</span>`;
                             }
                         }
 
-                        // --- СБОРКА МЕТА-ИНФОРМАЦИИ (ВРЕМЯ + ГАЛОЧКИ) ---
                         if (!m.sys) {
                             let metaStyle = "";
-
-                            // Если картинка, кладем время поверх неё
                             if (msgType === 'image') {
                                 metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
-                                // Оборачиваем контент в relative, чтобы позиционировать время
                                 contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top; min-width: 200px;">${contentHtml}`;
                             }
 
@@ -2834,12 +2909,9 @@
                             if (msgType === 'image') {
                                 contentHtml += metaHtml + `</div>`;
                             } else {
-                                // Для текста просто добавляем в конец
                                 div.innerHTML = contentHtml + metaHtml;
-                                // Важно: не используем += к innerHTML для текста, так как выше мы уже сформировали contentHtml
                             }
 
-                            // Если картинка, мы уже сформировали полный HTML в переменной contentHtml
                             if (msgType === 'image') {
                                 div.innerHTML = contentHtml;
                             }
@@ -2851,14 +2923,9 @@
                     });
 
                     if (needCommit) batch.commit();
-
-                    // Скроллим вниз
-                    setTimeout(() => {
-                        list.scrollTop = list.scrollHeight;
-                    }, 50);
+                    setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
                 });
 
-            // Фокус на поле ввода при открытии
             setTimeout(() => {
                 const inp = document.getElementById('msgInput');
                 if (inp) inp.focus();
@@ -4436,6 +4503,73 @@
             document.getElementById('profileBtn').style.display = 'none';
             document.getElementById('searchBackBtn').style.display = 'block';
         }
+
+        function openContextMenu(e, msgId, isMine, isMobile = false) {
+            selectedMsgId = msgId;
+            selectedMsgIsMine = isMine;
+
+            const menu = document.getElementById('contextMenu');
+            const btnEdit = document.getElementById('ctxEdit');
+
+            // Показываем/скрываем кнопку "Изменить"
+            if (isMine) btnEdit.style.display = 'flex';
+            else btnEdit.style.display = 'none';
+
+            // Показываем меню, чтобы вычислить его размеры
+            menu.style.display = 'flex';
+            setTimeout(() => menu.classList.add('active'), 10);
+
+            if (isMobile) {
+                // На телефоне по центру
+                menu.style.left = '50%';
+                menu.style.top = '50%';
+                menu.style.transform = 'translate(-50%, -50%)';
+                return;
+            }
+
+            // Вычисляем позицию для Десктопа
+            let x = e.clientX;
+            let y = e.clientY;
+
+            const menuWidth = menu.offsetWidth;
+            const menuHeight = menu.offsetHeight;
+            const winWidth = window.innerWidth;
+            const winHeight = window.innerHeight;
+
+            // Если меню вылезает справа
+            if (x + menuWidth > winWidth) {
+                x -= menuWidth;
+            }
+            // Если меню вылезает снизу
+            if (y + menuHeight > winHeight) {
+                y -= menuHeight;
+            }
+
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            menu.style.transform = 'none'; // Сбрасываем центрирование
+        }
+
+        // Закрытие меню при клике в любом месте
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('contextMenu');
+            // Если клик не внутри меню - закрываем
+            if (!menu.contains(e.target)) {
+                menu.classList.remove('active');
+                setTimeout(() => { menu.style.display = 'none'; }, 200);
+            }
+        });
+
+        // Закрытие при скролле (как в телеграме)
+        document.addEventListener('scroll', () => {
+            const menu = document.getElementById('contextMenu');
+            if (menu.style.display === 'flex') {
+                menu.classList.remove('active');
+                menu.style.display = 'none';
+            }
+        }, true); // true для перехвата скролла внутри div'ов
+
+
     </script>
     <div id="imageViewer" class="image-viewer" onclick="closeImageViewer()">
         <span class="close-viewer-btn">&times;</span>
