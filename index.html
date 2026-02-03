@@ -3376,16 +3376,33 @@
                 }
             });
         }
-        // Обработка нажатия клавиши Esc
-        document.addEventListener('keydown', (e) => {
+        // --- ЕДИНЫЙ ОБРАБОТЧИК ESC ---
+        document.addEventListener('keydown', function (e) {
             if (e.key === "Escape") {
-                const searchInput = document.getElementById('searchInput');
-                const searchResults = document.getElementById('searchResults');
+                // Ссылки на элементы
+                const viewer = document.getElementById('imageViewer');
+                const searchRes = document.getElementById('searchResults');
+                const searchInp = document.getElementById('searchInput');
 
-                // Логика: если окно поиска открыто ИЛИ в поле есть текст ИЛИ фокус стоит в поле поиска
-                if (searchResults.classList.contains('active') || searchInput.value.trim() !== '' || document.activeElement === searchInput) {
-                    e.preventDefault(); // Предотвращаем потерю фокуса браузером (если нужно)
-                    closeSearch();      // Вызываем функцию полного сброса
+                // 1. САМЫЙ ВЫСОКИЙ ПРИОРИТЕТ: Закрыть просмотр картинки
+                if (viewer.classList.contains('active')) {
+                    closeImageViewer();
+                    return; // Прерываем, чтобы не закрыть что-то под низом
+                }
+
+                // 2. СРЕДНИЙ ПРИОРИТЕТ: Закрыть поиск
+                // Если открыто окно поиска ИЛИ есть текст в поле ИЛИ фокус в поле
+                if (searchRes.classList.contains('active') || searchInp.value.trim() !== '' || document.activeElement === searchInp) {
+                    e.preventDefault(); // Чтобы не потерять фокус случайно
+                    closeSearch();
+                    return; // Прерываем, чтобы не закрыть чат сразу же
+                }
+
+                // 3. НИЗКИЙ ПРИОРИТЕТ: Закрыть чат
+                // Срабатывает только если поиск и картинки уже закрыты
+                if (currentChatId) {
+                    closeChat();
+                    return;
                 }
             }
         });
