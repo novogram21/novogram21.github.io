@@ -568,15 +568,6 @@
             display: none;
         }
 
-        .search-section-title {
-            padding: 8px 15px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #007bff;
-            background: #2a2a2a;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
 
 
         .action-sheet {
@@ -1623,70 +1614,76 @@
             resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Поиск...</div>';
             resultsBox.style.display = 'block';
 
-            const cleanQuery = query.startsWith('@') ? query.slice(1).toLowerCase() : query.toLowerCase();
+            // Убираем @ если есть
+            const cleanQuery = query.startsWith('@') ? query.slice(1) : query;
 
             try {
-                // 1. ПОИСК СРЕДИ ДРУЗЕЙ (Локальный)
-                // Мы берем данные из usersCache, которые наполнились при загрузке списка друзей
-                const localHits = Object.keys(usersCache)
-                    .map(id => ({ id, ...usersCache[id] }))
-                    .filter(u =>
-                        (u.name && u.name.toLowerCase().includes(cleanQuery)) ||
-                        (u.username && u.username.toLowerCase().includes(cleanQuery)) ||
-                        (u.email && u.email.toLowerCase().includes(cleanQuery))
-                    );
+                const hits = [];
 
-                // 2. ГЛОБАЛЬНЫЙ ПОИСК (В Firebase)
-                const globalHits = [];
-
-                // Поиск по никнейму
+                // 1. Ищем по username
                 const snapUser = await db.collection('users')
                     .where('username', '>=', cleanQuery)
                     .where('username', '<=', cleanQuery + '\uf8ff')
-                    .limit(5)
+                    .limit(3)
                     .get();
 
                 snapUser.forEach(doc => {
-                    if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
-                        globalHits.push({ id: doc.id, ...doc.data() });
-                    }
+                    if (doc.id !== currentUser.uid) hits.push({ id: doc.id, ...doc.data() });
                 });
 
-                // Поиск по почте (если глобальных результатов мало)
-                if (globalHits.length < 3) {
+                // 2. Если мало результатов, ищем по email
+                if (hits.length < 3) {
                     const snapEmail = await db.collection('users')
-                        .where('email', '>=', cleanQuery)
-                        .where('email', '<=', cleanQuery + '\uf8ff')
-                        .limit(5)
+                        .where('email', '>=', query)
+                        .where('email', '<=', query + '\uf8ff')
+                        .limit(3)
                         .get();
 
                     snapEmail.forEach(doc => {
-                        if (doc.id !== currentUser.uid &&
-                            !localHits.find(h => h.id === doc.id) &&
-                            !globalHits.find(h => h.id === doc.id)) {
-                            globalHits.push({ id: doc.id, ...doc.data() });
+                        if (doc.id !== currentUser.uid && !hits.find(h => h.id === doc.id)) {
+                            hits.push({ id: doc.id, ...doc.data() });
                         }
                     });
                 }
 
-                // 3. ОТРИСОВКА РЕЗУЛЬТАТОВ
-                if (localHits.length === 0 && globalHits.length === 0) {
-                    resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Ничего не найдено</div>';
-                    return;
-                }
+                // Отрисовка результатов (максимум 3)
+                const finalHits = hits.slice(0, 3);
 
-                resultsBox.innerHTML = '';
+                if (finalHits.length === 0) {
+                    resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Никого не найдено</div>';
+                } else {
+                    resultsBox.innerHTML = '';
+                    finalHits.forEach(user => {
+                        const div = document.createElement('div');
+                        div.style.padding = '10px';
+                        div.style.borderBottom = '1px solid #333';
+                        div.style.cursor = 'pointer';
+                        div.style.display = 'flex';
+                        div.style.alignItems = 'center';
+                        div.style.gap = '10px';
 
-                // Выводим "Мои контакты"
-                if (localHits.length > 0) {
-                    resultsBox.innerHTML += `<div class="search-section-title">Мои контакты</div>`;
-                    localHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, true)));
-                }
+                        // Аватарка или заглушка
+                        const avatarSrc = user.avatar ? `<img src="${user.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;">👤</div>`;
 
-                // Выводим "Глобальный поиск"
-                if (globalHits.length > 0) {
-                    resultsBox.innerHTML += `<div class="search-section-title">Глобальный поиск</div>`;
-                    globalHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, false)));
+                        // Никнейм (или none)
+                        const displayNick = user.username ? `@${user.username}` : 'none';
+
+                        div.innerHTML = `
+                                                                                                                                                                                                                                                    ${avatarSrc}
+                                                                                                                                                                                                                                                    <div>
+                                                                                                                                                                                                                                                        <div style="font-weight:bold; font-size:14px;">${user.name || 'Без имени'}</div>
+                                                                                                                                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                `;
+
+                        div.onclick = () => {
+                            sendFriendRequestToId(user.id); // Новая функция отправки
+                            resultsBox.style.display = 'none';
+                            document.getElementById('searchInput').value = '';
+                        };
+
+                        resultsBox.appendChild(div);
+                    });
                 }
 
             } catch (e) {
@@ -1695,61 +1692,20 @@
             }
         }
 
-        // Вспомогательная функция для создания HTML элемента результата
-        function renderSearchResult(user, isFriend) {
-            const div = document.createElement('div');
-            div.style.padding = '10px';
-            div.style.borderBottom = '1px solid #333';
-            div.style.cursor = 'pointer';
-            div.style.display = 'flex';
-            div.style.alignItems = 'center';
-            div.style.gap = '10px';
-            div.className = 'search-item-row';
-
-            const avatarSrc = user.avatar
-                ? `<img src="${user.avatar}" style="width:35px;height:35px;border-radius:50%;object-fit:cover;">`
-                : `<div style="width:35px;height:35px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
-
-            const displayNick = user.username ? `@${user.username}` : user.email;
-
-            div.innerHTML = `
-        ${avatarSrc}
-        <div style="flex:1; overflow:hidden;">
-            <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
-            <div style="font-size:12px; color:#888;">${displayNick}</div>
-        </div>
-        <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
-    `;
-
-            div.onclick = () => {
-                document.getElementById('searchResults').style.display = 'none';
-                document.getElementById('searchInput').value = '';
-
-                if (isFriend) {
-                    // Если друг — просто открываем чат
-                    openChat(user.id, user.name || user.username, user.username ? '@' + user.username : '');
-                } else {
-                    // Если не друг — кидаем заявку
-                    sendFriendRequestToId(user.id);
-                }
-            };
-            return div;
-        }
-
         // Новая функция отправки заявки по ID (а не email)
         async function sendFriendRequestToId(targetUid) {
+            // Проверяем, не друзья ли уже
+            // Это сложнее в текущей схеме, но пока просто отправим заявку
             try {
-                const myUsername = await getCurrentUsername();
                 await db.collection('friend_requests').add({
                     from: currentUser.uid,
-                    fromEmail: currentUser.email,
-                    fromUsername: myUsername || 'none',
-                    to: targetUid,
-                    ts: firebase.firestore.FieldValue.serverTimestamp()
+                    fromEmail: currentUser.email, // Оставляем email как тех. поле
+                    fromUsername: (await getCurrentUsername()) || 'none', // Добавляем username
+                    to: targetUid
                 });
-                alert('Заявка в друзья отправлена!');
+                alert('Заявка отправлена!');
             } catch (e) {
-                alert('Ошибка при отправке заявки');
+                alert('Ошибка: ' + e.message);
             }
         }
 
