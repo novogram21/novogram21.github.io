@@ -871,24 +871,28 @@
 
         /* Полноэкранный контейнер результатов поиска (стиль Telegram) */
         #searchResults {
-            position: absolute;
-            top: 60px; /* Отступ сверху, чтобы не перекрывать поле ввода */
-            left: 10px;
-            right: 10px;
-            background: #2d2d2d;
-            border: 1px solid #444;
-            border-radius: 12px;
-            z-index: 9999; /* Самый важный параметр - поверх всего */
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            /* Сбрасываем позиционирование "поверх" */
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: transparent; /* Убираем фон, чтобы был общий */
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            /* Растягиваем на всю высоту */
+            flex: 1;
+            overflow-y: auto;
             display: none; /* Скрыт по умолчанию */
             flex-direction: column;
-            max-height: 400px;
-            overflow-y: auto;
+            z-index: 10;
         }
 
             #searchResults.active {
-                display: flex; /* Показываем, когда класс active */
+                display: flex;
             }
+
+          
 
 
 
@@ -2478,18 +2482,37 @@
 
         async function handleSearchInput(input) {
             const resultsBox = document.getElementById('searchResults');
+
+            // Элементы, которые нужно скрыть при поиске
+            const friendsList = document.getElementById('friendsList');
+            const requestsList = document.getElementById('requestsList');
+            const tabs = document.querySelector('.tabs');
+
             const cleanQuery = input.value.trim().toLowerCase();
 
-            if (cleanQuery.length < 2) {
-                resultsBox.innerHTML = '';
-                resultsBox.classList.remove('active');
+            // Если поле пустое — возвращаем всё как было
+            if (cleanQuery.length === 0) {
+                closeSearch();
                 return;
             }
 
-            resultsBox.classList.add('active');
-            resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">🔍 Поиск...</div>';
+            // 1. ПЕРЕКЛЮЧАЕМ ИНТЕРФЕЙС
+            // Скрываем списки чатов и вкладки
+            friendsList.classList.add('hidden');
+            requestsList.classList.add('hidden');
+            if (tabs) tabs.classList.add('hidden');
 
-            // Используем debounce (задержку), чтобы не бомбить базу запросами при каждой букве
+            // Показываем блок результатов
+            resultsBox.classList.add('active');
+            resultsBox.style.display = 'flex'; // Принудительно показываем
+
+            // Показываем кнопку "Назад" в поиске
+            document.getElementById('profileBtn').style.display = 'none';
+            document.getElementById('searchBackBtn').style.display = 'block';
+
+            resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">🔍 Поиск...</div>';
+
+            // Debounce (задержка перед запросом)
             if (searchTimeout) clearTimeout(searchTimeout);
 
             searchTimeout = setTimeout(async () => {
@@ -2497,8 +2520,7 @@
                     const localHits = [];
                     const globalHits = [];
 
-                    // --- 1. ИСПРАВЛЕНИЕ: ЛОКАЛЬНЫЙ ПОИСК ПО КЭШУ ---
-                    // Превращаем объект usersCache в массив
+                    // --- ПОИСК ПО КЭШУ (Друзья) ---
                     const cachedUsers = Object.keys(usersCache || {}).map(id => ({
                         id: id,
                         ...usersCache[id]
@@ -2514,35 +2536,29 @@
                         }
                     });
 
-                    // --- 2. ГЛОБАЛЬНЫЙ ПОИСК (БАЗА ДАННЫХ) ---
-                    // Ищем, только если запрос длиннее 2 символов
+                    // --- ГЛОБАЛЬНЫЙ ПОИСК (База данных) ---
                     if (cleanQuery.length >= 3) {
                         const snapUser = await db.collection('users')
                             .where('username', '>=', cleanQuery)
                             .where('username', '<=', cleanQuery + '\uf8ff')
-                            .limit(5)
+                            .limit(10)
                             .get();
 
                         snapUser.forEach(doc => {
-                            // Не добавляем себя и тех, кто уже есть в локальном поиске
                             if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
-                                globalHits.push({
-                                    id: doc.id,
-                                    ...doc.data()
-                                });
+                                globalHits.push({ id: doc.id, ...doc.data() });
                             }
                         });
                     }
 
-                    // --- 3. ОТРИСОВКА ---
-                    resultsBox.innerHTML = ''; // Очищаем "Поиск..."
+                    // --- ОТРИСОВКА ---
+                    resultsBox.innerHTML = '';
 
                     if (localHits.length === 0 && globalHits.length === 0) {
                         resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
                         return;
                     }
 
-                    // Создаём контейнер для каждой секции
                     if (localHits.length > 0) {
                         const section = document.createElement('div');
                         section.innerHTML = `<div class="search-section-title">Ваши контакты</div>`;
@@ -2561,7 +2577,7 @@
                     console.error(e);
                     resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
                 }
-            }, 500); // Задержка 500мс
+            }, 500);
         }
 
 
@@ -5014,16 +5030,42 @@
         function closeSearch() {
             const resBox = document.getElementById('searchResults');
             const searchInput = document.getElementById('searchInput');
-            // 1. Прячем окно результатов
+
+            const friendsList = document.getElementById('friendsList');
+            const requestsList = document.getElementById('requestsList');
+            const tabs = document.querySelector('.tabs');
+
+            // 1. Скрываем результаты
             resBox.classList.remove('active');
-            resBox.style.display = 'none'; // Принудительно скрываем
-            resBox.innerHTML = '';         // Очищаем результаты
-            // 2. Очищаем поле ввода и убираем фокус
+            resBox.style.display = 'none';
+            resBox.innerHTML = '';
+
+            // 2. Очищаем поле
             searchInput.value = '';
-            searchInput.blur();
-            // 3. Возвращаем кнопку профиля и скрываем кнопку "назад"
+
+            // 3. Возвращаем интерфейс (показываем вкладки и активный список)
+            if (tabs) tabs.classList.remove('hidden');
+
+            // Возвращаем видимость активной вкладке
+            // Проверяем, какая вкладка активна
+            const activeTab = document.querySelector('.tab.active');
+            if (activeTab && activeTab.innerText.includes('Заявки')) {
+                requestsList.classList.remove('hidden');
+                friendsList.classList.add('hidden');
+            } else {
+                friendsList.classList.remove('hidden');
+                requestsList.classList.add('hidden');
+            }
+
+            // 4. Меняем иконки в шапке
             document.getElementById('profileBtn').style.display = 'flex';
             document.getElementById('searchBackBtn').style.display = 'none';
+        }
+
+        // Обновленная openSearchUI (теперь просто скрывает профиль, так как остальное делает handleSearchInput)
+        function openSearchUI() {
+            document.getElementById('profileBtn').style.display = 'none';
+            document.getElementById('searchBackBtn').style.display = 'block';
         }
         // И обнови openSearchUI, чтобы display переключался
         function openSearchUI() {
