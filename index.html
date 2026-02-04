@@ -5256,21 +5256,20 @@
             const file = input.files[0];
             if (!file) return;
 
-            // Сброс прошлых данных
             newAvatarDriveUrl = null;
 
-            // Показываем, что началась обработка
+            // UI элементы
             const preview = document.getElementById('editAvatarPreview');
             const ph = document.getElementById('editAvatarPlaceholder');
             const wrapper = document.querySelector('.edit-avatar-wrapper');
 
-            // Создаем или находим спиннер (крутилку)
+            // Спиннер
             let spinner = document.getElementById('avatar-spinner');
             if (!spinner) {
                 spinner = document.createElement('div');
                 spinner.id = 'avatar-spinner';
-                spinner.className = 'upload-spinner'; // Используем ваш существующий CSS класс
-                // Центрируем спиннер
+                spinner.className = 'upload-spinner';
+                // Центрируем
                 spinner.style.top = '50%';
                 spinner.style.left = '50%';
                 spinner.style.transform = 'translate(-50%, -50%)';
@@ -5283,11 +5282,11 @@
                 const img = new Image();
                 img.src = e.target.result;
                 img.onload = async function () {
-                    // 1. Сжатие картинки (Canvas)
+                    // 1. Сжатие для отправки
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    const MAX = 500; // Размер 500x500
+                    const MAX = 500;
                     if (width > height) {
                         if (width > MAX) { height *= MAX / width; width = MAX; }
                     } else {
@@ -5297,25 +5296,19 @@
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-
-                    // Получаем сжатый Base64 для отображения и отправки
                     const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
 
-                    // 2. Показываем превью локально (чтобы юзер видел, что выбрал)
+                    // 2. Временно показываем локальное фото (пока грузится)
                     preview.src = compressedBase64;
                     preview.style.display = 'block';
-                    preview.style.opacity = '0.5'; // Делаем полупрозрачным пока грузится
+                    preview.style.opacity = '0.5';
                     if (ph) ph.style.display = 'none';
 
-                    // 3. Отправляем на Google Script
-                    isAvatarUploading = true; // Блокируем кнопку сохранения
+                    // 3. Отправка
+                    isAvatarUploading = true;
 
                     try {
-                        // Убираем заголовок "data:image/jpeg;base64," для отправки
                         const rawBase64 = compressedBase64.split(',')[1];
-
-                        // Отправляем запрос на Google Script
-                        // Убедитесь, что переменная GOOGLE_SCRIPT_URL объявлена в вашем коде!
                         const response = await fetch(GOOGLE_SCRIPT_URL, {
                             method: "POST",
                             body: JSON.stringify({
@@ -5328,21 +5321,26 @@
                         const data = await response.json();
 
                         if (data.result === "success") {
-                            newAvatarDriveUrl = data.url; // ЗАПОМИНАЕМ ССЫЛКУ!
-                            showToast("Фото загружено на Диск");
-                            preview.style.opacity = '1'; // Возвращаем яркость
+                            // ВАЖНО: Конвертируем ссылку сразу после получения!
+                            newAvatarDriveUrl = convertDriveLink(data.url);
+
+                            console.log("Original URL:", data.url);
+                            console.log("Converted URL:", newAvatarDriveUrl);
+
+                            showToast("Фото загружено");
+                            preview.style.opacity = '1';
+                            // Ставим уже правильную ссылку в превью, чтобы проверить, работает ли она
+                            preview.src = newAvatarDriveUrl;
                         } else {
                             throw new Error(data.message || "Ошибка скрипта");
                         }
                     } catch (error) {
-                        console.error("Ошибка загрузки аватара:", error);
-                        alert("Не удалось загрузить фото на сервер. Попробуйте другое.");
-                        preview.style.opacity = '1';
-                        // Если ошибка - возвращаем плейсхолдер
+                        console.error("Ошибка:", error);
+                        alert("Ошибка загрузки. Попробуйте снова.");
                         preview.style.display = 'none';
                         if (ph) ph.style.display = 'flex';
                     } finally {
-                        isAvatarUploading = false; // Разблокируем сохранение
+                        isAvatarUploading = false;
                         if (spinner) spinner.style.display = 'none';
                     }
                 };
@@ -5351,7 +5349,6 @@
         }
 
         function saveEditProfile() {
-            // 1. Проверка: если фото еще грузится
             if (isAvatarUploading) {
                 showToast("Подождите, фото загружается...");
                 return;
@@ -5368,7 +5365,6 @@
             const birthdate = document.getElementById('editBirthdate').value;
             const username = document.getElementById('editUsername').value.trim();
 
-            // Проверка на валидность юзернейма
             if (typeof isUsernameValid !== 'undefined' && !isUsernameValid) {
                 showToast('Некорректное имя пользователя');
                 return;
@@ -5382,25 +5378,19 @@
                 username: username
             };
 
-            // --- ГЛАВНОЕ ИЗМЕНЕНИЕ ---
-            // Если есть новая ссылка с Google Диска, сохраняем её
+            // Если загружали новое фото, сохраняем ПРАВИЛЬНУЮ ссылку
             if (newAvatarDriveUrl) {
                 updateData.avatar = newAvatarDriveUrl;
             }
-            // -------------------------
 
             const user = firebase.auth().currentUser;
-
-            // Анимация кнопки
             const saveBtn = document.querySelector('#editProfileSheet .tg-header-top button:last-child');
             if (saveBtn) saveBtn.style.opacity = "0.5";
 
             db.collection('users').doc(user.uid).update(updateData)
                 .then(() => {
-                    // === Мгновенное обновление UI ===
-
-                    const nameInput = document.getElementById('profileName');
-                    if (nameInput) nameInput.value = name;
+                    // Обновляем UI мгновенно
+                    document.getElementById('profileName').value = name;
 
                     const surInput = document.getElementById('profileSurname');
                     if (surInput) {
@@ -5411,7 +5401,6 @@
                     const bioInput = document.getElementById('profileBio');
                     if (bioInput) {
                         bioInput.value = bio;
-                        // Авто-ресайз высоты
                         bioInput.style.height = "auto";
                         bioInput.style.height = (bioInput.scrollHeight) + "px";
                     }
@@ -5419,14 +5408,14 @@
                     const nickDiv = document.getElementById('profileUsername');
                     if (nickDiv) nickDiv.innerText = username ? '@' + username : '@не_задан';
 
-                    // Если загружали новую аватарку — обновляем её везде в интерфейсе
+                    // Обновляем аватарки везде
                     if (newAvatarDriveUrl) {
-                        // Маленькая аватарка слева сверху
+                        // 1. Маленькая
                         const myAvatarSmall = document.getElementById('myAvatarSmall');
                         if (myAvatarSmall) {
                             myAvatarSmall.innerHTML = `<img src="${newAvatarDriveUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
                         }
-                        // Большая аватарка в профиле
+                        // 2. Большая в профиле
                         const pImg = document.getElementById('profileAvatarPreview');
                         const pPh = document.getElementById('profileAvatarPlaceholder');
                         if (pImg) {
@@ -5435,7 +5424,7 @@
                         }
                         if (pPh) pPh.style.display = 'none';
 
-                        // Обновляем кэш пользователя
+                        // 3. Обновляем кэш
                         if (currentUser && usersCache[currentUser.uid]) {
                             usersCache[currentUser.uid].avatar = newAvatarDriveUrl;
                         }
@@ -5636,7 +5625,22 @@
             syncBirthdateView();
         });
 
+        // --- ХЕЛПЕР: Превращает ссылку Google Drive в прямую ссылку для картинки ---
+        function convertDriveLink(url) {
+            if (!url) return "";
+            // Если это уже base64 или не ссылка на драйв — возвращаем как есть
+            if (url.startsWith('data:') || !url.includes('id=')) return url;
 
+            try {
+                // Вытаскиваем ID файла из ссылки (между id= и следующим &)
+                const id = url.split('id=')[1].split('&')[0];
+                // Возвращаем формат, который понимает тег <img>
+                return `https://drive.google.com/uc?export=view&id=${id}`;
+            } catch (e) {
+                console.error("Ошибка конвертации ссылки:", e);
+                return url;
+            }
+        }
 
     </script>
 
