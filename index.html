@@ -872,19 +872,20 @@
         /* Полноэкранный контейнер результатов поиска (стиль Telegram) */
         #searchResults {
             position: absolute;
-            top: 60px; /* Отступ сверху, чтобы не перекрывать поле ввода */
-            left: 10px;
-            right: 10px;
-            background: #2d2d2d;
-            border: 1px solid #444;
-            border-radius: 12px;
-            z-index: 9999; /* Самый важный параметр - поверх всего */
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            top: 65px; /* Чуть ниже поля ввода */
+            left: 0;
+            width: 100%;
+            height: calc(100dvh - 65px); /* На весь экран */
+            background: #1f1f1f;
+            z-index: 999;
             display: none; /* Скрыт по умолчанию */
             flex-direction: column;
-            max-height: 400px;
             overflow-y: auto;
         }
+
+            #searchResults.active {
+                display: flex; /* Показываем */
+            }
 
             #searchResults.active {
                 display: flex; /* Показываем, когда класс active */
@@ -2473,18 +2474,20 @@
 
         // --- НОВЫЙ ПОИСК ---
         let searchTimeout = null;
+
         function handleSearchInput(input) {
             const val = input.value.trim();
+            const resultsBox = document.getElementById('searchResults');
 
-            // Если поле очистили, очищаем и результаты, но окно не закрываем (пока фокус там)
-            if (val === '') {
-                document.getElementById('searchResults').innerHTML = '';
+            // Если пусто — показываем пустое состояние, но НЕ закрываем
+            if (!val) {
+                resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center">Введите запрос для поиска</div>';
                 return;
             }
 
+            // Дебаунс (задержка перед поиском)
             if (searchTimeout) clearTimeout(searchTimeout);
 
-            // Ищем через 300мс после окончания ввода
             searchTimeout = setTimeout(() => {
                 performSearch(val);
             }, 300);
@@ -4952,10 +4955,21 @@
         // И обнови openSearchUI, чтобы display переключался
         function openSearchUI() {
             const resBox = document.getElementById('searchResults');
+            const profileBtn = document.getElementById('profileBtn');
+            const backBtn = document.getElementById('searchBackBtn');
+
+            // Показываем панель
             resBox.style.display = 'flex';
             resBox.classList.add('active');
-            document.getElementById('profileBtn').style.display = 'none';
-            document.getElementById('searchBackBtn').style.display = 'block';
+
+            // Начальное состояние
+            if (!resBox.innerHTML.trim()) {
+                resBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center">Введите запрос для поиска</div>';
+            }
+
+            // Меняем кнопки
+            if (profileBtn) profileBtn.style.display = 'none';
+            if (backBtn) backBtn.style.display = 'block';
         }
 
         function openContextMenu(e, msgId, isMine, isMobile = false) {
