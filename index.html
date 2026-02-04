@@ -2211,8 +2211,8 @@
                 <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="handleAvatarSelect(this)">
 
                 <div class="tg-profile-name-block">
-                    <input type="text" id="profileName" class="tg-name-input" placeholder="Имя" onblur="if(this.value.trim() === '') this.value = 'User'">
-                    <input type="text" id="profileSurname" class="tg-name-input" placeholder="Фамилия" style="font-size: 16px; margin-top: 2px; font-weight: normal;">
+                    <input type="text" id="profileName" class="tg-name-input" placeholder="Имя" readonly onblur="if(this.value.trim() === '') this.value = 'User'">
+                    <input type="text" id="profileSurname" class="tg-name-input" placeholder="Фамилия" readonly style="font-size: 16px; margin-top: 2px; font-weight: normal;">
                     <div class="tg-profile-status">в сети</div>
                 </div>
             </div>
