@@ -1493,6 +1493,7 @@
                 border-radius: 12px;
             }
 
+
             .tg-input-field textarea {
                 resize: none;
                 min-height: 50px;
@@ -1928,6 +1929,30 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        .birthday-display {
+            display: flex;
+            align-items: center;
+            background: transparent;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 14px 12px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+            .birthday-display:hover {
+                border-color: #666;
+            }
+
+            .birthday-display:active {
+                border-color: #8774e1;
+            }
+
+
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -2069,24 +2094,32 @@
             </div>
 
             <!-- Поля ввода -->
+            <!-- День рождения -->
             <div class="edit-form-group">
-                <div class="tg-input-field">
-                    <input type="text" id="editName" placeholder=" " required>
-                    <label>Имя (обязательно)</label>
+                <div class="section-label-row">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span style="font-weight: 500; color: #8774e1; margin-left: 10px;">День рождения</span>
                 </div>
 
-                <div class="tg-input-field">
-                    <input type="text" id="editSurname" placeholder=" ">
-                    <label>Фамилия (необязательно)</label>
+                <!-- Кликабельная область с красивым отображением -->
+                <div class="birthday-display" onclick="document.getElementById('editBirthdate').showPicker()">
+                    <span id="birthdayDisplayText" style="color: #888;">Не указан</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" style="margin-left: auto;">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
                 </div>
 
-                <div class="tg-input-field">
-                    <textarea id="editBio" placeholder=" " maxlength="70" rows="1" oninput="updateBioCounter(this)"></textarea>
-                    <label>О себе</label>
-                    <div class="char-counter" id="bioCounter">70</div>
-                </div>
-                <div class="field-hint">Любые подробности, например: возраст, род занятий или город.</div>
+                <!-- Скрытое поле даты -->
+                <input type="date" id="editBirthdate" style="display: none;" onchange="updateBirthdayDisplay(this.value)">
+
+                <div class="field-hint">Вы можете выбрать, кто будет видеть Ваш день рождения, в настройках.</div>
             </div>
+
 
             <div class="edit-separator"></div>
 
@@ -4984,8 +5017,10 @@
                     // Дата рождения
                     if (d.birthdate) {
                         document.getElementById('editBirthdate').value = d.birthdate;
+                        updateBirthdayDisplay(d.birthdate);
                     } else {
                         document.getElementById('editBirthdate').value = ''; // Сброс, если нет даты
+                        updateBirthdayDisplay('');
                     }
 
                     // --- Юзернейм (ИЗМЕНЕНИЯ) ---
@@ -5184,6 +5219,32 @@
                 });
             }, 500);
         }
+
+        function updateBirthdayDisplay(dateValue) {
+            const displayEl = document.getElementById('birthdayDisplayText');
+
+            if (!dateValue) {
+                displayEl.innerText = "Не указан";
+                displayEl.style.color = "#888";
+                return;
+            }
+
+            // Преобразуем "2000-01-15" в "15 января 2000"
+            const date = new Date(dateValue + 'T00:00:00'); // Добавляем время, чтобы избежать проблем с часовыми поясами
+
+            const months = [
+                'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+            ];
+
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+
+            displayEl.innerText = `${day} ${month} ${year}`;
+            displayEl.style.color = "white";
+        }
+
 
 
     </script>
