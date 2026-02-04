@@ -3666,13 +3666,22 @@
             closeAllSheets();
         }
         function closeAllSheets() {
-            document.getElementById('actionSheet').classList.remove('open');
-            document.getElementById('deleteSheet').classList.remove('open');
-            document.getElementById('profileSheet').classList.remove('open');
-            document.getElementById('editProfileSheet')?.classList.remove('open');
-            setTimeout(() => { document.getElementById('overlaySheet').style.display = 'none'; }, 300);
+            // Безопасное закрытие всех штор, проверка на существование элемента (?.)
+            document.getElementById('actionSheet')?.classList.remove('open');
+            document.getElementById('deleteSheet')?.classList.remove('open');
+            document.getElementById('profileSheet')?.classList.remove('open');
+            document.getElementById('editProfileSheet')?.classList.remove('open'); // Добавим и это на всякий случай
+
+            setTimeout(() => {
+                const overlay = document.getElementById('overlaySheet');
+                if (overlay) overlay.style.display = 'none';
+            }, 300);
+
             selectedMsgId = null;
         }
+
+
+
         function updateCallStatus(text) { document.getElementById('callStatusText').innerText = text; }
         function startTimer() {
             // Сбрасываем старый интервал, если был
