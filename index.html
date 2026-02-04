@@ -5262,14 +5262,18 @@
             // Показываем, что началась обработка
             const preview = document.getElementById('editAvatarPreview');
             const ph = document.getElementById('editAvatarPlaceholder');
-            const wrapper = document.querySelector('.edit-avatar-wrapper'); // Для добавления спиннера
+            const wrapper = document.querySelector('.edit-avatar-wrapper');
 
-            // Создаем временный спиннер поверх аватарки
+            // Создаем или находим спиннер (крутилку)
             let spinner = document.getElementById('avatar-spinner');
             if (!spinner) {
                 spinner = document.createElement('div');
                 spinner.id = 'avatar-spinner';
-                spinner.className = 'upload-spinner'; // Используем ваш существующий класс CSS
+                spinner.className = 'upload-spinner'; // Используем ваш существующий CSS класс
+                // Центрируем спиннер
+                spinner.style.top = '50%';
+                spinner.style.left = '50%';
+                spinner.style.transform = 'translate(-50%, -50%)';
                 wrapper.appendChild(spinner);
             }
             spinner.style.display = 'block';
@@ -5283,7 +5287,7 @@
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    const MAX = 500; // Размер 500x500 вполне достаточен
+                    const MAX = 500; // Размер 500x500
                     if (width > height) {
                         if (width > MAX) { height *= MAX / width; width = MAX; }
                     } else {
@@ -5304,13 +5308,14 @@
                     if (ph) ph.style.display = 'none';
 
                     // 3. Отправляем на Google Script
-                    isAvatarUploading = true; // Блокируем сохранение
+                    isAvatarUploading = true; // Блокируем кнопку сохранения
 
                     try {
                         // Убираем заголовок "data:image/jpeg;base64," для отправки
                         const rawBase64 = compressedBase64.split(',')[1];
 
-                        // Используем ваш URL скрипта
+                        // Отправляем запрос на Google Script
+                        // Убедитесь, что переменная GOOGLE_SCRIPT_URL объявлена в вашем коде!
                         const response = await fetch(GOOGLE_SCRIPT_URL, {
                             method: "POST",
                             body: JSON.stringify({
@@ -5333,6 +5338,9 @@
                         console.error("Ошибка загрузки аватара:", error);
                         alert("Не удалось загрузить фото на сервер. Попробуйте другое.");
                         preview.style.opacity = '1';
+                        // Если ошибка - возвращаем плейсхолдер
+                        preview.style.display = 'none';
+                        if (ph) ph.style.display = 'flex';
                     } finally {
                         isAvatarUploading = false; // Разблокируем сохранение
                         if (spinner) spinner.style.display = 'none';
