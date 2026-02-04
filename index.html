@@ -2457,48 +2457,59 @@
         let searchTimeout = null;
         function handleSearchInput(input) {
             const val = input.value.trim();
-
-            // Если поле очистили, очищаем и результаты, но окно не закрываем (пока фокус там)
-            if (val === '') {
-                document.getElementById('searchResults').innerHTML = '';
+            if (!val) {
+                // Очищаем и скрываем, если пусто
+                closeSearch();
                 return;
             }
 
+            // Сброс таймера
             if (searchTimeout) clearTimeout(searchTimeout);
 
-            // Ищем через 300мс после окончания ввода
+            // Важно: стрелочная функция внутри setTimeout
             searchTimeout = setTimeout(() => {
                 performSearch(val);
             }, 300);
         }
-        async function performSearch(query) {
-            const resultsBox = document.getElementById('searchResults');
-            resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Поиск...</div>';
 
-            // Убеждаемся, что окно открыто (класс active из CSS)
+        async function performSearch(query) {
+            console.log("Начинаем поиск:", query); // DEBUG
+            const resultsBox = document.getElementById('searchResults');
+
+            // 1. Открываем интерфейс
             if (!resultsBox.classList.contains('active')) {
                 openSearchUI();
             }
 
+            resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center">Поиск...</div>';
+
             const cleanQuery = query.startsWith('@') ? query.slice(1).toLowerCase() : query.toLowerCase();
 
+            // 2. Проверка usersCache
+            if (!usersCache) {
+                console.warn("usersCache еще не загружен!");
+                usersCache = {}; // Предотвращаем ошибку
+            }
+
             try {
-                // --- А. ЛОКАЛЬНЫЙ ПОИСК (СРЕДИ ДРУЗЕЙ) ---
-                // Ищем в кэше загруженных пользователей
+                // --- ЛОКАЛЬНЫЙ ПОИСК ---
                 const localHits = Object.keys(usersCache)
                     .map(id => ({ id, ...usersCache[id] }))
-                    .filter(u =>
-                        (u.name && u.name.toLowerCase().includes(cleanQuery)) ||
-                        (u.username && u.username.toLowerCase().includes(cleanQuery)) ||
-                        (u.email && u.email.toLowerCase().includes(cleanQuery))
-                    );
+                    .filter(u => {
+                        const name = (u.name || "").toLowerCase();
+                        const username = (u.username || "").toLowerCase();
+                        const email = (u.email || "").toLowerCase();
+                        return name.includes(cleanQuery) || username.includes(cleanQuery) || email.includes(cleanQuery);
+                    });
 
-                // --- Б. ГЛОБАЛЬНЫЙ ПОИСК (БАЗА ДАННЫХ) ---
+                console.log("Локально найдено:", localHits.length); // DEBUG
+
+                // --- ГЛОБАЛЬНЫЙ ПОИСК ---
                 const globalHits = [];
+                if (cleanQuery.length >= 3) {
+                    console.log("Ищем глобально в Firebase..."); // DEBUG
 
-                // Если запрос длиннее 2 символов, ищем в базе
-                if (cleanQuery.length >= 2) {
-                    // Ищем по username
+                    // Поиск по username
                     const snapUser = await db.collection('users')
                         .where('username', '>=', cleanQuery)
                         .where('username', '<=', cleanQuery + '\uf8ff')
@@ -2506,52 +2517,69 @@
                         .get();
 
                     snapUser.forEach(doc => {
-                        // Исключаем себя и тех, кто уже есть в локальном поиске
                         if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
                             globalHits.push({ id: doc.id, ...doc.data() });
                         }
                     });
-
-                    // Ищем по email (если мало результатов)
-                    if (globalHits.length < 3) {
-                        const snapEmail = await db.collection('users')
-                            .where('email', '>=', cleanQuery)
-                            .where('email', '<=', cleanQuery + '\uf8ff')
-                            .limit(5)
-                            .get();
-
-                        snapEmail.forEach(doc => {
-                            if (doc.id !== currentUser.uid &&
-                                !localHits.find(h => h.id === doc.id) &&
-                                !globalHits.find(h => h.id === doc.id)) {
-                                globalHits.push({ id: doc.id, ...doc.data() });
-                            }
-                        });
-                    }
                 }
 
-                // --- В. ОТРИСОВКА ---
+                // --- ОТРИСОВКА ---
                 resultsBox.innerHTML = '';
 
                 if (localHits.length === 0 && globalHits.length === 0) {
-                    resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
+                    resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center">Ничего не найдено</div>';
                     return;
                 }
 
                 if (localHits.length > 0) {
-                    resultsBox.innerHTML += `<div class="search-section-title">Ваши контакты</div>`;
+                    resultsBox.innerHTML += '<div class="search-section-title">Ваши контакты</div>';
                     localHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, true)));
                 }
 
                 if (globalHits.length > 0) {
-                    resultsBox.innerHTML += `<div class="search-section-title">Глобальный поиск</div>`;
+                    resultsBox.innerHTML += '<div class="search-section-title">Глобальный поиск</div>';
                     globalHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, false)));
                 }
 
             } catch (e) {
-                console.error(e);
-                resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
+                console.error("Ошибка поиска:", e);
+                resultsBox.innerHTML = '<div style="padding:10px; color:ff595a; text-align:center">Ошибка поиска</div>';
             }
+        }
+
+        function openSearchUI() {
+            const resBox = document.getElementById('searchResults');
+            const profileBtn = document.getElementById('profileBtn');
+            const backBtn = document.getElementById('searchBackBtn');
+
+            // Принудительно ставим стили, чтобы перебить CSS если что
+            resBox.style.display = 'flex';
+            resBox.classList.add('active');
+
+            // Поднимаем Z-Index, чтобы точно было видно
+            resBox.style.zIndex = '9999';
+
+            if (profileBtn) profileBtn.style.display = 'none';
+            if (backBtn) backBtn.style.display = 'block';
+        }
+
+        function closeSearch() {
+            const resBox = document.getElementById('searchResults');
+            const searchInput = document.getElementById('searchInput');
+            const profileBtn = document.getElementById('profileBtn');
+            const backBtn = document.getElementById('searchBackBtn');
+
+            resBox.classList.remove('active');
+            resBox.style.display = 'none';
+            resBox.innerHTML = '';
+
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.blur();
+            }
+
+            if (profileBtn) profileBtn.style.display = 'flex';
+            if (backBtn) backBtn.style.display = 'none';
         }
         // Вспомогательная функция для создания HTML элемента результата
         function renderSearchResult(user, isFriend) {
