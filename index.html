@@ -5018,6 +5018,7 @@
                     // Дата рождения
                     if (d.birthdate) {
                         document.getElementById('editBirthdate').value = d.birthdate;
+                        syncBirthdateView();
                     } else {
                         document.getElementById('editBirthdate').value = ''; // Сброс, если нет даты
                     }
