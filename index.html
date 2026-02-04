@@ -1901,7 +1901,7 @@
             <div class="tg-header-top">
                 <button onclick="closeAllSheets()" class="tg-icon-btn">←</button>
                 <div style="flex:1; font-weight: 500; font-size: 18px;">Профиль</div>
-                <button onclick="saveProfile()" class="tg-icon-btn">✏️</button>
+                <button onclick="enableProfileEdit()" class="tg-icon-btn">✏️</button>
                 <button onclick="logout()" class="tg-icon-btn" style="margin-left: 5px;">⋮</button>
             </div>
 
@@ -4714,6 +4714,22 @@
                 menu.style.display = 'none';
             }
         }, true); // true для перехвата скролла внутри div'ов
+
+
+        function enableProfileEdit() {
+            // Разрешить редактирование полей
+            document.getElementById('profileName').removeAttribute('readonly');
+            document.getElementById('profileSurname').removeAttribute('readonly');
+            document.getElementById('profileBio').removeAttribute('readonly');
+            document.getElementById('profileBio').style.pointerEvents = 'auto';
+
+            // Поменять кнопку карандаша на галочку для сохранения
+            const btn = event.target.closest('button');
+            btn.innerHTML = '✓';
+            btn.setAttribute('onclick', 'saveProfile()');
+
+            showToast('Режим редактирования активирован');
+        }
 
 
     </script>
