@@ -2347,7 +2347,7 @@
                 </div>
             </div>
             <div id="msgList" class="messages"></div>
-            <div class="input-bar" style="flex-direction: column; gap: 0; padding: 0;">
+            <div class="input-bar" style="flex-direction: column; gap: 0; padding: 0; align-items: stretch;">
 
                 <div id="replyBar" class="reply-bar hidden">
                     <div class="reply-icon">↩️</div>
@@ -2358,7 +2358,7 @@
                     <button class="reply-close" onclick="cancelReplyOrEdit()">✖</button>
                 </div>
 
-                <div style="display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 20px;">
+                <div style="display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 15px; box-sizing: border-box;">
                     <div class="input-container">
                         <input type="text" id="msgInput" placeholder="Сообщение" onkeypress="if(event.key==='Enter') sendMsg()">
                         <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
