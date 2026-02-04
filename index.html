@@ -3417,15 +3417,53 @@
                 if (doc.exists) {
                     const d = doc.data();
 
-                    // Заполняем текстовые поля
-                    document.getElementById('viewName').innerText = d.name || 'User';
-                    document.getElementById('viewSurname').innerText = d.surname || '';
-                    document.getElementById('profileEmail').innerText = d.email;
-                    document.getElementById('profileUsername').innerText = d.username ? '@' + d.username : '@не_задан';
-                    document.getElementById('viewBio').innerText = d.bio || 'Пусто';
+                    // Email (Текст)
+                    const emailEl = document.getElementById('profileEmail');
+                    if (emailEl) emailEl.innerText = d.email;
 
-                    // Логика Аватарки
-                    const img = document.getElementById('profileAvatarImg');
+                    // Username (Текст) - ИСПРАВЛЕНО
+                    const usernameDiv = document.getElementById('profileUsername');
+                    if (usernameDiv) {
+                        // Если юзернейм есть в базе, ставим его, иначе заглушку
+                        usernameDiv.innerText = d.username ? '@' + d.username : '@не_задан';
+                    }
+
+                    // Имя и Фамилия (Input)
+                    document.getElementById('profileName').value = d.name || '';
+                    document.getElementById('profileSurname').value = d.surname || '';
+
+                    // О себе (Textarea)
+                    const bioArea = document.getElementById('profileBio');
+                    if (bioArea) {
+                        bioArea.value = d.bio || '';
+                        // Авто-подстройка высоты
+                        bioArea.style.height = 'auto';
+                        bioArea.style.height = bioArea.scrollHeight + 'px';
+                    }
+
+                    // Дата рождения
+                    const birthInput = document.getElementById('profileBirthdate');
+                    const birthDisplay = document.getElementById('displayBirthdate');
+                    const birthBlock = document.getElementById('birthdateBlock');
+
+                    if (d.birthdate) {
+                        birthInput.value = d.birthdate;
+                        // Красивый формат ДД.ММ.ГГГГ
+                        const parts = d.birthdate.split('-');
+                        if (parts.length === 3) {
+                            birthDisplay.innerText = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                        } else {
+                            birthDisplay.innerText = d.birthdate;
+                        }
+                        birthBlock.style.display = 'flex';
+                    } else {
+                        birthInput.value = '';
+                        birthDisplay.innerText = '';
+                        birthBlock.style.display = 'none';
+                    }
+
+                    // Аватарка
+                    const img = document.getElementById('profileAvatarPreview');
                     const ph = document.getElementById('profileAvatarPlaceholder');
 
                     if (d.avatar) {
