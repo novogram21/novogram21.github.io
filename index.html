@@ -2203,12 +2203,10 @@
             </div>
 
             <div class="tg-profile-info">
-                <div class="tg-avatar-large" onclick="document.getElementById('avatarInput').click()">
+                <div class="tg-avatar-large" onclick="viewProfileAvatar()">
                     <img id="profileAvatarPreview" src="" style="display:none">
                     <div id="profileAvatarPlaceholder">👤</div>
-                    <div class="tg-avatar-edit-icon">📷</div>
                 </div>
-                <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="handleAvatarSelect(this)">
 
                 <div class="tg-profile-name-block">
                     <input type="text" id="profileName" class="tg-name-input" placeholder="Имя" readonly onblur="if(this.value.trim() === '') this.value = 'User'">
@@ -5572,7 +5570,14 @@
             syncBirthdateView();
         });
 
-
+        // Функция для просмотра аватарки профиля
+        function viewProfileAvatar() {
+            const img = document.getElementById('profileAvatarPreview');
+            // Открываем просмотрщик, только если картинка загружена и отображается
+            if (img && img.style.display !== 'none' && img.src) {
+                openImageViewer(img.src);
+            }
+        }
 
     </script>
 
