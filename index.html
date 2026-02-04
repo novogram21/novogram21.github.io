@@ -3559,14 +3559,10 @@
                     setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
                 });
 
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-            if (!isMobile) {
-                setTimeout(() => {
-                    const inp = document.getElementById('msgInput');
-                    if (inp) inp.focus();
-                }, 100);
-            }
+            setTimeout(() => {
+                const inp = document.getElementById('msgInput');
+                if (inp) inp.focus();
+            }, 100);
         }
         function performCloseUI() {
             document.getElementById('mainSidebar').classList.remove('hidden-mobile');
