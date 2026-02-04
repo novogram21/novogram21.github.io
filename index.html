@@ -2561,13 +2561,14 @@
             try {
                 // --- А. ЛОКАЛЬНЫЙ ПОИСК (СРЕДИ ДРУЗЕЙ) ---
                 // Ищем в кэше загруженных пользователей
-                const localHits = Object.keys(usersCache)
+                const localHits = Object.keys(usersCache || {})
                     .map(id => ({ id, ...usersCache[id] }))
-                    .filter(u =>
-                        (u.name && u.name.toLowerCase().includes(cleanQuery)) ||
-                        (u.username && u.username.toLowerCase().includes(cleanQuery)) ||
-                        (u.email && u.email.toLowerCase().includes(cleanQuery))
-                    );
+                    .filter(u => {
+                        const q = cleanQuery;
+                        return (u.name && u.name.toLowerCase().includes(q)) ||
+                            (u.username && u.username.toLowerCase().includes(q)) ||
+                            (u.email && u.email.toLowerCase().includes(q));
+                    });
 
                 // --- Б. ГЛОБАЛЬНЫЙ ПОИСК (БАЗА ДАННЫХ) ---
                 const globalHits = [];
