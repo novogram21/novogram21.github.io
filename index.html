@@ -5297,14 +5297,83 @@
             const user = firebase.auth().currentUser;
             db.collection('users').doc(user.uid).update(updateData)
                 .then(() => {
+                    // === НАЧАЛО: Мгновенное обновление данных на экране ===
+
+                    // 1. Обновляем Имя
+                    const nameInput = document.getElementById('profileName');
+                    if (nameInput) nameInput.value = name;
+
+                    // 2. Обновляем Фамилию (показываем или скрываем)
+                    const surInput = document.getElementById('profileSurname');
+                    if (surInput) {
+                        if (surname && surname.trim() !== "") {
+                            surInput.value = surname;
+                            surInput.style.display = "block"; // Показываем
+                        } else {
+                            surInput.style.display = "none";  // Скрываем
+                        }
+                    }
+
+                    // 3. Обновляем "О себе"
+                    const bioInput = document.getElementById('profileBio');
+                    if (bioInput) {
+                        bioInput.value = bio;
+                        // Подгоняем высоту поля под текст
+                        bioInput.style.height = "auto";
+                        bioInput.style.height = (bioInput.scrollHeight) + "px";
+                    }
+
+                    // 4. Обновляем Никнейм
+                    const nickDiv = document.getElementById('profileUsername');
+                    if (nickDiv) {
+                        nickDiv.innerText = username ? username : '';
+                    }
+
+                    // 5. Обновляем Аватарку (если загружали новую)
+                    if (editAvatarBase64) {
+                        // Большая аватарка в профиле
+                        const pImg = document.getElementById('profileAvatarPreview');
+                        const pPh = document.getElementById('profileAvatarPlaceholder');
+                        if (pImg) {
+                            pImg.src = editAvatarBase64;
+                            pImg.style.display = 'block';
+                        }
+                        if (pPh) pPh.style.display = 'none';
+
+                        // Маленькая аватарка в углу (кружочек)
+                        const myAvatarSmall = document.getElementById('myAvatarSmall');
+                        if (myAvatarSmall) {
+                            myAvatarSmall.innerHTML = `<img src="${editAvatarBase64}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+                        }
+                    }
+
+                    // 6. Обновляем Дату рождения
+                    const birthDisplay = document.getElementById('displayBirthdate');
+                    const birthBlock = document.getElementById('birthdateBlock');
+                    const birthInput = document.getElementById('profileBirthdate'); // Скрытый инпут
+
+                    if (birthInput) birthInput.value = birthdate;
+
+                    if (birthdate) {
+                        const parts = birthdate.split('-'); // 2006-04-04 -> [2006, 04, 04]
+                        if (parts.length === 3 && birthDisplay) {
+                            // Превращаем в 04.04.2006
+                            birthDisplay.innerText = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                            if (birthBlock) birthBlock.style.display = 'flex';
+                        }
+                    } else {
+                        if (birthBlock) birthBlock.style.display = 'none';
+                    }
+                    // === КОНЕЦ: Обновления экрана ===
+
                     showToast('Профиль обновлен');
                     closeEditProfile();
-                    // Обновляем данные на главном экране если нужно (loadData вызовется автоматически через слушатель или можно вызвать вручную)
                 })
                 .catch(err => {
                     console.error(err);
                     showToast('Ошибка сохранения: ' + err.message);
                 });
+
         }
 
         // Переменная для таймера (добавьте в начало скрипта, если еще нет)
