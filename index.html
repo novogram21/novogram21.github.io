@@ -1229,8 +1229,9 @@
 
         /* Фон шапки (зеленый паттерн) */
         .tg-header-bg {
-            background: #5a9e57; /* Зеленый цвет TG */
-            padding: 10px 15px 20px 15px;
+            background: #5a9e57;
+            /* ИЗМЕНЕНО: учитываем безопасную зону сверху (челку) */
+            padding: calc(10px + env(safe-area-inset-top)) 15px 20px 15px;
             color: white;
             position: relative;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -1404,12 +1405,15 @@
         .full-screen-sheet {
             top: 0;
             height: 100% !important;
-            background: #181818 !important; /* Очень темный фон как в ТГ */
+            background: #181818 !important;
             display: flex;
             flex-direction: column;
-            z-index: 6000; /* Поверх всего */
+            z-index: 6000;
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            /* ДОБАВЛЕНО: сбрасываем стили родительского action-sheet */
+            padding: 0 !important;
+            border-radius: 0 !important;
         }
 
             .full-screen-sheet.open {
