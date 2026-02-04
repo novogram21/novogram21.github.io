@@ -2880,7 +2880,15 @@
                         // === АВАТАРКА ===
                         const myAvatarSmall = document.getElementById('myAvatarSmall');
                         if (myAvatarSmall && d.avatar) {
-                            myAvatarSmall.innerHTML = `<img src="${d.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                            // 1. Принудительно растягиваем контейнер на весь круг
+                            myAvatarSmall.style.width = '100%';
+                            myAvatarSmall.style.height = '100%';
+                            myAvatarSmall.style.display = 'block';
+                            myAvatarSmall.style.borderRadius = '50%';
+                            myAvatarSmall.style.overflow = 'hidden'; // Обрезаем лишнее
+
+                            // 2. Вставляем картинку
+                            myAvatarSmall.innerHTML = `<img src="${d.avatar}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
                         }
                         // === КОНЕЦ ===
 
