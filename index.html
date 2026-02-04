@@ -5272,11 +5272,13 @@
             }
 
             const minYear = 1900;
-            const maxYear = now.getFullYear();
+            const maxYear = 2011;
 
-            fillSelect(yearSel, minYear, maxYear);
+            if (y > maxYear) y = maxYear;
+
+            fillSelect(yearSel, minYear, maxYear); 
             fillSelect(monthSel, 1, 12, v => pad2(v));
-            // day заполним после установки year/month
+
             setSelectValue(yearSel, y);
             setSelectValue(monthSel, m);
 
