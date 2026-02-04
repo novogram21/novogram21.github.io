@@ -2473,7 +2473,9 @@
         let usernameCheckTimeout = null; // И эту
 
         // --- НОВЫЙ ПОИСК ---
+        // --- НОВЫЙ ПОИСК (ИСПРАВЛЕННЫЙ) ---
         let searchTimeout = null;
+
         async function handleSearchInput(input) {
             const resultsBox = document.getElementById('searchResults');
             const cleanQuery = input.value.trim().toLowerCase();
@@ -2487,63 +2489,79 @@
             resultsBox.classList.add('active');
             resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">🔍 Поиск...</div>';
 
-            try {
-                const localHits = [];
-                const globalHits = [];
+            // Используем debounce (задержку), чтобы не бомбить базу запросами при каждой букве
+            if (searchTimeout) clearTimeout(searchTimeout);
 
-                // Локальный поиск по друзьям
-                friendsData.forEach(fr => {
-                    const nameMatch = fr.name && fr.name.toLowerCase().includes(cleanQuery);
-                    const usernameMatch = fr.username && fr.username.toLowerCase().includes(cleanQuery);
-                    const emailMatch = fr.email && fr.email.toLowerCase().includes(cleanQuery);
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const localHits = [];
+                    const globalHits = [];
 
-                    if (nameMatch || usernameMatch || emailMatch) {
-                        localHits.push(fr);
-                    }
-                });
+                    // --- 1. ИСПРАВЛЕНИЕ: ЛОКАЛЬНЫЙ ПОИСК ПО КЭШУ ---
+                    // Превращаем объект usersCache в массив
+                    const cachedUsers = Object.keys(usersCache || {}).map(id => ({
+                        id: id,
+                        ...usersCache[id]
+                    }));
 
-                // Глобальный поиск (если локально мало)
-                if (localHits.length < 3 && cleanQuery.length >= 3) {
-                    const snapUser = await db.collection('users')
-                        .where('username', '>=', cleanQuery)
-                        .where('username', '<=', cleanQuery + '\uf8ff')
-                        .limit(5)
-                        .get();
+                    cachedUsers.forEach(fr => {
+                        const nameMatch = fr.name && fr.name.toLowerCase().includes(cleanQuery);
+                        const usernameMatch = fr.username && fr.username.toLowerCase().includes(cleanQuery);
+                        const emailMatch = fr.email && fr.email.toLowerCase().includes(cleanQuery);
 
-                    snapUser.forEach(doc => {
-                        if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
-                            globalHits.push({ id: doc.id, ...doc.data() });
+                        if (nameMatch || usernameMatch || emailMatch) {
+                            localHits.push(fr);
                         }
                     });
+
+                    // --- 2. ГЛОБАЛЬНЫЙ ПОИСК (БАЗА ДАННЫХ) ---
+                    // Ищем, только если запрос длиннее 2 символов
+                    if (cleanQuery.length >= 3) {
+                        const snapUser = await db.collection('users')
+                            .where('username', '>=', cleanQuery)
+                            .where('username', '<=', cleanQuery + '\uf8ff')
+                            .limit(5)
+                            .get();
+
+                        snapUser.forEach(doc => {
+                            // Не добавляем себя и тех, кто уже есть в локальном поиске
+                            if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
+                                globalHits.push({
+                                    id: doc.id,
+                                    ...doc.data()
+                                });
+                            }
+                        });
+                    }
+
+                    // --- 3. ОТРИСОВКА ---
+                    resultsBox.innerHTML = ''; // Очищаем "Поиск..."
+
+                    if (localHits.length === 0 && globalHits.length === 0) {
+                        resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
+                        return;
+                    }
+
+                    // Создаём контейнер для каждой секции
+                    if (localHits.length > 0) {
+                        const section = document.createElement('div');
+                        section.innerHTML = `<div class="search-section-title">Ваши контакты</div>`;
+                        localHits.forEach(user => section.appendChild(renderSearchResult(user, true)));
+                        resultsBox.appendChild(section);
+                    }
+
+                    if (globalHits.length > 0) {
+                        const section = document.createElement('div');
+                        section.innerHTML = `<div class="search-section-title">Глобальный поиск</div>`;
+                        globalHits.forEach(user => section.appendChild(renderSearchResult(user, false)));
+                        resultsBox.appendChild(section);
+                    }
+
+                } catch (e) {
+                    console.error(e);
+                    resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
                 }
-
-                // Отрисовка результатов (ИСПРАВЛЕНО)
-                resultsBox.innerHTML = ''; // Сначала очищаем
-
-                if (localHits.length === 0 && globalHits.length === 0) {
-                    resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
-                    return;
-                }
-
-                // Создаём контейнер для каждой секции
-                if (localHits.length > 0) {
-                    const section = document.createElement('div');
-                    section.innerHTML = `<div class="search-section-title">Ваши контакты</div>`;
-                    localHits.forEach(user => section.appendChild(renderSearchResult(user, true)));
-                    resultsBox.appendChild(section);
-                }
-
-                if (globalHits.length > 0) {
-                    const section = document.createElement('div');
-                    section.innerHTML = `<div class="search-section-title">Глобальный поиск</div>`;
-                    globalHits.forEach(user => section.appendChild(renderSearchResult(user, false)));
-                    resultsBox.appendChild(section);
-                }
-
-            } catch (e) {
-                console.error(e);
-                resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
-            }
+            }, 500); // Задержка 500мс
         }
 
 
