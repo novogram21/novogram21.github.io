@@ -3669,6 +3669,7 @@
             document.getElementById('actionSheet').classList.remove('open');
             document.getElementById('deleteSheet').classList.remove('open');
             document.getElementById('profileSheet').classList.remove('open');
+            document.getElementById('editProfileSheet')?.classList.remove('open');
             setTimeout(() => { document.getElementById('overlaySheet').style.display = 'none'; }, 300);
             selectedMsgId = null;
         }
