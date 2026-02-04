@@ -872,20 +872,19 @@
         /* Полноэкранный контейнер результатов поиска (стиль Telegram) */
         #searchResults {
             position: absolute;
-            top: 65px; /* Чуть ниже поля ввода */
-            left: 0;
-            width: 100%;
-            height: calc(100dvh - 65px); /* На весь экран */
-            background: #1f1f1f;
-            z-index: 999;
+            top: 60px; /* Отступ сверху, чтобы не перекрывать поле ввода */
+            left: 10px;
+            right: 10px;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 12px;
+            z-index: 9999; /* Самый важный параметр - поверх всего */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             display: none; /* Скрыт по умолчанию */
             flex-direction: column;
+            max-height: 400px;
             overflow-y: auto;
         }
-
-            #searchResults.active {
-                display: flex; /* Показываем */
-            }
 
             #searchResults.active {
                 display: flex; /* Показываем, когда класс active */
@@ -2297,7 +2296,6 @@
         <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
         <!-- Профиль -->
         <div class="profile-bar" style="padding: 12px 15px; gap: 12px; position: relative;">
-
             <button id="searchBackBtn" onclick="closeSearch()" style="display: none; background: none; border: none; color: #007bff; font-size: 20px; cursor: pointer; flex-shrink: 0;">
                 ←
             </button>
@@ -2306,15 +2304,17 @@
                 <span id="myAvatarSmall">👤</span>
             </button>
 
-            <div style="flex: 1;">
+            <div style="flex: 1; position: relative;">
                 <input type="text" id="searchInput" placeholder="Поиск..."
-                                   style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
-                                   onfocus="openSearchUI()"
-                                   oninput="handleSearchInput(this)">
-            </div>
+                       style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
+                       onfocus="openSearchUI()"
+                       oninput="handleSearchInput(this)">
 
-            <div id="searchResults"></div>
+                <!-- Результаты поиска ВНУТРИ flex-контейнера -->
+                <div id="searchResults"></div>
+            </div>
         </div>
+
         <!-- Выпадающий список результатов -->
         <div id="searchResults" style="position: absolute; top: 45px; left: 10px; right: 10px; background: #2d2d2d; border: 1px solid #444; border-radius: 6px; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
         </div>
@@ -2474,24 +2474,78 @@
 
         // --- НОВЫЙ ПОИСК ---
         let searchTimeout = null;
-
-        function handleSearchInput(input) {
-            const val = input.value.trim();
+        async function handleSearchInput(input) {
             const resultsBox = document.getElementById('searchResults');
+            const cleanQuery = input.value.trim().toLowerCase();
 
-            // Если пусто — показываем пустое состояние, но НЕ закрываем
-            if (!val) {
-                resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center">Введите запрос для поиска</div>';
+            if (cleanQuery.length < 2) {
+                resultsBox.innerHTML = '';
+                resultsBox.classList.remove('active');
                 return;
             }
 
-            // Дебаунс (задержка перед поиском)
-            if (searchTimeout) clearTimeout(searchTimeout);
+            resultsBox.classList.add('active');
+            resultsBox.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">🔍 Поиск...</div>';
 
-            searchTimeout = setTimeout(() => {
-                performSearch(val);
-            }, 300);
+            try {
+                const localHits = [];
+                const globalHits = [];
+
+                // Локальный поиск по друзьям
+                friendsData.forEach(fr => {
+                    const nameMatch = fr.name && fr.name.toLowerCase().includes(cleanQuery);
+                    const usernameMatch = fr.username && fr.username.toLowerCase().includes(cleanQuery);
+                    const emailMatch = fr.email && fr.email.toLowerCase().includes(cleanQuery);
+
+                    if (nameMatch || usernameMatch || emailMatch) {
+                        localHits.push(fr);
+                    }
+                });
+
+                // Глобальный поиск (если локально мало)
+                if (localHits.length < 3 && cleanQuery.length >= 3) {
+                    const snapUser = await db.collection('users')
+                        .where('username', '>=', cleanQuery)
+                        .where('username', '<=', cleanQuery + '\uf8ff')
+                        .limit(5)
+                        .get();
+
+                    snapUser.forEach(doc => {
+                        if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
+                            globalHits.push({ id: doc.id, ...doc.data() });
+                        }
+                    });
+                }
+
+                // Отрисовка результатов (ИСПРАВЛЕНО)
+                resultsBox.innerHTML = ''; // Сначала очищаем
+
+                if (localHits.length === 0 && globalHits.length === 0) {
+                    resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
+                    return;
+                }
+
+                // Создаём контейнер для каждой секции
+                if (localHits.length > 0) {
+                    const section = document.createElement('div');
+                    section.innerHTML = `<div class="search-section-title">Ваши контакты</div>`;
+                    localHits.forEach(user => section.appendChild(renderSearchResult(user, true)));
+                    resultsBox.appendChild(section);
+                }
+
+                if (globalHits.length > 0) {
+                    const section = document.createElement('div');
+                    section.innerHTML = `<div class="search-section-title">Глобальный поиск</div>`;
+                    globalHits.forEach(user => section.appendChild(renderSearchResult(user, false)));
+                    resultsBox.appendChild(section);
+                }
+
+            } catch (e) {
+                console.error(e);
+                resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
+            }
         }
+
 
         async function performSearch(query) {
             const resultsBox = document.getElementById('searchResults');
@@ -4955,21 +5009,10 @@
         // И обнови openSearchUI, чтобы display переключался
         function openSearchUI() {
             const resBox = document.getElementById('searchResults');
-            const profileBtn = document.getElementById('profileBtn');
-            const backBtn = document.getElementById('searchBackBtn');
-
-            // Показываем панель
             resBox.style.display = 'flex';
             resBox.classList.add('active');
-
-            // Начальное состояние
-            if (!resBox.innerHTML.trim()) {
-                resBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center">Введите запрос для поиска</div>';
-            }
-
-            // Меняем кнопки
-            if (profileBtn) profileBtn.style.display = 'none';
-            if (backBtn) backBtn.style.display = 'block';
+            document.getElementById('profileBtn').style.display = 'none';
+            document.getElementById('searchBackBtn').style.display = 'block';
         }
 
         function openContextMenu(e, msgId, isMine, isMobile = false) {
