@@ -2505,8 +2505,15 @@
             resultsBox.style.display = 'flex'; // Принудительно показываем
 
             // Показываем кнопку "Назад" в поиске
-            document.getElementById('profileBtn').style.display = 'none';
-            document.getElementById('searchBackBtn').style.display = 'block';
+            document.getElementById('profileName').value = d.name;
+
+            const surnameEl = document.getElementById('profileSurname');
+            if (d.surname && d.surname.trim() !== "") {
+                surnameEl.value = d.surname;
+                surnameEl.style.display = "block"; // Показываем, если есть фамилия
+            } else {
+                surnameEl.style.display = "none";  // Скрываем, если пусто
+            }
 
             resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">🔍 Поиск...</div>';
 
