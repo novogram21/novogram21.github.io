@@ -5324,7 +5324,7 @@
 
                         if (data.result === "success") {
                             newAvatarDriveUrl = data.url; // ЗАПОМИНАЕМ ССЫЛКУ!
-                            showToast("Фото обновлено");
+                            showToast("Фото загружено");
                             preview.style.opacity = '1'; // Возвращаем яркость
                         } else {
                             throw new Error(data.message || "Ошибка скрипта");
