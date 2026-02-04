@@ -2874,23 +2874,26 @@
                 // Успешный вход подтвержден сервером -> сохраняем метку на будущее
                 localStorage.setItem('isLoggedIn', 'true');
                 // Проверяем, завершена ли регистрация
-                const userData = doc.data();
-
-                // --- ВСТАВИТЬ ЭТО ---
-                const myAvatarSmall = document.getElementById('myAvatarSmall');
-                if (myAvatarSmall) {
-                    if (userData.avatar) {
-                        // Если есть аватарка — ставим картинку
-                        myAvatarSmall.innerHTML = `<img src="${userData.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+                db.collection('users').doc(u.uid).get().then(doc => {
+                    if (doc.exists && doc.data().username) {
+                        // Все ок, пускаем в приложение окончательно
+                        document.getElementById('authScreen').classList.add('hidden');
+                        document.getElementById('profileEmail').innerText = u.email;
+                        updateLastSeen();
+                        // Загружаем чаты только сейчас (так как нужен currentUser)
+                        loadData();
+                        listenForIncomingCalls();
+                        loadTgId();
+                        setTimeout(handleHashChange, 500);
+                        if (lastSeenInterval) clearInterval(lastSeenInterval);
                     } else {
-                        // Если нет — ставим первую букву имени на цветном фоне
-                        const name = userData.name || "U";
-                        const firstLetter = name.charAt(0).toUpperCase();
-                        myAvatarSmall.innerHTML = `<div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg, #6a11cb, #2575fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:16px;">${firstLetter}</div>`;
+                        // Регистрация не завершена -> возвращаем экран регистрации
+                        document.getElementById('stepEmail').style.display = 'none';
+                        document.getElementById('stepName').style.display = 'block';
+                        document.getElementById('stepUsername').style.display = 'none';
+                        document.getElementById('authScreen').classList.remove('hidden');
                     }
-                }
-                // ---------------------
-
+                });
             } else {
                 // Сервер сказал: "Пользователь не вошел" или "Токен протух"
                 localStorage.removeItem('isLoggedIn'); // Удаляем метку
