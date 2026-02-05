@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -8,510 +7,586 @@
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.onesignal.com https://cdnjs.cloudflare.com;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>Novogram</title>
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <style>
-        * {
-            box-sizing: border-box;
+                * {
+                        box-sizing: border-box;
+
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #121212;
-            color: #eee;
-            margin: 0;
-            display: flex;
-            height: 100dvh;
-            overflow: hidden;
-            overscroll-behavior-y: none;
+                body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        background: #121212;
+                        color: #eee;
+                        margin: 0;
+                        display: flex;
+                        height: 100dvh;
+                        overflow: hidden;
+                        overscroll-behavior-y: none;
+
         }
+
 
 
         /* Авторизация */
-        .auth-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #121212;
-            z-index: 6000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+                .auth-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: #121212;
+                        z-index: 6000;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+
         }
 
-        .auth-box {
-            width: 300px;
-            padding: 25px;
-            background: #2d2d2d;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #444;
+                .auth-box {
+                        width: 300px;
+                        padding: 25px;
+                        background: #2d2d2d;
+                        border-radius: 12px;
+                        text-align: center;
+                        border: 1px solid #444;
+
         }
 
-            .auth-box input {
-                width: 100%;
-                padding: 12px;
-                margin: 8px 0;
-                background: #444;
-                border: 1px solid #555;
-                color: white;
-                border-radius: 6px;
-            }
+                    .auth-box input {
+                            width: 100%;
+                            padding: 12px;
+                            margin: 8px 0;
+                            background: #444;
+                            border: 1px solid #555;
+                            color: white;
+                            border-radius: 6px;
 
-            .auth-box button {
-                width: 100%;
-                padding: 12px;
-                background: #007bff;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                margin-top: 10px;
-            }
+        }
+
+                    .auth-box button {
+                            width: 100%;
+                            padding: 12px;
+                            background: #007bff;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-weight: bold;
+                            margin-top: 10px;
+
+        }
+
 
 
         /* Сайдбар */
-        .sidebar {
-            width: 320px;
-            background: #1f1f1f;
-            border-right: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            z-index: 10;
+                .sidebar {
+                        width: 320px;
+                        background: #1f1f1f;
+                        border-right: 1px solid #333;
+                        display: flex;
+                        flex-direction: column;
+                        z-index: 10;
+
         }
 
-        .profile-bar {
-            padding: 12px 15px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #252525; /* Или ваш цвет фона */
+                .profile-bar {
+                        padding: 12px 15px;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        background: #252525; /* Или ваш цвет фона */
+
         }
 
 
-        #searchInput {
-            width: 100%;
-            height: 44px;
-            padding: 0 15px;
-            border-radius: 22px; /* Вот это делает его круглым */
-            border: 1px solid #333;
-            background: #181818;
-            color: white;
-            font-size: 14px;
-            outline: none;
-            transition: 0.2s;
+                #searchInput {
+                        width: 100%;
+                        height: 44px;
+                        padding: 0 15px;
+                        border-radius: 22px; /* Вот это делает его круглым */
+                        border: 1px solid #333;
+                        background: #181818;
+                        color: white;
+                        font-size: 14px;
+                        outline: none;
+                        transition: 0.2s;
+
         }
 
-            #searchInput:focus {
-                border-color: #007bff; /* Синяя обводка при нажатии */
-            }
+                    #searchInput:focus {
+                            border-color: #007bff; /* Синяя обводка при нажатии */
 
-        .tabs {
-            display: flex;
-            background: #252525;
         }
 
-        .tab {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            color: #888;
-            font-size: 14px;
-            position: relative;
+                .tabs {
+                        display: flex;
+                        background: #252525;
+
         }
 
-            .tab.active {
-                border-bottom: 2px solid #007bff;
-                color: white;
-            }
+                .tab {
+                        flex: 1;
+                        padding: 12px;
+                        text-align: center;
+                        cursor: pointer;
+                        border-bottom: 2px solid transparent;
+                        color: #888;
+                        font-size: 14px;
+                        position: relative;
 
-        .tab-badge {
-            background: #ff4444;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 10px;
-            position: absolute;
-            top: 5px;
-            right: 10px;
         }
 
-        .list-container {
-            flex: 1;
-            overflow-y: auto;
+                    .tab.active {
+                            border-bottom: 2px solid #007bff;
+                            color: white;
+
         }
+
+                .tab-badge {
+                        background: #ff4444;
+                        color: white;
+                        border-radius: 50%;
+                        padding: 2px 6px;
+                        font-size: 10px;
+                        position: absolute;
+                        top: 5px;
+                        right: 10px;
+
+        }
+
+                .list-container {
+                        flex: 1;
+                        overflow-y: auto;
+
+        }
+
 
 
         /* Элемент списка чатов (НОВЫЙ ДИЗАЙН) */
 
         /* Элемент списка чатов */
-        .user-item {
-            padding: 10px 15px;
-            border-bottom: 1px solid #333;
-            display: grid;
-            grid-template-columns: 55px 1fr auto; /* Аватар | Имя+Текст | Мета (время, галочки, счетчик) */
-            grid-template-rows: auto auto;
-            column-gap: 10px;
-            align-items: center;
-            cursor: pointer;
-            transition: 0.2s;
-            min-height: 72px;
+                .user-item {
+                        padding: 10px 15px;
+                        border-bottom: 1px solid #333;
+                        display: grid;
+                        grid-template-columns: 55px 1fr auto; /* Аватар | Имя+Текст | Мета (время, галочки, счетчик) */
+                        grid-template-rows: auto auto;
+                        column-gap: 10px;
+                        align-items: center;
+                        cursor: pointer;
+                        transition: 0.2s;
+                        min-height: 72px;
+
         }
 
-            .user-item:hover {
-                background: #2a2a2a;
-            }
+                    .user-item:hover {
+                            background: #2a2a2a;
 
-        .user-item-avatar {
-            grid-column: 1;
-            grid-row: 1 / span 2;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
         }
 
-        .user-name {
-            grid-column: 2;
-            grid-row: 1;
-            font-weight: 600;
-            font-size: 16px;
-            color: white;
-            margin-bottom: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            align-self: end;
+                .user-item-avatar {
+                        grid-column: 1;
+                        grid-row: 1 / span 2;
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 50%;
+                        object-fit: cover;
+
         }
 
-        .last-msg-row {
-            grid-column: 2;
-            grid-row: 2;
-            display: flex;
-            align-items: center;
-            overflow: hidden;
-            align-self: start;
+                .user-name {
+                        grid-column: 2;
+                        grid-row: 1;
+                        font-weight: 600;
+                        font-size: 16px;
+                        color: white;
+                        margin-bottom: 2px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        align-self: end;
+
         }
 
-        .last-msg {
-            font-size: 14px;
-            color: #888;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100%;
+                .last-msg-row {
+                        grid-column: 2;
+                        grid-row: 2;
+                        display: flex;
+                        align-items: center;
+                        overflow: hidden;
+                        align-self: start;
+
         }
+
+                .last-msg {
+                        font-size: 14px;
+                        color: #888;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+
+        }
+
 
 
         /* Правая колонка: Время (сверху) и Галочки/Счетчик (снизу) */
-        .meta-column {
-            grid-column: 3;
-            grid-row: 1 / span 2;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end; /* Все прижато вправо */
-            justify-content: center;
-            gap: 5px;
-            min-width: 65px;
+                .meta-column {
+                        grid-column: 3;
+                        grid-row: 1 / span 2;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: flex-end; /* Все прижато вправо */
+                        justify-content: center;
+                        gap: 5px;
+                        min-width: 65px;
+
         }
 
-        .last-msg-date {
-            font-size: 13px;
-            color: #888;
+                .last-msg-date {
+                        font-size: 13px;
+                        color: #888;
+
         }
+
 
 
         /* Контейнер для нижней части правой колонки (Галочки ИЛИ Счетчик) */
-        .meta-bottom-row {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            height: 20px; /* Фиксированная высота */
+                .meta-bottom-row {
+                        display: flex;
+                        align-items: center;
+                        justify-content: flex-end;
+                        height: 20px; /* Фиксированная высота */
+
         }
+
 
 
         /* Галочки - теперь белые и в правом углу */
-        .list-ticks {
-            display: inline-flex;
-            font-size: 14px; /* Чуть крупнее */
-            color: white !important; /* Принудительно белые */
+                .list-ticks {
+                        display: inline-flex;
+                        font-size: 14px; /* Чуть крупнее */
+                        color: white !important; /* Принудительно белые */
+
         }
 
-            .list-ticks span {
-                color: white !important;
-            }
+                    .list-ticks span {
+                            color: white !important;
 
-        .badge-count {
-            background: #736AF0;
-            color: white;
-            font-size: 12px;
-            padding: 2px 9px;
-            border-radius: 12px;
-            font-weight: bold;
-            min-width: 20px;
-            text-align: center;
-            line-height: 1.2;
-            display: none;
         }
 
-            .badge-count:not(.hidden) {
-                display: block;
-            }
+                .badge-count {
+                        background: #736AF0;
+                        color: white;
+                        font-size: 12px;
+                        padding: 2px 9px;
+                        border-radius: 12px;
+                        font-weight: bold;
+                        min-width: 20px;
+                        text-align: center;
+                        line-height: 1.2;
+                        display: none;
 
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: transparent;
-            position: relative;
-            z-index: 1;
         }
+
+                    .badge-count:not(.hidden) {
+                            display: block;
+
+        }
+
+                .chat-area {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        background: transparent;
+                        position: relative;
+                        z-index: 1;
+
+        }
+
 
 
         /* Фон с паттерном для пустого экрана "Выберите чат" */
-        #noChat {
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #555;
-            position: relative;
-            overflow: hidden;
+                #noChat {
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #555;
+                        position: relative;
+                        overflow: hidden;
+
         }
 
-        #noChat {
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #aaa;
-            position: relative;
-            overflow: hidden;
-            background-color: #0a0c10;
+                #noChat {
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #aaa;
+                        position: relative;
+                        overflow: hidden;
+                        background-color: #0a0c10;
+
         }
 
-            #noChat > div {
-                position: relative;
-                z-index: 2;
-                font-size: 18px;
-                font-weight: 500;
-            }
+                    #noChat > div {
+                            position: relative;
+                            z-index: 2;
+                            font-size: 18px;
+                            font-weight: 500;
 
-        @keyframes scrollPattern {
-            0% {
-                transform: translate(0, 0);
-            }
-
-            100% {
-                transform: translate(-10%, -10%);
-            }
         }
 
-        .chat-header {
-            padding: 10px 15px;
-            background: #1f1f1f;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 60px;
+                @keyframes scrollPattern {
+                        0%
+
+        {
+                            transform: translate(0, 0);
+
         }
 
-        .back-btn {
-            display: none;
-            background: none;
-            border: none;
-            color: #007bff;
-            font-size: 24px;
-            cursor: pointer;
-            padding-right: 15px;
+                    100% {
+                            transform: translate(-10%, -10%);
+
         }
 
-        .chat-header-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            flex: 1;
+
         }
 
-        .chat-title {
-            font-weight: bold;
-            font-size: 16px;
+                .chat-header {
+                        padding: 10px 15px;
+                        background: #1f1f1f;
+                        border-bottom: 1px solid #333;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        min-height: 60px;
+
         }
 
-        .chat-status {
-            font-size: 12px;
-            color: #888;
+                .back-btn {
+                        display: none;
+                        background: none;
+                        border: none;
+                        color: #007bff;
+                        font-size: 24px;
+                        cursor: pointer;
+                        padding-right: 15px;
+
         }
 
-        .messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+                .chat-header-info {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 2px;
+                        flex: 1;
+
+        }
+
+                .chat-title {
+                        font-weight: bold;
+                        font-size: 16px;
+
+        }
+
+                .chat-status {
+                        font-size: 12px;
+                        color: #888;
+
+        }
+
+                .messages {
+                        flex: 1;
+                        padding: 20px;
+                        overflow-y: auto;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+
             /* Добавляем центрирование */
-            width: 100%;
-            max-width: 900px; /* Ширина колонки как в Telegram */
-            margin: 0 auto; /* Центрируем саму колонку */
-            background: transparent; /* Убеждаемся, что фон прозрачный */
+                        width: 100%;
+                        max-width: 900px; /* Ширина колонки как в Telegram */
+                        margin: 0 auto; /* Центрируем саму колонку */
+                        background: transparent; /* Убеждаемся, что фон прозрачный */
+
             /* Убираем position: relative, если он мешает фону, но обычно не мешает */
-            position: relative;
-            z-index: 1;
+                        position: relative;
+                        z-index: 1;
+
         }
 
 
-            /* Важно! Сообщения должны быть ВЫШЕ фона */
-            .messages > * {
-                position: relative;
-                z-index: 1;
-            }
 
-        .input-bar {
-            padding: 10px 20px;
-            background: transparent; /* Прозрачный, чтобы видеть фон */
-            display: flex;
-            justify-content: center; /* Центрируем всё содержимое */
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            max-width: 900px; /* Ограничиваем ширину, чтобы на больших экранах было не слишком широко */
-            margin: 0 auto; /* Центрируем сам блок */
-            position: relative;
-            z-index: 5;
+        /* Важно! Сообщения должны быть ВЫШЕ фона */
+                    .messages > * {
+                            position: relative;
+                            z-index: 1;
+
         }
 
-        .input-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            background: #1f1f1f; /* Фон самого поля ввода */
-            border-radius: 25px; /* Сильное скругление */
-            padding: 5px 15px;
-            border: 1px solid #333;
-            position: relative;
+                .input-bar {
+                        padding: 10px 20px;
+                        background: transparent; /* Прозрачный, чтобы видеть фон */
+                        display: flex;
+                        justify-content: center; /* Центрируем всё содержимое */
+                        align-items: center;
+                        gap: 10px;
+                        width: 100%;
+                        max-width: 900px; /* Ограничиваем ширину, чтобы на больших экранах было не слишком широко */
+                        margin: 0 auto; /* Центрируем сам блок */
+                        position: relative;
+                        z-index: 5;
+
         }
 
-            .input-container input {
-                flex: 1;
-                background: transparent;
-                border: none;
-                color: white;
-                padding: 10px;
-                font-size: 15px;
-                outline: none;
-            }
+                .input-container {
+                        flex: 1;
+                        display: flex;
+                        align-items: center;
+                        background: #1f1f1f; /* Фон самого поля ввода */
+                        border-radius: 25px; /* Сильное скругление */
+                        padding: 5px 15px;
+                        border: 1px solid #333;
+                        position: relative;
+
+        }
+
+                    .input-container input {
+                            flex: 1;
+                            background: transparent;
+                            border: none;
+                            color: white;
+                            padding: 10px;
+                            font-size: 15px;
+                            outline: none;
+
+        }
+
 
 
         /* Кнопка скрепки внутри поля */
-        .attach-btn {
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 5px;
-            transition: 0.2s;
+                .attach-btn {
+                        background: none;
+                        border: none;
+                        color: #888;
+                        font-size: 20px;
+                        cursor: pointer;
+                        padding: 5px;
+                        transition: 0.2s;
+
         }
 
-            .attach-btn:hover {
-                color: #ccc;
-            }
+                    .attach-btn:hover {
+                            color: #ccc;
+
+        }
+
 
 
         /* Круглая кнопка микрофона/отправки справа */
-        .voice-btn, .send-btn {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: 0.2s;
-            flex-shrink: 0;
+                .voice-btn, .send-btn {
+                        width: 45px;
+                        height: 45px;
+                        border-radius: 50%;
+                        border: none;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 20px;
+                        transition: 0.2s;
+                        flex-shrink: 0;
+
         }
 
-        .voice-btn {
-            background: #2d2d2d; /* Темный фон для микрофона */
-            color: white;
+                .voice-btn {
+                        background: #2d2d2d; /* Темный фон для микрофона */
+                        color: white;
+
         }
 
-            .voice-btn:hover {
-                background: #333;
-            }
+                    .voice-btn:hover {
+                            background: #333;
 
-        .send-btn {
-            background: #007bff; /* Синий для отправки */
-            color: white;
-            padding-left: 5px; /* Визуально центрируем стрелочку */
         }
 
-            .send-btn:hover {
-                background: #0056b3;
-            }
+                .send-btn {
+                        background: #007bff; /* Синий для отправки */
+                        color: white;
+                        padding-left: 5px; /* Визуально центрируем стрелочку */
 
-        .input-bar input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 20px;
-            border: 1px solid #444;
-            background: #2d2d2d;
-            color: white;
         }
+
+                    .send-btn:hover {
+                            background: #0056b3;
+
+        }
+
+                .input-bar input {
+                        flex: 1;
+                        padding: 12px;
+                        border-radius: 20px;
+                        border: 1px solid #444;
+                        background: #2d2d2d;
+                        color: white;
+
+        }
+
 
 
         /* Общие стили для сообщения */
-        .msg {
-            max-width: 75%;
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 15px;
-            line-height: 1.4;
-            position: relative;
-            cursor: pointer;
-            word-wrap: break-word; /* Чтобы длинные слова переносились */
+                .msg {
+                        max-width: 75%;
+                        padding: 8px 12px;
+                        border-radius: 12px;
+                        font-size: 15px;
+                        line-height: 1.4;
+                        position: relative;
+                        cursor: pointer;
+                        word-wrap: break-word; /* Чтобы длинные слова переносились */
+
         }
+
 
 
         /* Свои сообщения (справа) - фиолетовые */
-        .msg-me {
-            align-self: flex-end;
-            background: #736AF0; /* Красивый фиолетовый цвет как на скриншоте */
-            color: white;
-            border-bottom-right-radius: 2px;
+                .msg-me {
+                        align-self: flex-end;
+                        background: #736AF0; /* Красивый фиолетовый цвет как на скриншоте */
+                        color: white;
+                        border-bottom-right-radius: 2px;
+
         }
+
 
 
         /* Чужие сообщения (слева) - серые */
-        .msg-other {
-            align-self: flex-start;
-            background: #2d2d2d; /* Темно-серый */
-            color: white;
-            border-bottom-left-radius: 2px;
+                .msg-other {
+                        align-self: flex-start;
+                        background: #2d2d2d; /* Темно-серый */
+                        color: white;
+                        border-bottom-left-radius: 2px;
+
         }
+
 
 
         /* Системные сообщения (по центру) */
-        .msg-sys {
-            align-self: center;
-            background: rgba(34, 34, 34, 0.8);
-            border: 1px solid #444;
-            font-size: 13px;
-            color: #aaa;
-            padding: 4px 10px;
-            border-radius: 10px;
+                .msg-sys {
+                        align-self: center;
+                        background: rgba(34, 34, 34, 0.8);
+                        border: 1px solid #444;
+                        font-size: 13px;
+                        color: #aaa;
+                        padding: 4px 10px;
+                        border-radius: 10px;
+
         }
+
 
 
         /* Блок мета-информации (время + галочки) */
@@ -519,1516 +594,1781 @@
         /* Мета-информация (время + галочки) */
 
         /* Мета-информация (время + галочки) */
-        .msg-meta {
-            float: right;
-            margin-left: 7px;
-            margin-top: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            vertical-align: bottom;
-            position: relative;
-            top: 3px;
-            white-space: nowrap; /* Важно: запрещает перенос на новую строку внутри мета-блока */
-            height: 14px;
-            line-height: 1;
+                .msg-meta {
+                        float: right;
+                        margin-left: 7px;
+                        margin-top: 6px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 3px;
+                        vertical-align: bottom;
+                        position: relative;
+                        top: 3px;
+                        white-space: nowrap; /* Важно: запрещает перенос на новую строку внутри мета-блока */
+                        height: 14px;
+                        line-height: 1;
+
         }
 
-        .msg-time {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.6);
-            margin-right: 2px;
+                .msg-time {
+                        font-size: 11px;
+                        color: rgba(255, 255, 255, 0.6);
+                        margin-right: 2px;
+
         }
 
-        .msg-ticks {
-            font-size: 12px;
-            color: white; /* Всегда белые */
-            display: none;
-            font-weight: bold;
+                .msg-ticks {
+                        font-size: 12px;
+                        color: white; /* Всегда белые */
+                        display: none;
+                        font-weight: bold;
+
         }
 
-        .msg-me .msg-ticks {
-            display: inline-block;
+                .msg-me .msg-ticks {
+                        display: inline-block;
+
         }
+
 
 
         /* Прочитанные галочки (теперь они тоже белые, цвет не меняется) */
-        .tick-read {
-            color: white;
+                .tick-read {
+                        color: white;
+
         }
+
 
 
         /* Шторки */
-        .overlay-sheet {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 4999;
-            display: none;
+                .overlay-sheet {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        z-index: 4999;
+                        display: none;
+
         }
 
-        .search-section-title {
-            padding: 8px 15px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #007bff;
-            background: #2a2a2a;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+                .search-section-title {
+                        padding: 8px 15px;
+                        font-size: 12px;
+                        font-weight: bold;
+                        color: #007bff;
+                        background: #2a2a2a;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+
         }
 
-        .action-sheet {
+                .action-sheet {
+
             /* Оставляем старые стили */
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #1f1f1f;
-            border-top-left-radius: 16px;
-            border-top-right-radius: 16px;
-            padding: 20px;
-            z-index: 5000;
-            transform: translateY(100%);
+                        position: fixed;
+                        bottom: 0;
+                        left: 0;
+                        width: 100%;
+                        background: #1f1f1f;
+                        border-top-left-radius: 16px;
+                        border-top-right-radius: 16px;
+                        padding: 20px;
+                        z-index: 5000;
+                        transform: translateY(100%);
+
             /* ДОБАВЛЯЕМ ЭТО: скрываем от таба/фокуса, когда закрыто */
-            visibility: hidden;
-            transition: transform 0.3s, visibility 0s linear 0.3s;
+                        visibility: hidden;
+                        transition: transform 0.3s, visibility 0s linear 0.3s;
+
         }
 
-            .action-sheet.open {
-                transform: translateY(0);
-                /* ДОБАВЛЯЕМ ЭТО: показываем сразу при открытии */
-                visibility: visible;
-                transition: transform 0.3s, visibility 0s;
-            }
+                    .action-sheet.open {
+                            transform: translateY(0);
 
-        .action-btn {
-            background: #2d2d2d;
-            border: none;
-            padding: 15px;
-            color: white;
-            border-radius: 12px;
-            font-size: 16px;
-            cursor: pointer;
-            text-align: center;
+            /* ДОБАВЛЯЕМ ЭТО: показываем сразу при открытии */
+                            visibility: visible;
+                            transition: transform 0.3s, visibility 0s;
+
         }
 
-            .action-btn:active {
-                background: #333;
-            }
+                .action-btn {
+                        background: #2d2d2d;
+                        border: none;
+                        padding: 15px;
+                        color: white;
+                        border-radius: 12px;
+                        font-size: 16px;
+                        cursor: pointer;
+                        text-align: center;
 
-            .action-btn.delete {
-                color: #ff4444;
-            }
-
-        .sheet-title {
-            color: #777;
-            font-size: 13px;
-            text-align: center;
-            margin-bottom: 5px;
         }
+
+                    .action-btn:active {
+                            background: #333;
+
+        }
+
+                    .action-btn.delete {
+                            color: #ff4444;
+
+        }
+
+                .sheet-title {
+                        color: #777;
+                        font-size: 13px;
+                        text-align: center;
+                        margin-bottom: 5px;
+
+        }
+
 
 
         /* Профиль Шторка */
-        .profile-option {
-            background: #2d2d2d;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
+                .profile-option {
+                        background: #2d2d2d;
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin-bottom: 10px;
+
         }
 
-            .profile-option h3 {
-                margin: 0 0 10px 0;
-                font-size: 15px;
-                color: #ddd;
-            }
+                    .profile-option h3 {
+                            margin: 0 0 10px 0;
+                            font-size: 15px;
+                            color: #ddd;
 
-        .profile-input-group {
-            display: flex;
-            gap: 10px;
         }
+
+                .profile-input-group {
+                        display: flex;
+                        gap: 10px;
+
+        }
+
 
 
         /* Звонки */
-        .call-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 4000;
-            display: none;
-            flex-direction: column;
-            transition: opacity 0.5s;
+                .call-screen {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: #000;
+                        z-index: 4000;
+                        display: none;
+                        flex-direction: column;
+                        transition: opacity 0.5s;
+
         }
 
-        .video-grid {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            width: 100%;
-            height: 100%;
-            background: #000;
+                .video-grid {
+                        flex: 1;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        position: relative;
+                        width: 100%;
+                        height: 100%;
+                        background: #000;
+
         }
 
-        #remoteVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background: #000;
+                #remoteVideo {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                        background: #000;
+
         }
 
-        .local-video-container {
-            position: absolute;
-            bottom: 160px;
-            right: 20px;
+                .local-video-container {
+                        position: absolute;
+                        bottom: 160px;
+                        right: 20px;
+
             /* УВЕЛИЧЕННЫЕ РАЗМЕРЫ */
-            width: 140px; /* Было 100px */
-            height: 210px; /* Было 150px (пропорция 2:3 сохранена) */
+                        width: 140px; /* Было 100px */
+                        height: 210px; /* Было 150px (пропорция 2:3 сохранена) */
+
             /* КРАСИВОЕ СКРУГЛЕНИЕ */
-            border-radius: 18px; /* Сильнее скруглено (было 10px) */
-            overflow: hidden;
+                        border-radius: 18px; /* Сильнее скруглено (было 10px) */
+                        overflow: hidden;
+
             /* УТОНЧЕННАЯ РАМКА */
-            border: 2px solid rgba(255, 255, 255, 0.2); /* Полупрозрачная белая рамка выглядит стильнее */
+                        border: 2px solid rgba(255, 255, 255, 0.2); /* Полупрозрачная белая рамка выглядит стильнее */
+
             /* ТЕНЬ ДЛЯ ОБЪЕМА */
-            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-            z-index: 4002;
-            display: block;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Плавная анимация */
+                        box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+                        z-index: 4002;
+                        display: block;
+                        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Плавная анимация */
+
         }
 
-        #localVideo {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important; /* <--- Убирает черные полосы, обрезая лишнее */
-            position: absolute; /* <--- Фиксирует видео в углу контейнера */
-            top: 0;
-            left: 0;
-            background: #000;
+                #localVideo {
+                        width: 100% !important;
+                        height: 100% !important;
+                        object-fit: cover !important; /* <--- Убирает черные полосы, обрезая лишнее */
+                        position: absolute; /* <--- Фиксирует видео в углу контейнера */
+                        top: 0;
+                        left: 0;
+                        background: #000;
+
         }
 
-            #localVideo.mirror {
-                transform: scaleX(-1);
-            }
+                    #localVideo.mirror {
+                            transform: scaleX(-1);
 
-        .controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            padding: 20px 10px 40px 10px;
-            z-index: 4003;
-            background: #18191c;
-            border-top-left-radius: 16px;
-            border-top-right-radius: 16px;
         }
 
-        .control-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            width: 70px;
+                .controls {
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        width: 100%;
+                        display: flex;
+                        justify-content: center;
+                        gap: 15px;
+                        padding: 20px 10px 40px 10px;
+                        z-index: 4003;
+                        background: #18191c;
+                        border-top-left-radius: 16px;
+                        border-top-right-radius: 16px;
+
         }
 
-        .control-label {
-            font-size: 11px;
-            color: #b5bac1;
-            white-space: nowrap;
+                .control-item {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 8px;
+                        width: 70px;
+
         }
 
-        .btn-circle {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            transition: 0.2s;
-            background: #2b2d31;
-            color: #dbdee1;
+                .control-label {
+                        font-size: 11px;
+                        color: #b5bac1;
+                        white-space: nowrap;
+
         }
 
-            .btn-circle:active {
-                transform: scale(0.95);
-            }
+                .btn-circle {
+                        width: 56px;
+                        height: 56px;
+                        border-radius: 50%;
+                        border: none;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        font-size: 24px;
+                        transition: 0.2s;
+                        background: #2b2d31;
+                        color: #dbdee1;
 
-        .btn-active-white {
-            background: #f2f3f5 !important;
-            color: #313338 !important;
         }
 
-        .btn-hangup {
-            background: #da373c !important;
-            color: white !important;
+                    .btn-circle:active {
+                            transform: scale(0.95);
+
         }
 
-        .btn-screen-on {
-            background: #248046 !important;
-            color: white !important;
+                .btn-active-white {
+                        background: #f2f3f5 !important;
+                        color: #313338 !important;
+
         }
 
-        .incoming-call {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #222;
-            padding: 15px 25px;
-            border-radius: 30px;
-            z-index: 5000;
-            display: none;
-            align-items: center;
-            gap: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border: 1px solid #444;
-            width: 90%;
-            max-width: 400px;
-            justify-content: space-between;
+                .btn-hangup {
+                        background: #da373c !important;
+                        color: white !important;
+
         }
 
-        .timer-badge {
-            position: absolute;
-            top: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px;
-            border-radius: 20px;
-            color: #fff;
-            z-index: 4003;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 120px;
+                .btn-screen-on {
+                        background: #248046 !important;
+                        color: white !important;
+
         }
 
-        #callStatusText {
-            font-size: 12px;
-            color: #ccc;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+                .incoming-call {
+                        position: fixed;
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: #222;
+                        padding: 15px 25px;
+                        border-radius: 30px;
+                        z-index: 5000;
+                        display: none;
+                        align-items: center;
+                        gap: 20px;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+                        border: 1px solid #444;
+                        width: 90%;
+                        max-width: 400px;
+                        justify-content: space-between;
+
         }
 
-        #callTimer {
-            font-size: 18px;
-            font-family: monospace;
-            font-weight: bold;
+                .timer-badge {
+                        position: absolute;
+                        top: 40px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(0,0,0,0.6);
+                        padding: 10px 20px;
+                        border-radius: 20px;
+                        color: #fff;
+                        z-index: 4003;
+                        pointer-events: none;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        min-width: 120px;
+
         }
 
-        #callPing {
-            font-size: 11px;
-            color: #4caf50;
-            margin-top: 5px;
-            opacity: 0.9;
+                #callStatusText {
+                        font-size: 12px;
+                        color: #ccc;
+                        margin-bottom: 5px;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+
         }
 
-        .hidden {
-            display: none !important;
+                #callTimer {
+                        font-size: 18px;
+                        font-family: monospace;
+                        font-weight: bold;
+
         }
 
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                border-right: none;
-            }
+                #callPing {
+                        font-size: 11px;
+                        color: #4caf50;
+                        margin-top: 5px;
+                        opacity: 0.9;
 
-            .chat-area {
-                display: none;
-                width: 100%;
-                position: absolute;
-                top: 0;
-                left: 0;
-                height: 100%;
-                z-index: 20;
-            }
-
-                .chat-area.active {
-                    display: flex;
-                }
-
-            .sidebar.hidden-mobile {
-                display: none;
-            }
-
-            .back-btn {
-                display: block;
-            }
         }
+
+                .hidden {
+                        display: none !important;
+
+        }
+
+                @media (max-width: 768px) {
+                        .sidebar
+
+        {
+                            width: 100%;
+                            border-right: none;
+
+        }
+
+                    .chat-area {
+                            display: none;
+                            width: 100%;
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            height: 100%;
+                            z-index: 20;
+
+        }
+
+                        .chat-area.active {
+                                display: flex;
+
+        }
+
+                    .sidebar.hidden-mobile {
+                            display: none;
+
+        }
+
+                    .back-btn {
+                            display: block;
+
+        }
+
+
+        }
+
 
 
         /* Полноэкранный контейнер результатов поиска (стиль Telegram) */
-        #searchResults {
+                #searchResults {
+
             /* Сбрасываем позиционирование "поверх" */
-            position: relative;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: transparent; /* Убираем фон, чтобы был общий */
-            border: none;
-            border-radius: 0;
-            box-shadow: none;
+                        position: relative;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        background: transparent; /* Убираем фон, чтобы был общий */
+                        border: none;
+                        border-radius: 0;
+                        box-shadow: none;
+
             /* Растягиваем на всю высоту */
-            flex: 1;
-            overflow-y: auto;
-            display: none; /* Скрыт по умолчанию */
-            flex-direction: column;
-            z-index: 10;
+                        flex: 1;
+                        overflow-y: auto;
+                        display: none; /* Скрыт по умолчанию */
+                        flex-direction: column;
+                        z-index: 10;
+
         }
 
-            #searchResults.active {
-                display: flex;
-            }
+                    #searchResults.active {
+                            display: flex;
+
+        }
+
 
 
 
 
 
         /* Заголовки разделов в поиске */
-        .search-section-title {
-            padding: 10px 15px;
-            font-size: 13px;
-            font-weight: bold;
-            color: #007bff;
-            background: rgba(0, 123, 255, 0.05);
-            text-transform: uppercase;
+                .search-section-title {
+                        padding: 10px 15px;
+                        font-size: 13px;
+                        font-weight: bold;
+                        color: #007bff;
+                        background: rgba(0, 123, 255, 0.05);
+                        text-transform: uppercase;
+
         }
+
 
 
         /* Стилизация каждого найденного человека */
-        .search-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 15px;
-            gap: 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #2a2a2a;
+                .search-item {
+                        display: flex;
+                        align-items: center;
+                        padding: 10px 15px;
+                        gap: 12px;
+                        cursor: pointer;
+                        border-bottom: 1px solid #2a2a2a;
+
         }
 
-            .search-item:hover {
-                background: #2a2a2a;
-            }
+                    .search-item:hover {
+                            background: #2a2a2a;
 
-            .search-item img, .search-avatar-placeholder {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                object-fit: cover;
-            }
-
-        .search-info {
-            flex: 1;
-            overflow: hidden;
         }
 
-        .search-name {
-            font-weight: bold;
-            color: white;
-            font-size: 15px;
+                    .search-item img, .search-avatar-placeholder {
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 50%;
+                            object-fit: cover;
+
         }
 
-        .search-sub {
-            font-size: 13px;
-            color: #888;
+                .search-info {
+                        flex: 1;
+                        overflow: hidden;
+
         }
 
-        .search-action {
-            color: #007bff;
-            font-size: 20px;
-            padding-right: 5px;
+                .search-name {
+                        font-weight: bold;
+                        color: white;
+                        font-size: 15px;
+
         }
+
+                .search-sub {
+                        font-size: 13px;
+                        color: #888;
+
+        }
+
+                .search-action {
+                        color: #007bff;
+                        font-size: 20px;
+                        padding-right: 5px;
+
+        }
+
 
 
         /* 1. Общий фон для всего приложения */
-        #app-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1; /* Лежит под всем */
-            background-color: #0a0c10;
+                #app-background {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        z-index: -1; /* Лежит под всем */
+                        background-color: #0a0c10;
+
         }
 
-            #app-background::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                opacity: 0.7;
-                pointer-events: none;
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
-                background-size: 400px 400px;
-            }
+                    #app-background::before {
+                            content: "";
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            opacity: 0.7;
+                            pointer-events: none;
+                            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
+                            background-size: 400px 400px;
 
-            #app-background::after {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: radial-gradient(circle at 50% 50%, rgba(10, 12, 16, 0.3) 0%, rgba(10, 12, 16, 0.7) 100%);
-                pointer-events: none;
-            }
+        }
+
+                    #app-background::after {
+                            content: "";
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: radial-gradient(circle at 50% 50%, rgba(10, 12, 16, 0.3) 0%, rgba(10, 12, 16, 0.7) 100%);
+                            pointer-events: none;
+
+        }
+
 
 
         /* 2. Убираем фоны у отдельных блоков, чтобы просвечивал общий фон */
-        body {
-            background: transparent; /* Было 121212 */
+                body {
+                        background: transparent; /* Было 121212 */
+
         }
 
-        .chat-area {
-            background: transparent; /* Было 0d1117 */
+                .chat-area {
+                        background: transparent; /* Было 0d1117 */
+
         }
 
-        #noChat {
-            background: transparent; /* Убираем фон отсюда */
+                #noChat {
+                        background: transparent; /* Убираем фон отсюда */
+
             /* Убираем псевдоэлементы ::before и ::after у #noChat, так как теперь есть общий фон */
+
         }
+
 
 
         /* Если у вас остались стили для #noChat::before и #noChat::after - УДАЛИТЕ ИХ */
-        .messages {
-            background: transparent; /* Убираем фон */
+                .messages {
+                        background: transparent; /* Убираем фон */
+
             /* Убираем псевдоэлементы ::before и ::after у .messages */
+
         }
 
 
-            /* Скрываем полосу прокрутки для Chrome, Safari и Opera */
-            .messages::-webkit-scrollbar {
-                display: none;
-            }
+
+        /* Скрываем полосу прокрутки для Chrome, Safari и Opera */
+                    .messages::-webkit-scrollbar {
+                            display: none;
+
+        }
+
 
 
         /* Скрываем полосу прокрутки для IE, Edge и Firefox */
-        .messages {
-            -ms-overflow-style: none; /* IE и Edge */
-            scrollbar-width: none; /* Firefox */
+                .messages {
+                        -ms-overflow-style: none; /* IE и Edge */
+                        scrollbar-width: none; /* Firefox */
+
         }
+
 
 
         /* PIP drag/resize */
-        #localPip {
+                #localPip {
+
             /* важно: будет двигаться по left/top внутри .video-grid (она position: relative) */
-            touch-action: none;
-            user-select: none;
-            cursor: grab;
+                        touch-action: none;
+                        user-select: none;
+                        cursor: grab;
+
         }
 
-            #localPip.dragging,
-            #localPip.resizing {
-                transition: none !important; /* чтобы не было "резины" при перетаскивании */
-            }
+                    #localPip.dragging,
+                    #localPip.resizing {
+                            transition: none !important; /* чтобы не было "резины" при перетаскивании */
 
-            #localPip.dragging {
-                cursor: grabbing;
-            }
+        }
 
+                    #localPip.dragging {
+                            cursor: grabbing;
 
-            /* чтобы drag работал даже если тапаешь по самому видео */
-            #localPip > video {
-                pointer-events: none;
-            }
+        }
 
 
-            /* Ручка ресайза */
-            #localPip .pip-resize-handle {
-                position: absolute;
-                right: 8px;
-                bottom: 8px;
-                width: 22px;
-                height: 22px;
-                border-radius: 7px;
-                cursor: nwse-resize;
-                background: rgba(255,255,255,0.16);
-                border: 1px solid rgba(255,255,255,0.22);
-                box-shadow: 0 6px 16px rgba(0,0,0,0.35);
-                backdrop-filter: blur(8px);
-            }
+
+        /* чтобы drag работал даже если тапаешь по самому видео */
+                    #localPip > video {
+                            pointer-events: none;
+
+        }
 
 
-                /* небольшой “блик”, чтобы выглядело как UI-элемент */
-                #localPip .pip-resize-handle::after {
-                    content: "";
-                    position: absolute;
-                    inset: 6px;
-                    border-right: 2px solid rgba(255,255,255,0.55);
-                    border-bottom: 2px solid rgba(255,255,255,0.55);
-                    border-radius: 2px;
-                    transform: rotate(0deg);
-                }
+
+        /* Ручка ресайза */
+                    #localPip .pip-resize-handle {
+                            position: absolute;
+                            right: 8px;
+                            bottom: 8px;
+                            width: 22px;
+                            height: 22px;
+                            border-radius: 7px;
+                            cursor: nwse-resize;
+                            background: rgba(255,255,255,0.16);
+                            border: 1px solid rgba(255,255,255,0.22);
+                            box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+                            backdrop-filter: blur(8px);
+
+        }
+
+
+
+        /* небольшой “блик”, чтобы выглядело как UI-элемент */
+                        #localPip .pip-resize-handle::after {
+                                content: "";
+                                position: absolute;
+                                inset: 6px;
+                                border-right: 2px solid rgba(255,255,255,0.55);
+                                border-bottom: 2px solid rgba(255,255,255,0.55);
+                                border-radius: 2px;
+                                transform: rotate(0deg);
+
+        }
+
 
 
         /* Принудительное скрытие кнопок */
-        .control-item-hidden {
-            display: none !important;
+                .control-item-hidden {
+                        display: none !important;
+
         }
+
 
 
         /* Стили для картинок в чате */
-        .chat-media-img {
-            max-width: 240px; /* Ограничиваем ширину */
-            max-height: 300px; /* Ограничиваем высоту */
-            border-radius: 12px;
-            cursor: pointer;
-            display: block;
-            margin-bottom: 2px;
-            object-fit: cover;
-            background: #222; /* Фон пока грузится */
+                .chat-media-img {
+                        max-width: 240px; /* Ограничиваем ширину */
+                        max-height: 300px; /* Ограничиваем высоту */
+                        border-radius: 12px;
+                        cursor: pointer;
+                        display: block;
+                        margin-bottom: 2px;
+                        object-fit: cover;
+                        background: #222; /* Фон пока грузится */
+
         }
+
 
 
         /* Стили для файлов */
-        .chat-file-card {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.08); /* Полупрозрачная подложка */
-            border-radius: 10px;
-            text-decoration: none;
-            max-width: 260px;
-            transition: 0.2s;
-            border: 1px solid rgba(255,255,255,0.1);
+                .chat-file-card {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 10px;
+                        background: rgba(255, 255, 255, 0.08); /* Полупрозрачная подложка */
+                        border-radius: 10px;
+                        text-decoration: none;
+                        max-width: 260px;
+                        transition: 0.2s;
+                        border: 1px solid rgba(255,255,255,0.1);
+
         }
 
-            .chat-file-card:hover {
-                background: rgba(255, 255, 255, 0.12);
-            }
+                    .chat-file-card:hover {
+                            background: rgba(255, 255, 255, 0.12);
 
-        .file-icon {
-            font-size: 24px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
         }
 
-        .file-info {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+                .file-icon {
+                        font-size: 24px;
+                        width: 40px;
+                        height: 40px;
+                        background: rgba(255, 255, 255, 0.1);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+
         }
 
-        .file-name {
-            color: white;
-            font-size: 14px;
-            font-weight: 600;
+                .file-info {
+                        display: flex;
+                        flex-direction: column;
+                        overflow: hidden;
+
         }
 
-        .file-action {
-            color: #8faebf;
-            font-size: 11px;
-            margin-top: 2px;
+                .file-name {
+                        color: white;
+                        font-size: 14px;
+                        font-weight: 600;
+
         }
+
+                .file-action {
+                        color: #8faebf;
+                        font-size: 11px;
+                        margin-top: 2px;
+
+        }
+
 
 
         /* Исправление для галочек поверх картинки (опционально) */
-        .msg-meta {
-            display: inline-block;
-            vertical-align: bottom;
-            margin-left: 5px;
+                .msg-meta {
+                        display: inline-block;
+                        vertical-align: bottom;
+                        margin-left: 5px;
+
         }
+
 
 
         /* --- СТИЛИ ДЛЯ КАРТИНОК В ЧАТЕ --- */
-        .chat-media-img {
+                .chat-media-img {
+
             /* Делаем их крупнее */
-            width: 100%;
-            max-width: 320px; /* Было 240, стало шире */
-            height: auto; /* Авто-высота, чтобы не искажалось */
-            max-height: 400px;
-            border-radius: 12px;
-            cursor: zoom-in; /* Курсор лупы */
-            display: block;
-            object-fit: cover;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Тень для красоты */
-            transition: transform 0.2s;
+                        width: 100%;
+                        max-width: 320px; /* Было 240, стало шире */
+                        height: auto; /* Авто-высота, чтобы не искажалось */
+                        max-height: 400px;
+                        border-radius: 12px;
+                        cursor: zoom-in; /* Курсор лупы */
+                        display: block;
+                        object-fit: cover;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Тень для красоты */
+                        transition: transform 0.2s;
+
         }
 
-            .chat-media-img:active {
-                transform: scale(0.98); /* Эффект нажатия */
-            }
+                    .chat-media-img:active {
+                            transform: scale(0.98); /* Эффект нажатия */
 
-        .media-container {
-            overflow: hidden;
-            border-radius: 12px;
-            background: transparent; /* Убираем черный фон */
-            display: inline-block;
         }
+
+                .media-container {
+                        overflow: hidden;
+                        border-radius: 12px;
+                        background: transparent; /* Убираем черный фон */
+                        display: inline-block;
+
+        }
+
 
 
         /* --- СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА (LIGHTBOX) --- */
-        .image-viewer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9); /* Темный фон */
-            z-index: 9999; /* Поверх всего */
-            display: none; /* Скрыто по умолчанию */
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s;
-            backdrop-filter: blur(5px); /* Размытие фона */
+                .image-viewer {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.9); /* Темный фон */
+                        z-index: 9999; /* Поверх всего */
+                        display: none; /* Скрыто по умолчанию */
+                        justify-content: center;
+                        align-items: center;
+                        opacity: 0;
+                        transition: opacity 0.3s;
+                        backdrop-filter: blur(5px); /* Размытие фона */
+
         }
 
-            .image-viewer.active {
-                display: flex;
-                opacity: 1;
-            }
+                    .image-viewer.active {
+                            display: flex;
+                            opacity: 1;
 
-            .image-viewer img {
-                max-width: 95%;
-                max-height: 95%;
-                border-radius: 8px;
-                box-shadow: 0 0 20px rgba(0,0,0,0.5);
-                transform: scale(0.9);
-                transition: transform 0.3s;
-            }
-
-            .image-viewer.active img {
-                transform: scale(1);
-            }
-
-        .close-viewer-btn {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 10000;
         }
+
+                    .image-viewer img {
+                            max-width: 95%;
+                            max-height: 95%;
+                            border-radius: 8px;
+                            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+                            transform: scale(0.9);
+                            transition: transform 0.3s;
+
+        }
+
+                    .image-viewer.active img {
+                            transform: scale(1);
+
+        }
+
+                .close-viewer-btn {
+                        position: absolute;
+                        top: 20px;
+                        right: 30px;
+                        color: white;
+                        font-size: 40px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        z-index: 10000;
+
+        }
+
 
 
         /* Крутилка загрузки */
-        .upload-spinner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-            z-index: 10;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                .upload-spinner {
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 40px;
+                        height: 40px;
+                        border: 4px solid rgba(255, 255, 255, 0.3);
+                        border-radius: 50%;
+                        border-top-color: white;
+                        animation: spin 1s linear infinite;
+                        z-index: 10;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+
         }
 
-        @keyframes spin {
-            to {
-                transform: translate(-50%, -50%) rotate(360deg);
-            }
+                @keyframes spin {
+                        to
+
+        {
+                            transform: translate(-50%, -50%) rotate(360deg);
+
         }
+
+
+        }
+
 
 
         /* --- Стили профиля как в Telegram --- */
 
         /* Фон шапки (зеленый паттерн) */
-        .tg-header-bg {
-            background: #5a9e57;
+                .tg-header-bg {
+                        background: #5a9e57;
+
             /* ИЗМЕНЕНО: учитываем безопасную зону сверху (челку) */
-            padding: calc(10px + env(safe-area-inset-top)) 15px 20px 15px;
-            color: white;
-            position: relative;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                        padding: calc(10px + env(safe-area-inset-top)) 15px 20px 15px;
+                        color: white;
+                        position: relative;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+
         }
 
-        .tg-header-top {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
+                .tg-header-top {
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                        margin-bottom: 20px;
+
         }
 
-        .tg-icon-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 5px;
+                .tg-icon-btn {
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 20px;
+                        cursor: pointer;
+                        padding: 5px;
+
         }
 
-        .tg-profile-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
+                .tg-profile-info {
+                        display: flex;
+                        align-items: center;
+                        gap: 20px;
+
         }
+
 
 
         /* Аватарка */
-        .tg-avatar-large {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: #333;
-            position: relative;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            color: #aaa;
-            border: 2px solid white; /* Белая обводка как в дизайне */
+                .tg-avatar-large {
+                        width: 70px;
+                        height: 70px;
+                        border-radius: 50%;
+                        background: #333;
+                        position: relative;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 30px;
+                        color: #aaa;
+                        border: 2px solid white; /* Белая обводка как в дизайне */
+
         }
 
-            .tg-avatar-large img {
-                width: 100%;
-                height: 100%;
-                border-radius: 50%;
-                object-fit: cover;
-            }
+                    .tg-avatar-large img {
+                            width: 100%;
+                            height: 100%;
+                            border-radius: 50%;
+                            object-fit: cover;
 
-        .tg-avatar-edit-icon {
-            position: absolute;
-            bottom: -2px;
-            right: -2px;
-            background: #4a8e4a;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #5a9e57;
         }
+
+                .tg-avatar-edit-icon {
+                        position: absolute;
+                        bottom: -2px;
+                        right: -2px;
+                        background: #4a8e4a;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        font-size: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 2px solid #5a9e57;
+
+        }
+
 
 
         /* Имя и статус */
-        .tg-profile-name-block {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
+                .tg-profile-name-block {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+
         }
 
-        .tg-name-input {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 20px;
-            font-weight: 600;
-            width: 100%;
-            outline: none;
-            padding: 0;
+                .tg-name-input {
+                        background: transparent;
+                        border: none;
+                        color: white;
+                        font-size: 20px;
+                        font-weight: 600;
+                        width: 100%;
+                        outline: none;
+                        padding: 0;
+
         }
 
-            .tg-name-input::placeholder {
-                color: rgba(255,255,255,0.6);
-            }
+                    .tg-name-input::placeholder {
+                            color: rgba(255,255,255,0.6);
 
-        .tg-profile-status {
-            color: rgba(255,255,255,0.8);
-            font-size: 13px;
-            margin-top: 4px;
         }
+
+                .tg-profile-status {
+                        color: rgba(255,255,255,0.8);
+                        font-size: 13px;
+                        margin-top: 4px;
+
+        }
+
 
 
         /* Список настроек */
-        .tg-settings-list {
-            background: #17212b; /* Темный фон списка */
-            padding-top: 10px;
+                .tg-settings-list {
+                        background: #17212b; /* Темный фон списка */
+                        padding-top: 10px;
+
         }
 
-        .tg-section-title {
-            color: #7394ae; /* Голубой цвет заголовков */
-            font-size: 13px;
-            font-weight: bold;
-            padding: 15px 20px 5px 20px;
-            text-transform: uppercase;
+                .tg-section-title {
+                        color: #7394ae; /* Голубой цвет заголовков */
+                        font-size: 13px;
+                        font-weight: bold;
+                        padding: 15px 20px 5px 20px;
+                        text-transform: uppercase;
+
         }
 
-        .tg-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 20px;
-            cursor: pointer;
-            transition: 0.2s;
+                .tg-item {
+                        display: flex;
+                        align-items: center;
+                        padding: 10px 20px;
+                        cursor: pointer;
+                        transition: 0.2s;
+
         }
 
-            .tg-item:hover {
-                background: #202b36;
-            }
+                    .tg-item:hover {
+                            background: #202b36;
 
-        .tg-item-icon {
-            font-size: 22px;
-            width: 40px;
-            text-align: center;
-            margin-right: 15px;
-            color: #8faebf;
         }
 
-        .tg-item-content {
-            flex: 1;
-            border-bottom: 1px solid #0e1621; /* Разделитель */
-            padding-bottom: 10px;
-            padding-top: 5px;
+                .tg-item-icon {
+                        font-size: 22px;
+                        width: 40px;
+                        text-align: center;
+                        margin-right: 15px;
+                        color: #8faebf;
+
         }
 
-        .tg-item:last-child .tg-item-content {
-            border-bottom: none;
+                .tg-item-content {
+                        flex: 1;
+                        border-bottom: 1px solid #0e1621; /* Разделитель */
+                        padding-bottom: 10px;
+                        padding-top: 5px;
+
         }
 
-        .tg-input-clean {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 16px;
-            width: 100%;
-            outline: none;
-            padding: 0;
-            margin-bottom: 3px;
+                .tg-item:last-child .tg-item-content {
+                        border-bottom: none;
+
         }
 
-        .tg-item-label {
-            color: #7f91a4;
-            font-size: 12px;
+                .tg-input-clean {
+                        background: transparent;
+                        border: none;
+                        color: white;
+                        font-size: 16px;
+                        width: 100%;
+                        outline: none;
+                        padding: 0;
+                        margin-bottom: 3px;
+
         }
 
-        .tg-item-value {
-            color: white;
-            font-size: 16px;
-            margin-bottom: 3px;
+                .tg-item-label {
+                        color: #7f91a4;
+                        font-size: 12px;
+
         }
 
-        .tg-divider {
-            height: 10px;
-            background: #0e1621; /* Темная полоса между секциями */
-            margin: 5px 0;
+                .tg-item-value {
+                        color: white;
+                        font-size: 16px;
+                        margin-bottom: 3px;
+
         }
+
+                .tg-divider {
+                        height: 10px;
+                        background: #0e1621; /* Темная полоса между секциями */
+                        margin: 5px 0;
+
+        }
+
 
         /* Стили для окна редактирования */
-        .full-screen-sheet {
-            top: 0;
-            height: 100% !important;
-            background: #181818 !important;
-            display: flex;
-            flex-direction: column;
-            z-index: 6000;
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                .full-screen-sheet {
+                        top: 0;
+                        height: 100% !important;
+                        background: #181818 !important;
+                        display: flex;
+                        flex-direction: column;
+                        z-index: 6000;
+                        transform: translateY(100%);
+                        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
             /* ДОБАВЛЕНО: сбрасываем стили родительского action-sheet */
-            padding: 0 !important;
-            border-radius: 0 !important;
+                        padding: 0 !important;
+                        border-radius: 0 !important;
+
         }
 
-            .full-screen-sheet.open {
-                transform: translateY(0);
-            }
+                    .full-screen-sheet.open {
+                            transform: translateY(0);
 
-        .edit-content-scroll {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0;
         }
+
+                .edit-content-scroll {
+                        flex: 1;
+                        overflow-y: auto;
+                        padding: 0;
+
+        }
+
 
         /* Аватар секция */
-        .edit-avatar-section {
-            display: flex;
-            justify-content: center;
-            padding: 30px 0;
-            background: #181818;
+                .edit-avatar-section {
+                        display: flex;
+                        justify-content: center;
+                        padding: 30px 0;
+                        background: #181818;
+
         }
 
-        .edit-avatar-wrapper {
-            width: 100px;
-            height: 100px;
-            position: relative;
-            cursor: pointer;
+                .edit-avatar-wrapper {
+                        width: 100px;
+                        height: 100px;
+                        position: relative;
+                        cursor: pointer;
+
         }
+
 
         /* --- Переключатель (Toggle Switch) --- */
-        .tg-switch {
-            position: relative;
-            display: inline-block;
-            width: 42px;
-            height: 24px;
+                .tg-switch {
+                        position: relative;
+                        display: inline-block;
+                        width: 42px;
+                        height: 24px;
+
         }
 
-            .tg-switch input {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
+                    .tg-switch input {
+                            opacity: 0;
+                            width: 0;
+                            height: 0;
 
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #555; /* Серый выкл */
-            transition: .4s;
-            border-radius: 24px;
         }
 
-            .slider:before {
-                position: absolute;
-                content: "";
-                height: 18px;
-                width: 18px;
-                left: 3px;
-                bottom: 3px;
-                background-color: white;
-                transition: .4s;
-                border-radius: 50%;
-            }
+                .slider {
+                        position: absolute;
+                        cursor: pointer;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background-color: #555; /* Серый выкл */
+                        transition: .4s;
+                        border-radius: 24px;
 
-        input:checked + .slider {
-            background-color: #8774e1; /* Фиолетовый вкл */
         }
 
-            input:checked + .slider:before {
-                transform: translateX(18px);
-            }
+                    .slider:before {
+                            position: absolute;
+                            content: "";
+                            height: 18px;
+                            width: 18px;
+                            left: 3px;
+                            bottom: 3px;
+                            background-color: white;
+                            transition: .4s;
+                            border-radius: 50%;
 
-        .edit-avatar-wrapper img, .avatar-placeholder-large {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
         }
 
-        .avatar-placeholder-large {
-            background: linear-gradient(135deg, #6a11cb, #2575fc);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            font-weight: bold;
-            color: white;
+                input:checked + .slider {
+                        background-color: #8774e1; /* Фиолетовый вкл */
+
         }
 
-        .camera-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.4);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(2px);
+                    input:checked + .slider:before {
+                            transform: translateX(18px);
+
         }
+
+                .edit-avatar-wrapper img, .avatar-placeholder-large {
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 50%;
+                        object-fit: cover;
+
+        }
+
+                .avatar-placeholder-large {
+                        background: linear-gradient(135deg, #6a11cb, #2575fc);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 40px;
+                        font-weight: bold;
+                        color: white;
+
+        }
+
+                .camera-overlay {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0,0,0,0.4);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        backdrop-filter: blur(2px);
+
+        }
+
 
         /* Поля ввода (Material Design стиль) */
-        .edit-form-group {
-            padding: 10px 20px;
+                .edit-form-group {
+                        padding: 10px 20px;
+
         }
 
-        .tg-input-field {
-            position: relative;
-            margin-bottom: 24px;
-            background: transparent;
-            border: 1px solid #444; /* Рамка */
-            border-radius: 12px;
-            padding: 0;
+                .tg-input-field {
+                        position: relative;
+                        margin-bottom: 24px;
+                        background: transparent;
+                        border: 1px solid #444; /* Рамка */
+                        border-radius: 12px;
+                        padding: 0;
+
         }
 
-            .tg-input-field input, .tg-input-field textarea {
-                width: 100%;
-                background: transparent;
-                border: none;
-                color: white;
-                font-size: 16px;
-                padding: 14px 12px;
-                outline: none;
-                border-radius: 12px;
-            }
+                    .tg-input-field input, .tg-input-field textarea {
+                            width: 100%;
+                            background: transparent;
+                            border: none;
+                            color: white;
+                            font-size: 16px;
+                            padding: 14px 12px;
+                            outline: none;
+                            border-radius: 12px;
 
-            .tg-input-field textarea {
-                resize: none;
-                min-height: 50px;
-            }
-
-            /* Плавающий лейбл */
-            .tg-input-field label {
-                position: absolute;
-                left: 12px;
-                top: 14px;
-                color: #888;
-                font-size: 16px;
-                pointer-events: none;
-                transition: 0.2s ease all;
-                background: #181818;
-                padding: 0 4px;
-            }
-            /* Состояние фокуса или заполненности */
-            .tg-input-field input:focus ~ label,
-            .tg-input-field input:not(:placeholder-shown) ~ label,
-            .tg-input-field textarea:focus ~ label,
-            .tg-input-field textarea:not(:placeholder-shown) ~ label {
-                top: -10px;
-                font-size: 12px;
-                color: #8774e1;
-            }
-
-            .tg-input-field input:focus, .tg-input-field textarea:focus {
-                border-color: #8774e1; /* Цвет акцента при фокусе */
-            }
-
-        .char-counter {
-            position: absolute;
-            bottom: -20px;
-            right: 5px;
-            font-size: 12px;
-            color: #888;
         }
 
-        .field-hint {
-            font-size: 13px;
-            color: #888;
-            margin-top: -15px;
-            margin-bottom: 15px;
-            line-height: 1.4;
+                    .tg-input-field textarea {
+                            resize: none;
+                            min-height: 50px;
+
         }
 
-        .edit-separator {
-            height: 12px;
-            background: #0f0f0f;
-            border-top: 1px solid #222;
-            border-bottom: 1px solid #222;
-            margin-bottom: 15px;
+
+        /* Плавающий лейбл */
+                    .tg-input-field label {
+                            position: absolute;
+                            left: 12px;
+                            top: 14px;
+                            color: #888;
+                            font-size: 16px;
+                            pointer-events: none;
+                            transition: 0.2s ease all;
+                            background: #181818;
+                            padding: 0 4px;
+
         }
 
-        .section-header {
-            color: #8774e1;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 15px;
-            text-transform: uppercase;
+
+        /* Состояние фокуса или заполненности */
+                    .tg-input-field input:focus ~ label,
+                    .tg-input-field input:not(:placeholder-shown) ~ label,
+                    .tg-input-field textarea:focus ~ label,
+                    .tg-input-field textarea:not(:placeholder-shown) ~ label {
+                            top: -10px;
+                            font-size: 12px;
+                            color: #8774e1;
+
         }
+
+                    .tg-input-field input:focus, .tg-input-field textarea:focus {
+                            border-color: #8774e1; /* Цвет акцента при фокусе */
+
+        }
+
+                .char-counter {
+                        position: absolute;
+                        bottom: -20px;
+                        right: 5px;
+                        font-size: 12px;
+                        color: #888;
+
+        }
+
+                .field-hint {
+                        font-size: 13px;
+                        color: #888;
+                        margin-top: -15px;
+                        margin-bottom: 15px;
+                        line-height: 1.4;
+
+        }
+
+                .edit-separator {
+                        height: 12px;
+                        background: #0f0f0f;
+                        border-top: 1px solid #222;
+                        border-bottom: 1px solid #222;
+                        margin-bottom: 15px;
+
+        }
+
+                .section-header {
+                        color: #8774e1;
+                        font-size: 14px;
+                        font-weight: 500;
+                        margin-bottom: 15px;
+                        text-transform: uppercase;
+
+        }
+
 
 
         /* Затемнение картинки во время загрузки */
-        .loading-overlay img {
-            filter: brightness(0.5) blur(2px);
-            transition: 0.3s;
+                .loading-overlay img {
+                        filter: brightness(0.5) blur(2px);
+                        transition: 0.3s;
+
         }
+
 
 
         /* Эффект кликабельности */
-        .click-to-copy {
-            cursor: pointer;
-            position: relative;
+                .click-to-copy {
+                        cursor: pointer;
+                        position: relative;
+
         }
 
-            .click-to-copy:active {
-                background-color: #202b36;
-            }
+                    .click-to-copy:active {
+                            background-color: #202b36;
+
+        }
+
 
 
         /* Затемнение фона */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7); /* Темный фон */
-            z-index: 20000; /* Поверх всего */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            animation: fadeIn 0.2s forwards;
+                .modal-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.7); /* Темный фон */
+                        z-index: 20000; /* Поверх всего */
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        opacity: 0;
+                        animation: fadeIn 0.2s forwards;
+
         }
 
-        @keyframes fadeIn {
-            to {
-                opacity: 1;
-            }
+                @keyframes fadeIn {
+                        to
+
+        {
+                            opacity: 1;
+
         }
+
+
+        }
+
 
         /* Само окно */
-        .delete-modal {
-            background: #252525;
-            width: 90%;
-            max-width: 320px;
-            border-radius: 16px;
-            padding: 22px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            transform: scale(0.9);
-            animation: scaleUp 0.2s forwards;
+                .delete-modal {
+                        background: #252525;
+                        width: 90%;
+                        max-width: 320px;
+                        border-radius: 16px;
+                        padding: 22px;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                        display: flex;
+                        flex-direction: column;
+                        gap: 15px;
+                        transform: scale(0.9);
+                        animation: scaleUp 0.2s forwards;
+
         }
 
-        @keyframes scaleUp {
-            to {
-                transform: scale(1);
-            }
+                @keyframes scaleUp {
+                        to
+
+        {
+                            transform: scale(1);
+
         }
 
-        .delete-modal h3 {
-            margin: 0;
-            font-size: 18px;
-            color: white;
-            font-weight: 600;
+
         }
 
-        .delete-modal p {
-            margin: 0;
-            font-size: 15px;
-            color: #ccc;
-            line-height: 1.4;
+                .delete-modal h3 {
+                        margin: 0;
+                        font-size: 18px;
+                        color: white;
+                        font-weight: 600;
+
         }
+
+                .delete-modal p {
+                        margin: 0;
+                        font-size: 15px;
+                        color: #ccc;
+                        line-height: 1.4;
+
+        }
+
 
         /* Чекбокс */
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
+                .checkbox-container {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        cursor: pointer;
+
         }
 
-            .checkbox-container input[type="checkbox"] {
-                appearance: none;
-                width: 20px;
-                height: 20px;
-                border: 2px solid #888;
-                border-radius: 6px;
-                background: transparent;
-                cursor: pointer;
-                position: relative;
-                transition: 0.2s;
-            }
+                    .checkbox-container input[type="checkbox"] {
+                            appearance: none;
+                            width: 20px;
+                            height: 20px;
+                            border: 2px solid #888;
+                            border-radius: 6px;
+                            background: transparent;
+                            cursor: pointer;
+                            position: relative;
+                            transition: 0.2s;
 
-                .checkbox-container input[type="checkbox"]:checked {
-                    background: #8774e1; /* Фиолетовый цвет как в TG */
-                    border-color: #8774e1;
-                }
+        }
 
-                    .checkbox-container input[type="checkbox"]:checked::after {
-                        content: '✓';
-                        position: absolute;
-                        color: white;
-                        font-size: 14px;
-                        left: 3px;
-                        top: -1px;
-                        font-weight: bold;
-                    }
+                        .checkbox-container input[type="checkbox"]:checked {
+                                background: #8774e1; /* Фиолетовый цвет как в TG */
+                                border-color: #8774e1;
 
-            .checkbox-container label {
-                font-size: 15px;
-                color: white;
-                cursor: pointer;
-                user-select: none;
-            }
+        }
+
+                            .checkbox-container input[type="checkbox"]:checked::after {
+                                    content: '✓';
+                                    position: absolute;
+                                    color: white;
+                                    font-size: 14px;
+                                    left: 3px;
+                                    top: -1px;
+                                    font-weight: bold;
+
+        }
+
+                    .checkbox-container label {
+                            font-size: 15px;
+                            color: white;
+                            cursor: pointer;
+                            user-select: none;
+
+        }
+
 
         /* Кнопки */
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 15px;
-            margin-top: 10px;
+                .modal-buttons {
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 15px;
+                        margin-top: 10px;
+
         }
 
-            .modal-buttons button {
-                background: none;
-                border: none;
-                font-size: 15px;
-                font-weight: bold;
-                cursor: pointer;
-                padding: 5px 10px;
-                border-radius: 6px;
-                transition: 0.2s;
-            }
+                    .modal-buttons button {
+                            background: none;
+                            border: none;
+                            font-size: 15px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 6px;
+                            transition: 0.2s;
 
-        .btn-cancel {
-            color: #8774e1; /* Фиолетовый */
         }
 
-            .btn-cancel:hover {
-                background: rgba(135, 116, 225, 0.1);
-            }
+                .btn-cancel {
+                        color: #8774e1; /* Фиолетовый */
 
-        .btn-confirm {
-            color: #ff595a; /* Красный */
         }
 
-            .btn-confirm:hover {
-                background: rgba(255, 89, 90, 0.1);
-            }
+                    .btn-cancel:hover {
+                            background: rgba(135, 116, 225, 0.1);
+
+        }
+
+                .btn-confirm {
+                        color: #ff595a; /* Красный */
+
+        }
+
+                    .btn-confirm:hover {
+                            background: rgba(255, 89, 90, 0.1);
+
+        }
+
 
         /* Контекстное меню (скрыто по умолчанию) */
-        .context-menu {
-            position: fixed;
-            z-index: 10000;
-            width: 220px;
-            background: transparent;
-            display: none; /* Скрыто */
-            flex-direction: column;
-            gap: 8px;
-            opacity: 0;
-            transform: scale(0.95);
-            transition: opacity 0.2s, transform 0.2s;
+                .context-menu {
+                        position: fixed;
+                        z-index: 10000;
+                        width: 220px;
+                        background: transparent;
+                        display: none; /* Скрыто */
+                        flex-direction: column;
+                        gap: 8px;
+                        opacity: 0;
+                        transform: scale(0.95);
+                        transition: opacity 0.2s, transform 0.2s;
+
         }
 
-            .context-menu.active {
-                display: flex;
-                opacity: 1;
-                transform: scale(1);
-            }
+                    .context-menu.active {
+                            display: flex;
+                            opacity: 1;
+                            transform: scale(1);
+
+        }
+
 
         /* Бар реакций сверху */
-        .reactions-bar {
-            background: #252525;
-            padding: 8px;
-            border-radius: 14px;
-            display: flex;
-            justify-content: space-between;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                .reactions-bar {
+                        background: #252525;
+                        padding: 8px;
+                        border-radius: 14px;
+                        display: flex;
+                        justify-content: space-between;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+
         }
 
-            .reactions-bar span {
-                font-size: 20px;
-                cursor: pointer;
-                transition: transform 0.2s;
-            }
+                    .reactions-bar span {
+                            font-size: 20px;
+                            cursor: pointer;
+                            transition: transform 0.2s;
 
-                .reactions-bar span:hover {
-                    transform: scale(1.2);
-                }
+        }
+
+                        .reactions-bar span:hover {
+                                transform: scale(1.2);
+
+        }
+
 
         /* Основной список действий */
-        .context-list {
-            background: #252525; /* Цвет фона меню как в TG */
-            border-radius: 14px;
-            padding: 6px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
+                .context-list {
+                        background: #252525; /* Цвет фона меню как в TG */
+                        border-radius: 14px;
+                        padding: 6px;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                        display: flex;
+                        flex-direction: column;
+
         }
 
-        .context-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: background 0.1s;
+                .context-item {
+                        display: flex;
+                        align-items: center;
+                        padding: 8px 12px;
+                        color: white;
+                        font-size: 14px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        border-radius: 8px;
+                        transition: background 0.1s;
+
         }
 
-            .context-item:hover {
-                background: #333; /* Подсветка при наведении */
-            }
+                    .context-item:hover {
+                            background: #333; /* Подсветка при наведении */
 
-        .context-icon {
-            margin-right: 12px;
-            font-size: 16px;
-            width: 20px;
-            text-align: center;
         }
+
+                .context-icon {
+                        margin-right: 12px;
+                        font-size: 16px;
+                        width: 20px;
+                        text-align: center;
+
+        }
+
 
         /* Красная кнопка удаления */
-        .context-item.delete {
-            color: #ff595a;
+                .context-item.delete {
+                        color: #ff595a;
+
         }
 
-            .context-item.delete .context-icon {
-                filter: grayscale(0) !important; /* Чтобы иконка не была серой */
-            }
+                    .context-item.delete .context-icon {
+                            filter: grayscale(0) !important; /* Чтобы иконка не была серой */
 
-        .context-divider {
-            height: 1px;
-            background: #383838;
-            margin: 4px 10px;
         }
+
+                .context-divider {
+                        height: 1px;
+                        background: #383838;
+                        margin: 4px 10px;
+
+        }
+
 
         /* Всплывающее уведомление (Toast) */
-        #toast-notification {
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 7000;
-            pointer-events: none;
+                #toast-notification {
+                        position: fixed;
+                        bottom: 80px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(0, 0, 0, 0.7);
+                        color: white;
+                        padding: 10px 20px;
+                        border-radius: 20px;
+                        font-size: 14px;
+                        opacity: 0;
+                        transition: opacity 0.3s;
+                        z-index: 7000;
+                        pointer-events: none;
+
         }
 
-            #toast-notification.show {
-                opacity: 1;
-            }
+                    #toast-notification.show {
+                            opacity: 1;
 
-        .tg-bio-input {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 16px;
-            width: 100%;
-            outline: none;
-            resize: none;
-            font-family: inherit;
-            padding: 0;
-            margin-bottom: 3px;
-            min-height: 24px;
         }
 
-            .tg-bio-input::placeholder {
-                color: rgba(255, 255, 255, 0.4);
-            }
+                .tg-bio-input {
+                        background: transparent;
+                        border: none;
+                        color: white;
+                        font-size: 16px;
+                        width: 100%;
+                        outline: none;
+                        resize: none;
+                        font-family: inherit;
+                        padding: 0;
+                        margin-bottom: 3px;
+                        min-height: 24px;
+
+        }
+
+                    .tg-bio-input::placeholder {
+                            color: rgba(255, 255, 255, 0.4);
+
+        }
+
 
 
         /* Стили для элементов меню (как в Telegram) */
-        .action-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            cursor: pointer;
-            background: #252525;
-            transition: background 0.2s;
+                .action-item {
+                        display: flex;
+                        align-items: center;
+                        padding: 12px 16px;
+                        cursor: pointer;
+                        background: #252525;
+                        transition: background 0.2s;
+
         }
 
-            .action-item:hover {
-                background: #2f2f2f;
-            }
+                    .action-item:hover {
+                            background: #2f2f2f;
 
-        .action-icon {
-            font-size: 20px;
-            margin-right: 15px;
-            width: 24px;
-            text-align: center;
         }
 
-        .action-text {
-            font-size: 16px;
-            color: white;
+                .action-icon {
+                        font-size: 20px;
+                        margin-right: 15px;
+                        width: 24px;
+                        text-align: center;
+
         }
+
+                .action-text {
+                        font-size: 16px;
+                        color: white;
+
+        }
+
 
         /* Панель ответа над вводом */
-        .reply-bar {
-            width: 100%;
-            background: #1f1f1f;
-            border-top: 1px solid #333;
-            padding: 8px 15px;
-            display: flex;
-            align-items: center;
-            border-left: 3px solid #736AF0; /* Фиолетовая полоска слева */
+                .reply-bar {
+                        width: 100%;
+                        background: #1f1f1f;
+                        border-top: 1px solid #333;
+                        padding: 8px 15px;
+                        display: flex;
+                        align-items: center;
+                        border-left: 3px solid #736AF0; /* Фиолетовая полоска слева */
+
         }
 
-            .reply-bar.editing {
-                border-left: 3px solid #007bff; /* Синяя для редактирования */
-            }
+                    .reply-bar.editing {
+                            border-left: 3px solid #007bff; /* Синяя для редактирования */
 
-        .reply-content {
-            flex: 1;
-            margin-left: 10px;
-            overflow: hidden;
         }
 
-        .reply-title {
-            color: #736AF0;
-            font-size: 13px;
-            font-weight: bold;
+                .reply-content {
+                        flex: 1;
+                        margin-left: 10px;
+                        overflow: hidden;
+
         }
 
-        .reply-text {
-            color: #ccc;
-            font-size: 13px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+                .reply-title {
+                        color: #736AF0;
+                        font-size: 13px;
+                        font-weight: bold;
+
         }
 
-        .reply-close {
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 5px;
+                .reply-text {
+                        color: #ccc;
+                        font-size: 13px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+
         }
+
+                .reply-close {
+                        background: none;
+                        border: none;
+                        color: #888;
+                        font-size: 18px;
+                        cursor: pointer;
+                        padding: 5px;
+
+        }
+
 
         /* Стили для цитаты внутри сообщения */
-        .msg-reply-quote {
-            border-left: 2px solid white;
-            padding-left: 8px;
-            margin-bottom: 4px;
-            cursor: pointer;
+                .msg-reply-quote {
+                        border-left: 2px solid white;
+                        padding-left: 8px;
+                        margin-bottom: 4px;
+                        cursor: pointer;
+
         }
 
-        .msg-reply-name {
-            font-size: 11px;
-            color: rgba(255,255,255,0.7);
-            font-weight: bold;
+                .msg-reply-name {
+                        font-size: 11px;
+                        color: rgba(255,255,255,0.7);
+                        font-weight: bold;
+
         }
 
-        .msg-reply-text {
-            font-size: 12px;
-            color: white;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+                .msg-reply-text {
+                        font-size: 12px;
+                        color: white;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+
         }
 
-        .birth-modal {
-            background: #252525;
-            width: 92%;
-            max-width: 360px;
-            border-radius: 16px;
-            padding: 18px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
+                .birth-modal {
+                        background: #252525;
+                        width: 92%;
+                        max-width: 360px;
+                        border-radius: 16px;
+                        padding: 18px;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                        display: flex;
+                        flex-direction: column;
+                        gap: 14px;
+
         }
 
-        .birth-pickers {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
+                .birth-pickers {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 10px;
+
         }
 
-            .birth-pickers select {
-                width: 100%;
-                background: #1f1f1f;
-                border: 1px solid #444;
-                color: white;
-                padding: 12px 10px;
-                border-radius: 12px;
-                outline: none;
-            }
+                    .birth-pickers select {
+                            width: 100%;
+                            background: #1f1f1f;
+                            border: 1px solid #444;
+                            color: white;
+                            padding: 12px 10px;
+                            border-radius: 12px;
+                            outline: none;
+
+        }
+
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -2401,9 +2741,9 @@
 
             <div style="flex: 1; position: relative;">
                 <input type="text" id="searchInput" placeholder="Поиск..."
-                       style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
-                       onfocus="openSearchUI()"
-                       oninput="handleSearchInput(this)">
+                                   style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
+                                   onfocus="openSearchUI()"
+                                   oninput="handleSearchInput(this)">
 
                 <!-- Результаты поиска ВНУТРИ flex-контейнера -->
                 <div id="searchResults"></div>
@@ -2591,41 +2931,24 @@
 
 
 
-        let cachedIceServers = null;
+        // --- Ш�?Ф� ОВАН�?Е ТОКЕНА ТЕЛЕГ� АМА (Base64) ---
+        // Токен: 8387775107:AAGhXPcfytIcnh-_zD04HvlGXIJ_b-crPK4
 
-        // Функция загрузки настроек (безопасно через Google Script)
-        async function loadIceConfig() {
-            // 1. Если уже загружали — отдаем из памяти
-            if (cachedIceServers) return cachedIceServers;
 
-            // 2. Резервный сервер (бесплатный Google STUN), если скрипт недоступен
-            const fallback = {
-                iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }],
-                iceCandidatePoolSize: 10
-            };
-
-            try {
-                console.log("🔄 Загружаю ICE сервера...");
-                // Важно: action=getTurnCredentials и secret=ТВОЙ_КЛЮЧ
-                const url = `${GOOGLE_SCRIPT_URL}?action=getTurnCredentials&secret=${APP_SECRET_KEY}`;
-
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.status === "success" && data.iceServers) {
-                    cachedIceServers = {
-                        iceServers: data.iceServers,
-                        iceCandidatePoolSize: 10
-                    };
-                    console.log("✅ TURN-серверы успешно получены");
-                    return cachedIceServers;
-                }
-            } catch (e) {
-                console.warn("⚠️ Ошибка загрузки TURN, используем fallback:", e);
-            }
-
-            return fallback;
-        }
+        const iceServers = {
+            iceServers: [
+                { urls: "stun:stun.relay.metered.ca:80" },
+                { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+                { urls: "turn:global.relay.metered.ca:80", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turn:global.relay.metered.ca:80?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turn:global.relay.metered.ca:443", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turn:open-turn.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turn:open-turn.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turn:open-turn.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
+            ],
+            iceCandidatePoolSize: 10
+        };
         let currentUser = null;
         let currentFriendId = null;
         let currentCallId = null;
@@ -2691,7 +3014,7 @@
                 surnameEl.value = d.surname;
                 surnameEl.style.display = "block"; // Показываем, если есть фамилия
             } else {
-                surnameEl.style.display = "none";  // Скрываем, если пусто
+                surnameEl.style.display = "none";  // Скрываем, если пусто
             }
 
             resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">🔍 Поиск...</div>';
@@ -2863,13 +3186,13 @@
                 : `<div style="width:35px;height:35px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
             const displayNick = user.username ? `@${user.username}` : user.email;
             div.innerHTML = `
-                                                                                                                                    ${avatarSrc}
-                                                                                                                                    <div style="flex:1; overflow:hidden;">
-                                                                                                                                        <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
-                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                    </div>
-                                                                                                                                    <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
-                                                                                                                                `;
+                                                                                                                                        ${avatarSrc}
+                                                                                                                                        <div style="flex:1; overflow:hidden;">
+                                                                                                                                            <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
+                                                                                                                                            <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                        </div>
+                                                                                                                                        <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
+                                                                                                                                    `;
             div.onclick = () => {
                 document.getElementById('searchResults').style.display = 'none';
                 document.getElementById('searchInput').value = '';
@@ -3232,16 +3555,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                                                                                        ${avatar}
-                                                                                                                                                                                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                                                                                            ${avatar}
+                                                                                                                                                                                                                                                                                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                                                                                                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                                                                                                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                                                                                                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                                                                                                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                        `;
                         list.appendChild(div);
                     });
                 });
@@ -3486,19 +3809,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                ${avatarHtml}
-                                <div class="user-name">${fName}</div>
-                                <div class="last-msg-row">
-                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                </div>
-                                <div class="meta-column">
-                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                    <div class="meta-bottom-row">
-                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                    ${avatarHtml}
+                                    <div class="user-name">${fName}</div>
+                                    <div class="last-msg-row">
+                                        <span class="last-msg" id="last-${chatId}">...</span>
                                     </div>
-                                </div>
-                            `;
+                                    <div class="meta-column">
+                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                        <div class="meta-bottom-row">
+                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                        </div>
+                                    </div>
+                                `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -3568,9 +3891,9 @@
 
             // Установка нормального заголовка
             titleEl.innerHTML = `
-                    <div>${name}</div>
-                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                `;
+                        <div>${name}</div>
+                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                    `;
 
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
@@ -3707,11 +4030,11 @@
                         // Отображение цитаты (Ответа)
                         if (m.replyTo) {
                             contentHtml += `
-                                                                                                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                                                                                        <div class="msg-reply-name">${m.replyTo.name}</div>
-                                                                                                        <div class="msg-reply-text">${m.replyTo.text}</div>
-                                                                                                    </div>
-                                                                                                    `;
+                                                                                                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                                                                            <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                                                                            <div class="msg-reply-text">${m.replyTo.text}</div>
+                                                                                                        </div>
+                                                                                                        `;
                         }
 
                         const msgType = m.type || 'text';
@@ -3725,16 +4048,16 @@
                                 try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { }
                             }
                             contentHtml += `
-                                                                                                        <div class="media-container">
-                                                                                                            <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer" onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">
-                                                                                                        </div>`;
+                                                                                                            <div class="media-container">
+                                                                                                                <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer" onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">
+                                                                                                            </div>`;
                         }
                         else if (msgType === 'file') {
                             contentHtml += `
-                                                                                                        <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                                                                                            <div class="file-icon">📄</div>
-                                                                                                            <div class="file-info"><div class="file-name">Скачать файл</div><div class="file-action">Нажмите для загрузки</div></div>
-                                                                                                        </a>`;
+                                                                                                            <a href="${m.txt}" target="_blank" class="chat-file-card">
+                                                                                                                <div class="file-icon">📄</div>
+                                                                                                                <div class="file-info"><div class="file-name">Скачать файл</div><div class="file-action">Нажмите для загрузки</div></div>
+                                                                                                            </a>`;
                         }
                         else {
                             // Текст + ссылки + пометка (изм.)
@@ -3767,10 +4090,10 @@
                             }
 
                             let metaHtml = `
-                                                                                                        <span class="msg-meta" style="${metaStyle}">
-                                                                                                            <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
-                                                                                                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                                                                                        </span>`;
+                                                                                                            <span class="msg-meta" style="${metaStyle}">
+                                                                                                                <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
+                                                                                                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                                                                                            </span>`;
 
                             if (msgType === 'image') {
                                 contentHtml += metaHtml + `</div>`;
@@ -4051,45 +4374,22 @@
             tick();
             callTimerInt = setInterval(tick, 1000);
         }
-        // Добавляем аргумент 'config'
-        // --- ИСПРАВЛЕНИЕ: Функция теперь принимает конфиг как аргумент ---
-        function setupPeerConnection(config) {
+        function setupPeerConnection() {
             candidateQueue = [];
-
-            // Если конфиг не передали, используем бесплатный STUN
-            const finalConfig = config || { iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }] };
-
-            pc = new RTCPeerConnection(finalConfig);
-
+            pc = new RTCPeerConnection(iceServers);
             pc.oniceconnectionstatechange = () => {
-                if (pc.iceConnectionState === 'connected') {
-                    console.log("🚀 P2P Соединение установлено!");
+                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                    pc.getStats().then(stats => {
+                        stats.forEach(report => {
+                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                const local = stats.get(report.localCandidateId);
+                                console.log(`🚀 Connection: ${local.candidateType}`);
+                            }
+                        });
+                    });
                 }
             };
-
-            // Обработка кандидатов (пустая, так как логика в start/answer)
             pc.onicecandidate = e => { };
-
-            pc.ontrack = e => {
-                const remoteVid = document.getElementById('remoteVideo');
-                remoteVid.muted = false;
-                if (remoteVid.srcObject !== e.streams[0]) {
-                    remoteVid.srcObject = e.streams[0];
-                    remoteVid.play().catch(console.error);
-                }
-            };
-
-            pc.onconnectionstatechange = () => {
-                if (pc.connectionState === 'connected') {
-                    isConnected = true; wasCallConnected = true;
-                    updateCallStatus("В разговоре");
-                    stopAllTones(); startTimer(); startPing();
-                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-                    endCall(false);
-                }
-            };
-        }
-            pc.onicecandidate = e => { }; // Оставляем пустым, обработка в startCall/answerCall
             pc.ontrack = e => {
                 const remoteVid = document.getElementById('remoteVideo');
                 remoteVid.muted = false;
@@ -4218,9 +4518,7 @@
                 if (t !== newVideoTrack) t.stop();
             });
         }
-        // --- ФУНКЦИЯ НАЧАЛА ЗВОНКА ---
         async function startCall() {
-            // 1. Проверки на занятость
             if (currentCallId) {
                 try {
                     const snap = await db.collection('calls').doc(currentCallId).get();
@@ -4229,33 +4527,18 @@
                 } catch (e) { currentCallId = null; }
             }
             if (isConnected) return alert("Вы уже в звонке!");
-
-            amICaller = true;
-            wasCallConnected = false;
-
-            // 2. Показываем статус загрузки (пока получаем ключи)
-            updateCallStatus("Получение серверов...");
-
-            // 3. Загружаем конфиг (безопасно)
-            const myIceConfig = await loadIceConfig();
-
+            amICaller = true; wasCallConnected = false;
             const newCallId = [currentUser.uid, currentFriendId].sort().join('_');
             const callDoc = db.collection('calls').doc(newCallId);
-
             const snap = await callDoc.get();
             if (snap.exists && snap.data().caller !== currentUser.uid) { return alert("Линия занята!"); }
-
             currentCallId = newCallId;
-
-            // 4. Включаем интерфейс
             document.getElementById('callScreen').style.display = 'flex';
             updateCallControlsVisibility();
             document.getElementById('callScreen').style.pointerEvents = 'auto';
-
             updateCallStatus("Соединение...");
             playConnectingTone();
-
-            // 5. Уведомление в Telegram
+            // Уведомление о звонке в Телеграм
             if (currentFriendId) {
                 db.collection('users').doc(currentFriendId).get().then(doc => {
                     if (doc.exists && doc.data().tgChatId) {
@@ -4263,25 +4546,18 @@
                     }
                 });
             }
-
-            // 6. Настраиваем соединение С КОНФИГОМ
-            setupPeerConnection(myIceConfig);
-
+            setupPeerConnection();
             pc.onicecandidate = e => { if (e.candidate) callDoc.collection('offerCandidates').add(e.candidate.toJSON()); };
-
             await getMedia();
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-
-            // 7. Сохраняем в базу
+            // Добавляем поле 'to', чтобы собеседник мог найти этот звонок
             await callDoc.set({
                 offer: { type: offer.type, sdp: offer.sdp },
                 caller: currentUser.uid,
-                to: currentFriendId,
+                to: currentFriendId, // <--- ВАЖНОЕ ДОБАВЛЕНИЕ
                 status: 'dialing'
             });
-
-            // 8. Слушаем изменения
             callDoc.onSnapshot(async snap => {
                 if (!snap.exists) { endCall(false, true); return; }
                 const data = snap.data();
@@ -4291,49 +4567,7 @@
                     flushCandidateQueue();
                 }
             });
-
             callDoc.collection('answerCandidates').onSnapshot(snap => {
-                snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
-            });
-        }
-
-        // --- ФУНКЦИЯ ОТВЕТА НА ЗВОНОК ---
-        async function answerCall() {
-            amICaller = false;
-            wasCallConnected = false;
-
-            document.getElementById('ringtone').pause();
-            document.getElementById('incomingPopup').style.display = 'none';
-            document.getElementById('callScreen').style.display = 'flex';
-            updateCallControlsVisibility();
-            document.getElementById('callScreen').style.pointerEvents = 'auto';
-
-            // 1. Статус и загрузка конфига
-            updateCallStatus("Получение серверов...");
-            const myIceConfig = await loadIceConfig();
-
-            updateCallStatus("Соединение...");
-
-            const callDoc = db.collection('calls').doc(currentCallId);
-            const data = (await callDoc.get()).data();
-
-            // 2. Настраиваем соединение С КОНФИГОМ
-            setupPeerConnection(myIceConfig);
-
-            pc.onicecandidate = e => { if (e.candidate) callDoc.collection('answerCandidates').add(e.candidate.toJSON()); };
-
-            await getMedia();
-            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-            flushCandidateQueue();
-
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-
-            await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'connected' });
-
-            callDoc.onSnapshot(snap => { if (!snap.exists) endCall(false, true); });
-
-            callDoc.collection('offerCandidates').onSnapshot(snap => {
                 snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
             });
         }
@@ -4446,14 +4680,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                                                                                                                                                    <div style="display:flex; align-items:center;">
-                                                                                                                                                                                                                        ${avatarHtml}
-                                                                                                                                                                                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                                                                                                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                                                                                                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                        <div style="display:flex; align-items:center;">
+                                                                                                                                                                                                                            ${avatarHtml}
+                                                                                                                                                                                                                            <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                                                                                                                                                                                <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                                                                                                                                                                                <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                            </div>
                                                                                                                                                                                                                         </div>
-                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                    `;
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
                                 }
@@ -4551,7 +4785,7 @@
                 });
             }
         }
-        
+
         // --- ЛОГИКА ПРОФИЛЯ ---
         // Валидация никнейма (только англ, цифры, _ и .)
         function validateUsername(input) {
@@ -5047,8 +5281,8 @@
             firebase.auth().onAuthStateChanged(u => { if (u) setTimeout(savePlayerId, 3000); });
         });
         // 2. Функция отправки пуша (С ОБХОДОМ БЛОКИРОВКИ)
-        
-        
+
+
         // Правильная функция выхода с удалением уведомлений
         async function logout() {
             if (!confirm("Выйти из аккаунта?")) return;
@@ -5125,9 +5359,9 @@
                     document.getElementById('noChat').classList.add('hidden');
                     document.getElementById('activeChat').classList.remove('hidden');
                     document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                                                                                        <div>${name}</div>
-                                                                                                                                                                                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                                                                                    `;
+                                                                                                                                                                                                            <div>${name}</div>
+                                                                                                                                                                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                                                                                                                                                                        `;
                     loadMessages();
                 } else {
                     // Юзер не найден, возвращаемся назад
@@ -5140,38 +5374,6 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGYrk10xkvkdYVQDDUhLWHiYZUHJOoKf0BsFFXXNmbmFi66fYP-rAS6uipmecT6UB5/exec";
         // --- БЕЗОПАСНЫЕ УВЕДОМЛЕНИЯ ---
         const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc";
-        // --- ИСПРАВЛЕНИЕ: Загрузка настроек с сервера ---
-        let cachedIceServers = null;
-
-        async function loadIceConfig() {
-            if (cachedIceServers) return cachedIceServers;
-
-            // Резервный сервер (бесплатный), если Google Script недоступен
-            const fallback = {
-                iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }]
-            };
-
-            try {
-                console.log("Загружаю настройки звонка...");
-                // Используем GET запрос к вашему скрипту
-                const url = `${GOOGLE_SCRIPT_URL}?action=getTurnCredentials&secret=${APP_SECRET_KEY}`;
-
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.status === "success" && data.iceServers) {
-                    cachedIceServers = {
-                        iceServers: data.iceServers,
-                        iceCandidatePoolSize: 10
-                    };
-                    console.log("✅ Настройки звонка получены");
-                    return cachedIceServers;
-                }
-            } catch (e) {
-                console.warn("⚠️ Ошибка загрузки настроек, используем резерв:", e);
-            }
-            return fallback;
-        }
 
         async function sendNotificationSecure(friendUid, messageText, msgType = 'text') {
             if (!friendUid || !messageText) return;
@@ -5225,7 +5427,7 @@
                         secret: APP_SECRET_KEY,
                         tgId: tgId,
                         oneSignalId: osId,
-                        title: senderName,    // <--- Сюда пойдет Имя Фамилия из базы
+                        title: senderName,    // <--- Сюда пойдет Имя Фамилия из базы
                         text: displayText
                     })
                 });
@@ -5249,22 +5451,22 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file); // Берем картинку локально
                 contentHtml = `
-                                                                                                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                            <div class="upload-spinner"></div>
-                                                                                                                                                                                        </div>
-                                                                                                                                                                                    `;
+                                                                                                                                                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                <div class="upload-spinner"></div>
+                                                                                                                                                                                            </div>
+                                                                                                                                                                                        `;
             } else {
                 contentHtml = `
-                                                                                                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                            <div class="file-icon">📄</div>
-                                                                                                                                                                                            <div class="file-info">
-                                                                                                                                                                                                <div class="file-name">${file.name}</div>
-                                                                                                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                            <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                <div class="file-icon">📄</div>
+                                                                                                                                                                                                <div class="file-info">
+                                                                                                                                                                                                    <div class="file-name">${file.name}</div>
+                                                                                                                                                                                                    <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                </div>
+                                                                                                                                                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                             </div>
-                                                                                                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                        </div>
-                                                                                                                                                                                    `;
+                                                                                                                                                                                        `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -5284,24 +5486,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                                                                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                            <div class="upload-spinner"></div>
-                                                                                                                                                                                        </div>
-                                                                                                                                                                                    `;
+                                                                                                                                                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                <div class="upload-spinner"></div>
+                                                                                                                                                                                            </div>
+                                                                                                                                                                                        `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                                                                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                            <div class="file-icon">📄</div>
-                                                                                                                                                                                            <div class="file-info">
-                                                                                                                                                                                                <div class="file-name">${file.name}</div>
-                                                                                                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                            <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                <div class="file-icon">📄</div>
+                                                                                                                                                                                                <div class="file-info">
+                                                                                                                                                                                                    <div class="file-name">${file.name}</div>
+                                                                                                                                                                                                    <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                </div>
+                                                                                                                                                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                             </div>
-                                                                                                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                        </div>
-                                                                                                                                                                                    `;
+                                                                                                                                                                                        `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -5490,7 +5692,7 @@
             menu.style.transform = 'none'; // Сбрасываем центрирование
         }
 
-        
+
 
 
 
@@ -5666,7 +5868,7 @@
                             surInput.value = surname;
                             surInput.style.display = "block"; // Показываем
                         } else {
-                            surInput.style.display = "none";  // Скрываем
+                            surInput.style.display = "none";  // Скрываем
                         }
                     }
 
@@ -5945,27 +6147,27 @@
 
     </script>
 
-<div id="birthModal" class="modal-overlay" style="display:none" onclick="closeBirthModal()">
-    <div class="birth-modal" onclick="event.stopPropagation()">
-        <h3 style="margin:0; font-size:18px; color:white; font-weight:600;">День рождения</h3>
+    <div id="birthModal" class="modal-overlay" style="display:none" onclick="closeBirthModal()">
+        <div class="birth-modal" onclick="event.stopPropagation()">
+            <h3 style="margin:0; font-size:18px; color:white; font-weight:600;">День рождения</h3>
 
-        <div class="birth-pickers">
-            <select id="bdDay"></select>
-            <select id="bdMonth"></select>
-            <select id="bdYear"></select>
-        </div>
+            <div class="birth-pickers">
+                <select id="bdDay"></select>
+                <select id="bdMonth"></select>
+                <select id="bdYear"></select>
+            </div>
 
-        <div class="modal-buttons">
-            <button class="btn-cancel" onclick="closeBirthModal()">Отмена</button>
-            <button class="btn-confirm" style="color:#8774e1" onclick="applyBirthdate()">Готово</button>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeBirthModal()">Отмена</button>
+                <button class="btn-confirm" style="color:#8774e1" onclick="applyBirthdate()">Готово</button>
+            </div>
         </div>
     </div>
-</div>
 
 
-<div id="imageViewer" class="image-viewer" onclick="closeImageViewer()">
-    <span class="close-viewer-btn">&times;</span>
-    <img id="imageViewerImg" src="" onclick="event.stopPropagation()">
-</div>
+    <div id="imageViewer" class="image-viewer" onclick="closeImageViewer()">
+        <span class="close-viewer-btn">&times;</span>
+        <img id="imageViewerImg" src="" onclick="event.stopPropagation()">
+    </div>
 </body>
 </html>
