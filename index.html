@@ -3028,26 +3028,20 @@
             });
         });
         function updateLastSeen() {
-            if (!currentUser) return;
-
             const now = Date.now();
-            // Если страница активна или была активность недавно
-            if (document.visibilityState === 'visible' || (now - lastActivityTime < 30000)) {
+            // Если с последней активности прошло меньше 30 секунд - обновляем базу
+            if (now - lastActivityTime < 30000) {
                 isOnline = true;
-                db.collection('users').doc(currentUser.uid).update({
-                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-                }).catch(e => console.log('Err update lastSeen', e));
+                if (currentUser) {
+                    db.collection('users').doc(currentUser.uid).update({
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(e => console.log('Err update lastSeen', e));
+                }
             } else {
                 isOnline = false;
+                // Можно (опционально) явно поставить статус "офлайн" в базу, но лучше просто не обновлять дату
             }
         }
-
-        // Добавьте этот слушатель в конец скрипта
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                updateLastSeen();
-            }
-        });
         // Запускаем проверку каждые 15 секунд
         // Если активен -> обновит дату в базе.
         // Если НЕ активен -> не обновит, и через 30-60 сек для других он станет "был недавно"
@@ -5055,54 +5049,86 @@
             // Если ссылка вида #chat/USER_ID
             if (hash.startsWith('#chat/')) {
                 const userId = hash.replace('#chat/', '');
+
                 // Если мы уже в этом чате, ничего не делаем
                 if (currentFriendId === userId) return;
-                // Если мы только зашли на сайт, currentUser может еще не прогрузиться
-                // Проверка будет внутри auth listener, но здесь подстрахуемся
+
                 if (!currentUser) return;
-                // Нам нужно имя и ник для открытия чата.
+
                 // Пытаемся найти в кэше или загрузить из базы
                 let userData = usersCache[userId];
                 if (!userData) {
                     try {
-                        // Показываем прелоадер в заголовке, пока грузим
-                        document.getElementById('mainChatArea').classList.add('active'); // для мобилок
+                        document.getElementById('mainChatArea').classList.add('active');
                         document.getElementById('noChat').classList.add('hidden');
                         document.getElementById('activeChat').classList.remove('hidden');
                         document.getElementById('chatTitle').innerText = "Загрузка...";
+
                         const doc = await db.collection('users').doc(userId).get();
                         if (doc.exists) {
                             userData = doc.data();
-                            usersCache[userId] = userData; // Сохраняем в кэш
+                            usersCache[userId] = userData;
                         }
                     } catch (e) {
                         console.error("Ошибка роутера", e);
                     }
                 }
+
                 if (userData) {
                     const name = userData.name || userData.username || 'User';
                     const nick = userData.username ? '@' + userData.username : '';
-                    // Вызываем обычную функцию открытия, но она снова поставит хеш.
-                    // Это не страшно, но чтобы не зациклить, можно временно отключить слушатель,
-                    // но проще оставить как есть, браузер умный.
-                    // ВАЖНО: Мы вызываем openChat, но он сам ставит hash.
-                    // Чтобы не было двойной работы, код внутри openChat корректен.
-                    // Прямой вызов UI логики (дублируем часть openChat чтобы избежать рекурсии хеша)
+
                     currentFriendId = userId;
                     currentChatId = [currentUser.uid, userId].sort().join('_');
+
+                    // --- ВАЖНО: Загружаем ключи шифрования при обновлении страницы ---
+                    fetchChatKey(currentChatId);
+                    // -----------------------------------------------------------------
+
                     if (window.innerWidth <= 768) {
                         document.getElementById('mainSidebar').classList.add('hidden-mobile');
                         document.getElementById('mainChatArea').classList.add('active');
                     }
+
                     document.getElementById('noChat').classList.add('hidden');
                     document.getElementById('activeChat').classList.remove('hidden');
+
                     document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                                                                                                    <div>${name}</div>
-                                                                                                                                                                                                                    <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                                                                                                `;
+                        <div>${name}</div>
+                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                    `;
+
+                    // =======================================================
+                    // ИСПРАВЛЕНИЕ: ЗАПУСКАЕМ СЛУШАТЕЛЬ СТАТУСА ПРИ ОБНОВЛЕНИИ
+                    // =======================================================
+
+                    // 1. Сбрасываем старый, если был
+                    if (chatStatusUnsub) chatStatusUnsub();
+
+                    // 2. Ставим "загрузка" или последнее известное время сразу
+                    const statusEl = document.getElementById('chatStatus');
+                    if (statusEl) {
+                        statusEl.innerText = userData.lastSeen ? formatLastSeen(userData.lastSeen) : 'загрузка...';
+                    }
+
+                    // 3. Запускаем живое прослушивание
+                    chatStatusUnsub = db.collection('users').doc(userId).onSnapshot(userSnap => {
+                        if (userSnap.exists && currentFriendId === userId) {
+                            const uData = userSnap.data();
+                            usersCache[userId] = uData; // Обновляем кэш
+
+                            const el = document.getElementById('chatStatus');
+                            if (el) {
+                                el.innerText = formatLastSeen(uData.lastSeen);
+                            }
+                        }
+                    }, err => console.error("Ошибка слушателя статуса:", err));
+
+                    // =======================================================
+
                     loadMessages();
                 } else {
-                    // Юзер не найден, возвращаемся назад
+                    // Юзер не найден
                     window.location.hash = '';
                 }
             }
