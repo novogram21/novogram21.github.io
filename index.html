@@ -2158,12 +2158,14 @@
             font-style: italic;
             display: block;
             animation: fadeIn 0.5s;
+            /* --- НОВОЕ: Перевод БОЛЬШИМИ БУКВАМИ --- */
+            text-transform: uppercase;
+            font-weight: bold; /* Жирный, чтобы лучше читалось */
         }
 
-        .translating-loader {
-            font-size: 10px;
-            color: #666;
-            margin-top: 4px;
+        /* --- НОВОЕ: Оригинальный текст маленькими буквами --- */
+        .msg-text {
+            text-transform: lowercase;
         }
 
     </style>
@@ -2228,7 +2230,9 @@
             <h3 style="margin-bottom: 10px;">Выберите язык</h3>
 
             <div class="lang-list-container" style="display:flex; flex-direction:column; gap:5px; max-height: 300px; overflow-y:auto;">
+
                 <div class="lang-option" onclick="selectLanguage('ru')">🇷🇺 Русский (ru)</div>
+                <div class="lang-option" onclick="selectLanguage('ar')">🇪🇬 العربية (ar)</div>
                 <div class="lang-option" onclick="selectLanguage('en')">🇬🇧 English (en)</div>
                 <div class="lang-option" onclick="selectLanguage('de')">🇩🇪 Deutsch (de)</div>
                 <div class="lang-option" onclick="selectLanguage('fr')">🇫🇷 Français (fr)</div>
@@ -6222,8 +6226,10 @@
         }
 
         // 3. Сохраняет выбор
+        // 3. Сохраняет выбор
         function selectLanguage(code) {
             const langs = {
+                'ar': 'Egyptian', // Добавлено
                 'ru': 'Русский',
                 'en': 'English',
                 'de': 'Deutsch',
@@ -6248,11 +6254,12 @@
             closeLangModal();
         }
 
-        // Эта функция у вас уже есть, но убедитесь, что она выглядит так:
+        // Обновляем метку в меню настроек
         function updateLangLabel() {
             const el = document.getElementById('currentLangLabel');
             if (el) {
                 const langNames = {
+                    'ar': 'Egyptian', // Добавлено
                     'ru': 'Русский',
                     'en': 'English',
                     'de': 'Deutsch',
