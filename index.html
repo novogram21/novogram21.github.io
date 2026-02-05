@@ -6293,17 +6293,28 @@
         };
 
         // --- API ПЕРЕВОДА ---
+        // --- API ПЕРЕВОДА ---
         async function fetchTranslation(text, toLang) {
             try {
-                // Добавляем проверку: если текст уже на целевом языке, не переводить
-                // langpair=Autodetect|ru
                 const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=Autodetect|${toLang}`;
                 const res = await fetch(url);
                 const data = await res.json();
 
                 if (data && data.responseData && data.responseData.translatedText) {
-                    // MyMemory иногда возвращает текст без изменений или с ошибкой "MOUNT LIMIT REACHED"
-                    return data.responseData.translatedText;
+                    const result = data.responseData.translatedText;
+
+                    // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+                    // Проверяем, не вернул ли API ошибку о том, что языки одинаковые
+                    if (result.includes("PLEASE SELECT TWO DISTINCT LANGUAGES")) {
+                        return null; // Возвращаем пустоту, перевод не покажется
+                    }
+
+                    // Также проверяем, не совпадает ли перевод с оригиналом (игнорируя регистр)
+                    if (result.trim().toLowerCase() === text.trim().toLowerCase()) {
+                        return null;
+                    }
+
+                    return result;
                 }
                 return null;
             } catch (e) {
