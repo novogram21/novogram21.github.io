@@ -1509,12 +1509,12 @@
                 transform: translateX(18px);
             }
 
-            .edit-avatar-wrapper img, .avatar-placeholder-large {
-                width: 100%;
-                height: 100%;
-                border-radius: 50%;
-                object-fit: cover;
-            }
+        .edit-avatar-wrapper img, .avatar-placeholder-large {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
 
         .avatar-placeholder-large {
             background: linear-gradient(135deg, #6a11cb, #2575fc);
@@ -2033,6 +2033,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script>
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function (OneSignal) {
@@ -2525,6 +2526,62 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // --- КРИПТОГРАФИЯ (БЕЗОПАСНАЯ) ---
+        // Твоя ссылка на скрипт
+        const KEY_PROVIDER_URL = "https://script.google.com/macros/s/AKfycbwkRCYUHSgywECcVq4YYn6RJt4A27KLZO5l_KgB-dO7OvITMc-7VJF27u4u_mlCZOk/exec";
+
+        let sessionKeys = {}; // Кэш ключей в памяти
+
+        // 1. Получить ключ (запрос к серверу)
+        async function fetchChatKey(chatId) {
+            if (sessionKeys[chatId]) return sessionKeys[chatId];
+
+            try {
+                const response = await fetch(KEY_PROVIDER_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        chatId: chatId,
+                        userId: currentUser.uid
+                    })
+                });
+                const data = await response.json();
+
+                if (data.key) {
+                    sessionKeys[chatId] = data.key;
+                    return data.key;
+                } else {
+                    console.error("Сервер не вернул ключ");
+                    return null;
+                }
+            } catch (e) {
+                console.error("Ошибка получения ключа:", e);
+                return null;
+            }
+        }
+
+        // 2. Зашифровать (используя полученный ключ)
+        function encryptText(text, chatId) {
+            const key = sessionKeys[chatId];
+            if (!key || !text) return text;
+            try {
+                return CryptoJS.AES.encrypt(text, key).toString();
+            } catch (e) { return text; }
+        }
+
+        // 3. Расшифровать (используя полученный ключ)
+        function decryptText(cipherText, chatId) {
+            const key = sessionKeys[chatId];
+            if (!key || !cipherText) return cipherText;
+            try {
+                const bytes = CryptoJS.AES.decrypt(cipherText, key);
+                const originalText = bytes.toString(CryptoJS.enc.Utf8);
+                return originalText || cipherText;
+            } catch (e) { return cipherText; }
+        }
+
+
+
         // --- Ш�?Ф� ОВАН�?Е ТОКЕНА ТЕЛЕГ� АМА (Base64) ---
         // Токен: 8387775107:AAGhXPcfytIcnh-_zD04HvlGXIJ_b-crPK4
         const ENCRYPTED_TOKEN = "ODM4Nzc3NTEwNzpBQUdoWFBjZnl0SWNuaC1fekQwNEh2bEdYSUpfYi1jclBLNA==";
@@ -3180,19 +3237,23 @@
                     if (!msgSnap.empty) {
                         const lastData = msgSnap.docs[0].data();
                         // Текст сообщения
+                        // Текст сообщения
                         if (lastEl) {
-                            const type = lastData.type || 'text'; // Получаем тип сообщения
+                            const type = lastData.type || 'text';
                             let displayText = '';
+
+                            // Расшифровываем для превью
+                            const decryptedPreview = decryptText(lastData.txt, chatId);
+
                             if (type === 'image') {
                                 displayText = '📷 Фотография';
                             } else if (type === 'file') {
                                 displayText = '📄 Файл';
                             } else {
-                                // Обычный текст - обрезаем, если длинный
-                                displayText = lastData.txt || '';
+                                displayText = decryptedPreview || '';
                                 if (displayText.length > 25) displayText = displayText.substring(0, 25) + '...';
                             }
-                            // Добавляем приставку "Вы:", если отправитель - текущий пользователь
+
                             if (lastData.from === currentUser.uid) {
                                 displayText = 'Вы: ' + displayText;
                             }
@@ -3444,24 +3505,35 @@
             await db.collection('friend_requests').doc(rid).delete();
         }
         function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
-        function openChat(fid, name, nick) {
+        async function openChat(fid, name, nick) {
             window.location.hash = "chat/" + fid;
             currentFriendId = fid;
             currentChatId = [currentUser.uid, fid].sort().join('_');
+
             if (window.innerWidth <= 768) {
                 document.getElementById('mainSidebar').classList.add('hidden-mobile');
                 document.getElementById('mainChatArea').classList.add('active');
             }
+
             document.getElementById('noChat').classList.add('hidden');
             document.getElementById('activeChat').classList.remove('hidden');
-            // Установка заголовка
-            document.getElementById('chatTitle').innerHTML = `
-                                                                                                                                            <div>${name}</div>
-                                                                                                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                                                                                                        `;
+
+            // --- ИЗМЕНЕНИЕ: Временный заголовок ---
+            const titleEl = document.getElementById('chatTitle');
+            titleEl.innerHTML = '<div>Загрузка ключей...</div>'; // Показываем юзеру процесс
+
+            // --- ИЗМЕНЕНИЕ: Ждем ключ от Google ---
+            await fetchChatKey(currentChatId);
+            // -------------------------------------
+
+            // Установка нормального заголовка
+            titleEl.innerHTML = `
+                <div>${name}</div>
+                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+            `;
+
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
-            // Сначала ставим "загрузка..." или пробуем взять из кэша, если он есть
             if (statusEl) {
                 if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
                     statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
@@ -3469,14 +3541,14 @@
                     statusEl.innerText = 'загрузка...';
                 }
             }
-            // 1. Если уже есть активный слушатель статуса — отключаем его
+
+            // 1. Сброс старого слушателя
             if (chatStatusUnsub) chatStatusUnsub();
-            // 2. Создаем новый слушатель
+
+            // 2. Новый слушатель
             chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
-                // Проверяем, что мы всё еще в чате именно с этим пользователем
                 if (userSnap.exists && currentFriendId === fid) {
                     const userData = userSnap.data();
-                    // Обновляем кэш
                     if (typeof usersCache !== 'undefined') {
                         usersCache[fid] = userData;
                     }
@@ -3485,8 +3557,11 @@
                     }
                 }
             }, err => console.error("Ошибка слушателя статуса:", err));
+
+            // Загружаем сообщения (теперь ключ уже есть в памяти, расшифровка сработает)
             loadMessages();
-            // Фокус на инпут (только для ПК)
+
+            // Фокус на инпут
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (!isMobile) {
                 setTimeout(() => {
@@ -3530,8 +3605,12 @@
                     list.innerHTML = '';
 
                     snap.docs.forEach(doc => {
-                        const m = doc.data();
+                        const rawData = doc.data();
                         const msgId = doc.id;
+
+                        // Клонируем и расшифровываем
+                        const m = { ...rawData };
+                        m.txt = decryptText(rawData.txt, currentChatId);
 
                         if (deletedLocal.includes(msgId)) return;
 
@@ -3691,7 +3770,7 @@
             // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
             if (isEditingMode && editMessageId) {
                 db.collection('chats').doc(currentChatId).collection('msgs').doc(editMessageId).update({
-                    txt: t,
+                    txt: encryptText(t, currentChatId),
                     edited: true // Метка, что сообщение изменено
                 }).then(() => {
                     cancelReplyOrEdit();
@@ -3700,8 +3779,10 @@
             }
 
             // --- ОБЫЧНАЯ ОТПРАВКА ---
+            const encryptedText = encryptText(t, currentChatId);
+
             const msgData = {
-                txt: t,
+                txt: encryptedText, // В базу летит шифр
                 from: currentUser.uid,
                 to: currentFriendId,
                 sys: isSys,
