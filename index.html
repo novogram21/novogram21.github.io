@@ -2034,14 +2034,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script>
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function (OneSignal) {
-            await OneSignal.init({
-                appId: "6af8818f-ba3a-40c4-b820-5235c1d73925",
-            });
-        });
-    </script>
 </head>
 <body>
     <div id="app-background"></div>
@@ -2538,24 +2530,34 @@
             if (sessionKeys[chatId]) return sessionKeys[chatId];
 
             try {
+                console.log("Запрашиваю ключ для:", chatId);
                 const response = await fetch(KEY_PROVIDER_URL, {
                     method: 'POST',
+                    // Важно: Google Script иногда капризничает с заголовками, 
+                    // поэтому отправляем как 'text/plain', но внутри JSON.
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({
                         chatId: chatId,
                         userId: currentUser.uid
                     })
                 });
-                const data = await response.json();
 
-                if (data.key) {
+                const textResult = await response.text();
+                console.log("Ответ сервера (сырой):", textResult);
+
+                // Пробуем парсить JSON
+                const data = JSON.parse(textResult);
+
+                if (data.status === "success" && data.key) {
                     sessionKeys[chatId] = data.key;
+                    console.log("✅ Ключ получен!");
                     return data.key;
                 } else {
-                    console.error("Сервер не вернул ключ");
+                    console.error("❌ Сервер вернул ошибку:", data.message || "Нет ключа");
                     return null;
                 }
             } catch (e) {
-                console.error("Ошибка получения ключа:", e);
+                console.error("❌ Ошибка сети или парсинга:", e);
                 return null;
             }
         }
