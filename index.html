@@ -8,6 +8,7 @@
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.googleapis.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.onesignal.com https://cdnjs.cloudflare.com;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>Novogram</title>
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -2590,24 +2591,41 @@
 
 
 
-        // --- Ш�?Ф� ОВАН�?Е ТОКЕНА ТЕЛЕГ� АМА (Base64) ---
-        // Токен: 8387775107:AAGhXPcfytIcnh-_zD04HvlGXIJ_b-crPK4
-      
-        
-        const iceServers = {
-            iceServers: [
-                { urls: "stun:stun.relay.metered.ca:80" },
-                { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
-                { urls: "turn:global.relay.metered.ca:80", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
-                { urls: "turn:global.relay.metered.ca:80?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
-                { urls: "turn:global.relay.metered.ca:443", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
-                { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
-                { urls: "turn:open-turn.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
-                { urls: "turn:open-turn.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
-                { urls: "turn:open-turn.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
-            ],
-            iceCandidatePoolSize: 10
-        };
+        let cachedIceServers = null;
+
+        // Функция загрузки настроек (безопасно через Google Script)
+        async function loadIceConfig() {
+            // 1. Если уже загружали — отдаем из памяти
+            if (cachedIceServers) return cachedIceServers;
+
+            // 2. Резервный сервер (бесплатный Google STUN), если скрипт недоступен
+            const fallback = {
+                iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }],
+                iceCandidatePoolSize: 10
+            };
+
+            try {
+                console.log("🔄 Загружаю ICE сервера...");
+                // Важно: action=getTurnCredentials и secret=ТВОЙ_КЛЮЧ
+                const url = `${GOOGLE_SCRIPT_URL}?action=getTurnCredentials&secret=${APP_SECRET_KEY}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === "success" && data.iceServers) {
+                    cachedIceServers = {
+                        iceServers: data.iceServers,
+                        iceCandidatePoolSize: 10
+                    };
+                    console.log("✅ TURN-серверы успешно получены");
+                    return cachedIceServers;
+                }
+            } catch (e) {
+                console.warn("⚠️ Ошибка загрузки TURN, используем fallback:", e);
+            }
+
+            return fallback;
+        }
         let currentUser = null;
         let currentFriendId = null;
         let currentCallId = null;
@@ -4033,22 +4051,28 @@
             tick();
             callTimerInt = setInterval(tick, 1000);
         }
-        function setupPeerConnection() {
+        // Добавляем аргумент 'config'
+        function setupPeerConnection(config) {
             candidateQueue = [];
-            pc = new RTCPeerConnection(iceServers);
+
+            // Используем переданный конфиг ИЛИ дефолтный (на всякий случай)
+            const finalConfig = config || { iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }] };
+
+            pc = new RTCPeerConnection(finalConfig);
+
             pc.oniceconnectionstatechange = () => {
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     pc.getStats().then(stats => {
                         stats.forEach(report => {
                             if (report.type === 'candidate-pair' && report.state === 'succeeded') {
                                 const local = stats.get(report.localCandidateId);
-                                console.log(`🚀 Connection: ${local.candidateType}`);
+                                console.log(`🚀 Connection type: ${local ? local.candidateType : 'unknown'}`);
                             }
                         });
                     });
                 }
             };
-            pc.onicecandidate = e => { };
+            pc.onicecandidate = e => { }; // Оставляем пустым, обработка в startCall/answerCall
             pc.ontrack = e => {
                 const remoteVid = document.getElementById('remoteVideo');
                 remoteVid.muted = false;
@@ -4177,7 +4201,9 @@
                 if (t !== newVideoTrack) t.stop();
             });
         }
+        // --- ФУНКЦИЯ НАЧАЛА ЗВОНКА ---
         async function startCall() {
+            // 1. Проверки на занятость
             if (currentCallId) {
                 try {
                     const snap = await db.collection('calls').doc(currentCallId).get();
@@ -4186,18 +4212,33 @@
                 } catch (e) { currentCallId = null; }
             }
             if (isConnected) return alert("Вы уже в звонке!");
-            amICaller = true; wasCallConnected = false;
+
+            amICaller = true;
+            wasCallConnected = false;
+
+            // 2. Показываем статус загрузки (пока получаем ключи)
+            updateCallStatus("Получение серверов...");
+
+            // 3. Загружаем конфиг (безопасно)
+            const myIceConfig = await loadIceConfig();
+
             const newCallId = [currentUser.uid, currentFriendId].sort().join('_');
             const callDoc = db.collection('calls').doc(newCallId);
+
             const snap = await callDoc.get();
             if (snap.exists && snap.data().caller !== currentUser.uid) { return alert("Линия занята!"); }
+
             currentCallId = newCallId;
+
+            // 4. Включаем интерфейс
             document.getElementById('callScreen').style.display = 'flex';
             updateCallControlsVisibility();
             document.getElementById('callScreen').style.pointerEvents = 'auto';
+
             updateCallStatus("Соединение...");
             playConnectingTone();
-            // Уведомление о звонке в Телеграм
+
+            // 5. Уведомление в Telegram
             if (currentFriendId) {
                 db.collection('users').doc(currentFriendId).get().then(doc => {
                     if (doc.exists && doc.data().tgChatId) {
@@ -4205,18 +4246,25 @@
                     }
                 });
             }
-            setupPeerConnection();
+
+            // 6. Настраиваем соединение С КОНФИГОМ
+            setupPeerConnection(myIceConfig);
+
             pc.onicecandidate = e => { if (e.candidate) callDoc.collection('offerCandidates').add(e.candidate.toJSON()); };
+
             await getMedia();
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-            // Добавляем поле 'to', чтобы собеседник мог найти этот звонок
+
+            // 7. Сохраняем в базу
             await callDoc.set({
                 offer: { type: offer.type, sdp: offer.sdp },
                 caller: currentUser.uid,
-                to: currentFriendId, // <--- ВАЖНОЕ ДОБАВЛЕНИЕ
+                to: currentFriendId,
                 status: 'dialing'
             });
+
+            // 8. Слушаем изменения
             callDoc.onSnapshot(async snap => {
                 if (!snap.exists) { endCall(false, true); return; }
                 const data = snap.data();
@@ -4226,7 +4274,49 @@
                     flushCandidateQueue();
                 }
             });
+
             callDoc.collection('answerCandidates').onSnapshot(snap => {
+                snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
+            });
+        }
+
+        // --- ФУНКЦИЯ ОТВЕТА НА ЗВОНОК ---
+        async function answerCall() {
+            amICaller = false;
+            wasCallConnected = false;
+
+            document.getElementById('ringtone').pause();
+            document.getElementById('incomingPopup').style.display = 'none';
+            document.getElementById('callScreen').style.display = 'flex';
+            updateCallControlsVisibility();
+            document.getElementById('callScreen').style.pointerEvents = 'auto';
+
+            // 1. Статус и загрузка конфига
+            updateCallStatus("Получение серверов...");
+            const myIceConfig = await loadIceConfig();
+
+            updateCallStatus("Соединение...");
+
+            const callDoc = db.collection('calls').doc(currentCallId);
+            const data = (await callDoc.get()).data();
+
+            // 2. Настраиваем соединение С КОНФИГОМ
+            setupPeerConnection(myIceConfig);
+
+            pc.onicecandidate = e => { if (e.candidate) callDoc.collection('answerCandidates').add(e.candidate.toJSON()); };
+
+            await getMedia();
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            flushCandidateQueue();
+
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'connected' });
+
+            callDoc.onSnapshot(snap => { if (!snap.exists) endCall(false, true); });
+
+            callDoc.collection('offerCandidates').onSnapshot(snap => {
                 snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
             });
         }
