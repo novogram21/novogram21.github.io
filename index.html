@@ -3714,27 +3714,31 @@
 
                     if (snap.exists) {
                         const data = snap.data();
-                        // Проверяем, что флаг true и запись свежая (младше 5 сек)
-                        if (data.isTyping && data.ts) {
-                            const diff = Date.now() - data.ts.toMillis();
-                            if (diff < 5000) {
-                                showTyping = true;
+                        // Проверяем только флаг isTyping
+                        if (data.isTyping) {
+                            showTyping = true;
+
+                            // (Опционально) Дополнительная проверка на "зависание" (30 секунд вместо 5)
+                            // Если сообщение "печатает" висит дольше 30 сек - скрываем
+                            if (data.ts) {
+                                const diff = Date.now() - data.ts.toMillis();
+                                if (diff > 30000) showTyping = false;
                             }
                         }
                     }
 
                     if (showTyping) {
-                        // Если печатает - ставим фиолетовый текст с точками
+                        // Если печатает - ставим фиолетовый текст
                         statusEl.innerHTML = `<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>`;
                     } else {
-                        // Если перестал печатать - возвращаем обычный статус из кэша
+                        // Если не печатает - возвращаем обычный статус
                         const cachedUser = usersCache[fid];
                         if (cachedUser && cachedUser.lastSeen) {
                             statusEl.innerText = formatLastSeen(cachedUser.lastSeen);
                             statusEl.style.color = "#888";
                             statusEl.style.fontWeight = "normal";
                         } else {
-                            statusEl.innerText = "";
+                            statusEl.innerText = "в сети"; // Заглушка, если нет данных
                         }
                     }
                 });
@@ -6104,23 +6108,26 @@
 
             const now = Date.now();
 
-            // 1. Если прошло больше 2 секунд с последнего обновления в базе - обновляем "Я печатаю"
+            // Отправляем статус "печатаю" раз в 2 секунды
             if (!isTyping || (now - lastTypingTime > 2000)) {
                 isTyping = true;
                 lastTypingTime = now;
 
+                console.log("📤 Отправляю статус: печатаю..."); // <-- Проверка в консоли
+
                 db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
                     isTyping: true,
-                    ts: firebase.firestore.FieldValue.serverTimestamp() // Важно для проверки актуальности
-                });
+                    ts: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(err => console.error("Ошибка отправки статуса:", err));
             }
 
-            // 2. Сбрасываем старый таймер очистки
+            // Сброс через 3 секунды тишины
             if (typingTimeout) clearTimeout(typingTimeout);
 
-            // 3. Ставим новый таймер: если через 3 секунды ничего не ввели — ставим "не печатает"
             typingTimeout = setTimeout(() => {
                 isTyping = false;
+                console.log("📤 Статус сброшен (не печатаю)"); // <-- Проверка в консоли
+
                 db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
                     isTyping: false
                 });
