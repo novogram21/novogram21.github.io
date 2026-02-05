@@ -5318,15 +5318,7 @@
             menu.style.transform = 'none'; // Сбрасываем центрирование
         }
 
-        // Закрытие меню при клике в любом месте
-        document.addEventListener('click', (e) => {
-            const menu = document.getElementById('contextMenu');
-            // Если клик не внутри меню - закрываем
-            if (!menu.contains(e.target)) {
-                menu.classList.remove('active');
-                setTimeout(() => { menu.style.display = 'none'; }, 200);
-            }
-        });
+        
 
 
 
