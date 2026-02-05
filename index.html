@@ -3688,14 +3688,7 @@
 
                     const batch = db.batch();
                     let needCommit = false;
-                    if (isMobile) {
-                        // На телефоне: считаем активным, только если вкладка НЕ скрыта.
-                        // hasFocus() на телефоне часто врет, поэтому убираем его.
-                        isWindowActive = !document.hidden;
-                    } else {
-                        // На компьютере: требуем и фокус (клик в окно), и видимость.
-                        isWindowActive = document.hasFocus() && !document.hidden;
-                    }
+                    const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
                     
 
                     list.innerHTML = '';
