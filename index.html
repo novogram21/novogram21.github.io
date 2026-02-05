@@ -2527,14 +2527,21 @@
 
         // 1. Получить ключ (запрос к серверу)
         async function fetchChatKey(chatId) {
+            // 1. Проверяем переменную в памяти (самое быстрое)
             if (sessionKeys[chatId]) return sessionKeys[chatId];
 
+            // 2. Проверяем localStorage (быстро)
+            const localKey = localStorage.getItem('chatKey_' + chatId);
+            if (localKey) {
+                sessionKeys[chatId] = localKey;
+                return localKey;
+            }
+
+            // 3. Если нет нигде - идем на сервер (долго, но только 1 раз)
             try {
                 console.log("Запрашиваю ключ для:", chatId);
                 const response = await fetch(KEY_PROVIDER_URL, {
                     method: 'POST',
-                    // Важно: Google Script иногда капризничает с заголовками, 
-                    // поэтому отправляем как 'text/plain', но внутри JSON.
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({
                         chatId: chatId,
@@ -2543,14 +2550,13 @@
                 });
 
                 const textResult = await response.text();
-                console.log("Ответ сервера (сырой):", textResult);
-
-                // Пробуем парсить JSON
                 const data = JSON.parse(textResult);
 
                 if (data.status === "success" && data.key) {
                     sessionKeys[chatId] = data.key;
-                    console.log("✅ Ключ получен!");
+                    // Сохраняем в localStorage на будущее
+                    localStorage.setItem('chatKey_' + chatId, data.key);
+                    console.log("✅ Ключ получен и сохранен!");
                     return data.key;
                 } else {
                     console.error("❌ Сервер вернул ошибку:", data.message || "Нет ключа");
@@ -3520,11 +3526,15 @@
             document.getElementById('noChat').classList.add('hidden');
             document.getElementById('activeChat').classList.remove('hidden');
 
-            // --- ИЗМЕНЕНИЕ: Временный заголовок ---
+            // --- ИЗМЕНЕНИЕ: Умная загрузка ---
             const titleEl = document.getElementById('chatTitle');
-            titleEl.innerHTML = '<div>Загрузка ключей...</div>'; // Показываем юзеру процесс
 
-            // --- ИЗМЕНЕНИЕ: Ждем ключ от Google ---
+            // Если ключа нет в кэше, показываем лоадер
+            if (!sessionKeys[currentChatId] && !localStorage.getItem('chatKey_' + currentChatId)) {
+                titleEl.innerHTML = '<div>Загрузка ключей...</div>';
+            }
+
+            // Ждем ключ (если он в кэше, это займет 0мс)
             await fetchChatKey(currentChatId);
             // -------------------------------------
 
