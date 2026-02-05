@@ -3841,11 +3841,14 @@
             }
         }
 
+        // --- 1. ОПТИМИЗИРОВАННАЯ ЗАГРУЗКА СООБЩЕНИЙ ---
         function loadMessages() {
             const list = document.getElementById('msgList');
 
-            // Очищаем старую подписку, если она была
+            // Очищаем старую подписку
             if (msgUnsub) msgUnsub();
+
+            // Очищаем список ТОЛЬКО один раз при смене чата
             list.innerHTML = '';
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
@@ -3855,143 +3858,209 @@
                 .limitToLast(50)
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
 
-                    // Игнорируем локальные изменения кэша, если данных мало (защита от дублей)
+                    // Игнорируем кэш, если это не первая загрузка (защита от скачков)
                     if (snap.metadata.fromCache && snap.docs.length < 2 && snap.docs.length > 0) return;
 
                     const batch = db.batch();
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
 
-                    list.innerHTML = '';
-
-                    snap.docs.forEach(doc => {
+                    // === ГЛАВНОЕ ИЗМЕНЕНИЕ: ИСПОЛЬЗУЕМ docChanges ===
+                    // Это позволяет обрабатывать только то, что реально изменилось
+                    snap.docChanges().forEach(change => {
+                        const doc = change.doc;
                         const rawData = doc.data();
                         const msgId = doc.id;
 
-                        // Клонируем и расшифровываем текст
+                        // Если сообщение удалено локально - пропускаем
+                        if (deletedLocal.includes(msgId)) return;
+
+                        // Расшифровываем
                         const m = { ...rawData };
                         m.txt = decryptText(rawData.txt, currentChatId);
 
-                        if (deletedLocal.includes(msgId)) return;
-
-                        const div = document.createElement('div');
-                        div.id = 'msg-' + msgId;
-
-                        // === ЛОГИКА ОТКРЫТИЯ МЕНЮ (ПК и Мобайл) ===
-                        div.oncontextmenu = (e) => {
-                            e.preventDefault(); e.stopPropagation();
-                            openContextMenu(e, msgId, m.from === currentUser.uid);
-                        };
-                        div.onclick = (e) => {
-                            if (window.innerWidth <= 768) {
-                                if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
-                                    e.stopPropagation();
-                                    openContextMenu(e, msgId, m.from === currentUser.uid, true);
-                                }
-                            }
-                        };
-
-                        // Помечаем сообщение прочитанным
-                        if (m.to === currentUser.uid && !m.read && isWindowActive) {
-                            batch.update(doc.ref, { read: true });
-                            needCommit = true;
-                        }
-
-                        // Форматирование времени
-                        let timeStr = '';
-                        if (m.ts) {
-                            const date = m.ts.toDate();
-                            timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                        } else {
-                            const now = new Date();
-                            timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-                        }
-
-                        let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
-
-                        // Классы стилей
-                        if (m.sys) div.className = 'msg msg-sys';
-                        else if (m.from === currentUser.uid) div.className = 'msg msg-me';
-                        else div.className = 'msg msg-other';
-
-                        let contentHtml = '';
-
-                        // Отображение цитаты (Ответа)
-                        if (m.replyTo) {
-                            contentHtml += `
-                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                <div class="msg-reply-name">${m.replyTo.name}</div>
-                                <div class="msg-reply-text">${m.replyTo.text}</div>
-                            </div>`;
-                        }
-
                         const msgType = m.type || 'text';
 
-                        // --- ГЕНЕРАЦИЯ КОНТЕНТА ---
-                        if (m.sys) {
-                            contentHtml += m.txt;
-                        }
-                        else if (msgType === 'image') {
-                            let imgSrc = m.txt;
-                            if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
-                            contentHtml += `<div class="media-container"><img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight" onerror="this.src='https://placehold.co/200x200?text=Ошибка';"></div>`;
-                        }
-                        else if (msgType === 'file') {
-                            contentHtml += `<a href="${m.txt}" target="_blank" class="chat-file-card"><div class="file-icon">📄</div><div class="file-info"><div class="file-name">Скачать файл</div><div class="file-action">Нажмите для загрузки</div></div></a>`;
-                        }
-                        else {
-                            // ТЕКСТОВОЕ СООБЩЕНИЕ
-                            let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
-                            const safeHtml = DOMPurify.sanitize(formattedText, { ALLOWED_TAGS: ['a'], ALLOWED_ATTR: ['href', 'target', 'style'] });
-                            // Важно: добавляем класс msg-text, чтобы переводчик знал, куда вставлять текст
-                            contentHtml += `<span class="msg-text">${safeHtml}</span>`;
-                        }
+                        // --- A. НОВОЕ СООБЩЕНИЕ ---
+                        if (change.type === 'added') {
+                            const div = document.createElement('div');
+                            div.id = 'msg-' + msgId;
 
-                        // Добавляем время и галочки
-                        if (!m.sys) {
-                            let metaStyle = "";
-                            if (msgType === 'image') {
-                                metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
-                                contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top; min-width: 200px;">${contentHtml}`;
+                            // Генерируем HTML через вспомогательную функцию
+                            div.innerHTML = buildMessageHTML(m, msgId, msgType);
+
+                            // Классы
+                            if (m.sys) div.className = 'msg msg-sys';
+                            else if (m.from === currentUser.uid) div.className = 'msg msg-me';
+                            else div.className = 'msg msg-other';
+
+                            // События (Контекстное меню)
+                            div.oncontextmenu = (e) => {
+                                e.preventDefault(); e.stopPropagation();
+                                openContextMenu(e, msgId, m.from === currentUser.uid);
+                            };
+                            // Для мобилок
+                            div.onclick = (e) => {
+                                if (window.innerWidth <= 768) {
+                                    if (e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
+                                        e.stopPropagation();
+                                        openContextMenu(e, msgId, m.from === currentUser.uid, true);
+                                    }
+                                }
+                            };
+
+                            list.appendChild(div);
+
+                            // Помечаем прочитанным, если адресовано мне
+                            if (m.to === currentUser.uid && !m.read && isWindowActive) {
+                                batch.update(doc.ref, { read: true });
+                                needCommit = true;
                             }
 
-                            let metaHtml = `
-                            <span class="msg-meta" style="${metaStyle}">
-                                ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                            </span>`;
-
-                            if (msgType === 'image') contentHtml += metaHtml + `</div>`;
-                            else div.innerHTML = contentHtml + metaHtml;
-
-                            if (msgType === 'image') div.innerHTML = contentHtml;
-                        } else {
-                            div.innerHTML = contentHtml;
-                        }
-
-                        // Добавляем сообщение в список
-                        list.appendChild(div);
-
-                        // 🔥🔥🔥 ВОТ ЭТОГО НЕ ХВАТАЛО: ЗАПУСК ПЕРЕВОДА 🔥🔥🔥
-                        if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate) {
-                            // Переводим только ТЕКСТОВЫЕ сообщения от ДРУГИХ пользователей (не системные)
-                            if (m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
-                                appendTranslation(div, m.txt);
+                            // ЗАПУСК ПЕРЕВОДА (ТОЛЬКО ДЛЯ НОВЫХ)
+                            if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate) {
+                                if (m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
+                                    appendTranslation(div, m.txt);
+                                }
                             }
                         }
-                        // -----------------------------------------------------
 
+                        // --- B. СООБЩЕНИЕ ИЗМЕНЕНО (Например, прочитано или отредактировано) ---
+                        if (change.type === 'modified') {
+                            const existingDiv = document.getElementById('msg-' + msgId);
+                            if (existingDiv) {
+                                // 1. Если изменился статус прочтения (галочки)
+                                const ticksEl = existingDiv.querySelector('.msg-ticks');
+                                if (ticksEl && m.read) {
+                                    ticksEl.innerHTML = '<span style="margin-right: -4px;">✓</span>✓';
+                                }
+
+                                // 2. Если текст был ОТРЕДАКТИРОВАН
+                                if (m.edited) {
+                                    // Перестраиваем контент
+                                    existingDiv.innerHTML = buildMessageHTML(m, msgId, msgType);
+
+                                    // Если текст изменился, пробуем перевести заново
+                                    if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate && m.from !== currentUser.uid && msgType === 'text') {
+                                        // Удаляем старый перевод если был
+                                        const oldTrans = existingDiv.querySelector('.translated-block');
+                                        if (oldTrans) oldTrans.remove();
+                                        appendTranslation(existingDiv, m.txt);
+                                    }
+                                }
+                            }
+                        }
+
+                        // --- C. СООБЩЕНИЕ УДАЛЕНО ---
+                        if (change.type === 'removed') {
+                            const el = document.getElementById('msg-' + msgId);
+                            if (el) el.remove();
+                        }
                     });
 
                     if (needCommit) batch.commit();
-                    setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+
+                    // Скролл вниз (с небольшой задержкой для картинок)
+                    setTimeout(() => {
+                        if (list.lastElementChild) list.lastElementChild.scrollIntoView({ behavior: "smooth", block: "end" });
+                    }, 100);
                 });
 
+            // Фокус на поле ввода
             setTimeout(() => {
                 const inp = document.getElementById('msgInput');
                 if (inp) inp.focus();
             }, 100);
+        }
+
+        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
+        function buildMessageHTML(m, msgId, msgType) {
+            let contentHtml = '';
+
+            // Время
+            let timeStr = '';
+            if (m.ts) {
+                const date = m.ts.toDate();
+                timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+            } else {
+                const now = new Date();
+                timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            }
+
+            let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
+
+            // Цитата (Reply)
+            if (m.replyTo) {
+                contentHtml += `
+                <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                    <div class="msg-reply-name">${m.replyTo.name}</div>
+                    <div class="msg-reply-text">${m.replyTo.text}</div>
+                </div>`;
+            }
+
+            // Основной контент
+            if (m.sys) {
+                contentHtml += m.txt;
+            }
+            else if (msgType === 'image') {
+                let imgSrc = m.txt;
+                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
+                contentHtml += `<div class="media-container"><img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" onerror="this.src='https://placehold.co/200x200?text=Ошибка';"></div>`;
+            }
+            else if (msgType === 'file') {
+                contentHtml += `<a href="${m.txt}" target="_blank" class="chat-file-card"><div class="file-icon">📄</div><div class="file-info"><div class="file-name">Скачать файл</div><div class="file-action">Нажмите для загрузки</div></div></a>`;
+            }
+            else {
+                // Текст
+                let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                const safeHtml = DOMPurify.sanitize(formattedText, { ALLOWED_TAGS: ['a'], ALLOWED_ATTR: ['href', 'target', 'style'] });
+                contentHtml += `<span class="msg-text">${safeHtml}</span>`;
+            }
+
+            // Мета-данные (Время + Галочки)
+            if (!m.sys) {
+                let metaStyle = "";
+                if (msgType === 'image') {
+                    // Для картинок мета-данные поверх изображения
+                    metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
+                    // Обертка для позиционирования
+                    contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top; min-width: 200px;">${contentHtml}`;
+                }
+
+                let metaHtml = `
+                <span class="msg-meta" style="${metaStyle}">
+                    ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                    <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                </span>`;
+
+                if (msgType === 'image') contentHtml += metaHtml + `</div>`;
+                else contentHtml += metaHtml;
+            }
+
+            return contentHtml;
+        }
+
+        // --- 3. ИСПРАВЛЕННАЯ ФУНКЦИЯ ПЕРЕВОДА (БЕЗ "ПРЫЖКОВ") ---
+        async function appendTranslation(msgElement, text) {
+            // Проверка: если уже переведено, выходим
+            if (msgElement.querySelector('.translated-block')) return;
+
+            // МЫ УБРАЛИ СОЗДАНИЕ LOADER-а ("Перевод..."). 
+            // Теперь UI не дергается. Текст просто появится, когда будет готов.
+
+            const translatedText = await fetchTranslation(text, targetLang);
+
+            // Если перевод есть и он отличается от оригинала
+            if (translatedText && translatedText !== text) {
+                const transBlock = document.createElement('div');
+                transBlock.className = 'translated-block';
+                transBlock.innerText = translatedText;
+
+                const contentSpan = msgElement.querySelector('.msg-text');
+                if (contentSpan) contentSpan.appendChild(transBlock);
+                else msgElement.appendChild(transBlock);
+            }
         }
         function performCloseUI() {
             // 1. Сброс UI
@@ -6325,27 +6394,20 @@
 
         // Функция вставки перевода в сообщение
         async function appendTranslation(msgElement, text) {
-            // Проверка, не переведено ли уже
+            // Проверка: если уже переведено, выходим (чтобы не дублировать при обновлениях)
             if (msgElement.querySelector('.translated-block')) return;
 
-            // Добавляем индикатор загрузки
-            const loader = document.createElement('div');
-            loader.className = 'translating-loader';
-            loader.innerText = 'Перевод...';
-            // Вставляем внутрь сообщения, но перед мета-данными (временем) если получится, или в конец
-            const contentSpan = msgElement.querySelector('.msg-text');
-            if (contentSpan) contentSpan.appendChild(loader);
-            else msgElement.appendChild(loader);
+            // МЫ УБРАЛИ СОЗДАНИЕ LOADER-а ЗДЕСЬ. 
+            // Сообщения не будут прыгать, перевод появится тихо, когда загрузится.
 
             const translatedText = await fetchTranslation(text, targetLang);
-
-            loader.remove(); // Удаляем лоадер
 
             if (translatedText && translatedText !== text) {
                 const transBlock = document.createElement('div');
                 transBlock.className = 'translated-block';
                 transBlock.innerText = translatedText;
 
+                const contentSpan = msgElement.querySelector('.msg-text');
                 if (contentSpan) contentSpan.appendChild(transBlock);
                 else msgElement.appendChild(transBlock);
             }
