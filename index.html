@@ -2090,6 +2090,43 @@
                 border-radius: 12px;
                 outline: none;
             }
+
+
+        /* Анимация точек для статуса "печатает" */
+        @keyframes blink {
+            0% {
+                opacity: .2;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: .2;
+            }
+        }
+
+        .typing-dots span {
+            animation-name: blink;
+            animation-duration: 1.4s;
+            animation-iteration-count: infinite;
+            animation-fill-mode: both;
+        }
+
+            .typing-dots span:nth-child(2) {
+                animation-delay: .2s;
+            }
+
+            .typing-dots span:nth-child(3) {
+                animation-delay: .4s;
+            }
+
+        .typing-text {
+            color: #736AF0 !important; /* Фиолетовый цвет для статуса печатает */
+            font-weight: bold;
+        }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -2692,6 +2729,10 @@
         let unreadCounts = {};
         let audioCtx = null;
         let toneTimer = null;
+        let typingUnsub = null; // Слушатель входящего статуса
+        let isTyping = false;   // Мой текущий статус
+        let typingTimeout = null; // Таймер для сброса статуса
+        let lastTypingTime = 0; // Для ограничения записи в базу (throttle)
         let chatStatusUnsub = null;
         let originalUsername = ""; // Добавьте эту строку
         let isUsernameValid = true; // И эту
@@ -2907,13 +2948,13 @@
                 : `<div style="width:35px;height:35px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
             const displayNick = user.username ? `@${user.username}` : user.email;
             div.innerHTML = `
-                                                                                                                                                ${avatarSrc}
-                                                                                                                                                <div style="flex:1; overflow:hidden;">
-                                                                                                                                                    <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
-                                                                                                                                                    <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                </div>
-                                                                                                                                                <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
-                                                                                                                                            `;
+                                                                                                                                                    ${avatarSrc}
+                                                                                                                                                    <div style="flex:1; overflow:hidden;">
+                                                                                                                                                        <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
+                                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                    </div>
+                                                                                                                                                    <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
+                                                                                                                                                `;
             div.onclick = () => {
                 document.getElementById('searchResults').style.display = 'none';
                 document.getElementById('searchInput').value = '';
@@ -3119,7 +3160,7 @@
                             document.getElementById('authScreen').classList.add('hidden');
                             document.getElementById('profileEmail').innerText = u.email;
                             updateLastSeen();
-                            
+
                             loadData();
                             listenForIncomingCalls();
                             loadTgId();
@@ -3277,16 +3318,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                                                                                                    ${avatar}
-                                                                                                                                                                                                                                                                                                                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                                                                                                                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                                                                                                                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                                                                                                                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                                                                                                                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                                                                                                                        ${avatar}
+                                                                                                                                                                                                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                    `;
                         list.appendChild(div);
                     });
                 });
@@ -3526,19 +3567,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                            ${avatarHtml}
-                                            <div class="user-name">${fName}</div>
-                                            <div class="last-msg-row">
-                                                <span class="last-msg" id="last-${chatId}">...</span>
-                                            </div>
-                                            <div class="meta-column">
-                                                <span class="last-msg-date" id="date-${chatId}"></span>
-                                                <div class="meta-bottom-row">
-                                                    <span id="status-${chatId}" class="list-ticks"></span>
-                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                ${avatarHtml}
+                                                <div class="user-name">${fName}</div>
+                                                <div class="last-msg-row">
+                                                    <span class="last-msg" id="last-${chatId}">...</span>
                                                 </div>
-                                            </div>
-                                        `;
+                                                <div class="meta-column">
+                                                    <span class="last-msg-date" id="date-${chatId}"></span>
+                                                    <div class="meta-bottom-row">
+                                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                    </div>
+                                                </div>
+                                            `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -3594,7 +3635,7 @@
             document.getElementById('noChat').classList.add('hidden');
             document.getElementById('activeChat').classList.remove('hidden');
 
-            // --- ИЗМЕНЕНИЕ: Умная загрузка ---
+            // --- Умная загрузка ключей ---
             const titleEl = document.getElementById('chatTitle');
 
             // Если ключа нет в кэше, показываем лоадер
@@ -3604,24 +3645,25 @@
 
             // Ждем ключ (если он в кэше, это займет 0мс)
             await fetchChatKey(currentChatId);
-            // -------------------------------------
 
             // Установка нормального заголовка
             titleEl.innerHTML = `
-                                <div>${name}</div>
-                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                            `;
+        <div>${name}</div>
+        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+    `;
 
-            // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
             if (statusEl) {
-                // Если данные уже есть в кэше — показываем сразу
+                // Сбрасываем стиль (на случай если там остался фиолетовый цвет от "печатает")
+                statusEl.style.color = "#888";
+                statusEl.style.fontWeight = "normal";
+
                 if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
                     statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
                 }
-                // --- ИЗМЕНЕНИЕ: Если данных нет (перезагрузка), но имя загрузилось из базы выше
-                else if (userData && userData.lastSeen) {
+                // Если userData определена глобально (редкий случай, но оставим как у вас было)
+                else if (typeof userData !== 'undefined' && userData && userData.lastSeen) {
                     statusEl.innerText = formatLastSeen(userData.lastSeen);
                 }
                 else {
@@ -3629,10 +3671,21 @@
                 }
             }
 
-            // 1. Сброс старого слушателя
-            if (chatStatusUnsub) chatStatusUnsub();
+            // =========================================================
+            // 1. ОЧИСТКА СТАРЫХ СЛУШАТЕЛЕЙ
+            // =========================================================
+            if (chatStatusUnsub) {
+                chatStatusUnsub();
+                chatStatusUnsub = null;
+            }
+            if (typingUnsub) {
+                typingUnsub();
+                typingUnsub = null;
+            }
 
-            // 2. Новый слушатель
+            // =========================================================
+            // 2. СЛУШАТЕЛЬ ОБЫЧНОГО СТАТУСА (В СЕТИ / БЫЛ НЕДАВНО)
+            // =========================================================
             chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
                 if (userSnap.exists && currentFriendId === fid) {
                     const userData = userSnap.data();
@@ -3640,15 +3693,56 @@
                         usersCache[fid] = userData;
                     }
                     if (statusEl) {
-                        statusEl.innerText = formatLastSeen(userData.lastSeen);
+                        // ВАЖНО: Обновляем статус только если сейчас НЕТ надписи "печатает..."
+                        // Чтобы не перебивать анимацию
+                        if (!statusEl.querySelector('.typing-text')) {
+                            statusEl.innerText = formatLastSeen(userData.lastSeen);
+                            statusEl.style.color = "#888";
+                        }
                     }
                 }
             }, err => console.error("Ошибка слушателя статуса:", err));
 
-            // Загружаем сообщения (теперь ключ уже есть в памяти, расшифровка сработает)
+            // =========================================================
+            // 3. СЛУШАТЕЛЬ СТАТУСА "ПЕЧАТАЕТ" (НОВОЕ)
+            // =========================================================
+            typingUnsub = db.collection('chats').doc(currentChatId).collection('typing').doc(fid)
+                .onSnapshot(snap => {
+                    if (!statusEl) return;
+
+                    let showTyping = false;
+
+                    if (snap.exists) {
+                        const data = snap.data();
+                        // Проверяем, что флаг true и запись свежая (младше 5 сек)
+                        if (data.isTyping && data.ts) {
+                            const diff = Date.now() - data.ts.toMillis();
+                            if (diff < 5000) {
+                                showTyping = true;
+                            }
+                        }
+                    }
+
+                    if (showTyping) {
+                        // Если печатает - ставим фиолетовый текст с точками
+                        statusEl.innerHTML = `<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>`;
+                    } else {
+                        // Если перестал печатать - возвращаем обычный статус из кэша
+                        const cachedUser = usersCache[fid];
+                        if (cachedUser && cachedUser.lastSeen) {
+                            statusEl.innerText = formatLastSeen(cachedUser.lastSeen);
+                            statusEl.style.color = "#888";
+                            statusEl.style.fontWeight = "normal";
+                        } else {
+                            statusEl.innerText = "";
+                        }
+                    }
+                });
+
+            // Загружаем сообщения
             loadMessages();
 
-            // Фокус на инпут
+            // Фокус на инпут (для ПК)
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (!isMobile) {
                 setTimeout(() => {
@@ -3689,7 +3783,7 @@
                     const batch = db.batch();
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
-                    
+
 
                     list.innerHTML = '';
 
@@ -3760,11 +3854,11 @@
                         // Отображение цитаты (Ответа)
                         if (m.replyTo) {
                             contentHtml += `
-                                                                                                                <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                                                                                                    <div class="msg-reply-name">${m.replyTo.name}</div>
-                                                                                                                    <div class="msg-reply-text">${m.replyTo.text}</div>
-                                                                                                                </div>
-                                                                                                                `;
+                                                                                                                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                                                                                        <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                                                                                        <div class="msg-reply-text">${m.replyTo.text}</div>
+                                                                                                                    </div>
+                                                                                                                    `;
                         }
 
                         const msgType = m.type || 'text';
@@ -3778,16 +3872,16 @@
                                 try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { }
                             }
                             contentHtml += `
-                                                                                                                    <div class="media-container">
-                                                                                                                        <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer" onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">
-                                                                                                                    </div>`;
+                                                                                                                        <div class="media-container">
+                                                                                                                            <img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" referrerpolicy="no-referrer" onload="document.getElementById('msgList').scrollTop = document.getElementById('msgList').scrollHeight" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">
+                                                                                                                        </div>`;
                         }
                         else if (msgType === 'file') {
                             contentHtml += `
-                                                                                                                    <a href="${m.txt}" target="_blank" class="chat-file-card">
-                                                                                                                        <div class="file-icon">📄</div>
-                                                                                                                        <div class="file-info"><div class="file-name">Скачать файл</div><div class="file-action">Нажмите для загрузки</div></div>
-                                                                                                                    </a>`;
+                                                                                                                        <a href="${m.txt}" target="_blank" class="chat-file-card">
+                                                                                                                            <div class="file-icon">📄</div>
+                                                                                                                            <div class="file-info"><div class="file-name">Скачать файл</div><div class="file-action">Нажмите для загрузки</div></div>
+                                                                                                                        </a>`;
                         }
                         else {
                             // БЕЗОПАСНАЯ ОБРАБОТКА ТЕКСТА
@@ -3808,7 +3902,7 @@
 
                             contentHtml += `<span class="msg-text">${safeHtml}</span>`;
 
-                            
+
                         }
 
                         if (!m.sys) {
@@ -3819,11 +3913,11 @@
                             }
 
                             let metaHtml = `
-    <span class="msg-meta" style="${metaStyle}">
-        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-        <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-    </span>`;
+        <span class="msg-meta" style="${metaStyle}">
+            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+            <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+        </span>`;
 
                             if (msgType === 'image') {
                                 contentHtml += metaHtml + `</div>`;
@@ -3851,27 +3945,65 @@
             }, 100);
         }
         function performCloseUI() {
+            // 1. Сброс UI
             document.getElementById('mainSidebar').classList.remove('hidden-mobile');
             document.getElementById('mainChatArea').classList.remove('active');
             document.getElementById('activeChat').classList.add('hidden');
             document.getElementById('noChat').classList.remove('hidden');
-            currentFriendId = null;
-            currentChatId = null;
+
+            // 2. Сброс моего статуса "печатает" в базе (ДЕЛАЕМ ЭТО ДО сброса ID)
+            if (currentChatId && currentUser) {
+                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
+                    isTyping: false
+                }).catch(() => { }); // Игнорируем ошибки (если инет пропал)
+            }
+
+            // 3. Отписка от сообщений
             if (msgUnsub) {
                 msgUnsub();
                 msgUnsub = null;
             }
-            // --- ДОБАВЬТЕ ЭТО ---
+
+            // 4. Отписка от статуса "В сети"
             if (chatStatusUnsub) {
                 chatStatusUnsub();
                 chatStatusUnsub = null;
             }
+
+            // 5. --- НОВОЕ: Отписка от "Печатает..." ---
+            // Проверяем переменную typingUnsub (которую мы объявили в начале скрипта)
+            if (typeof typingUnsub !== 'undefined' && typingUnsub) {
+                typingUnsub();
+                typingUnsub = null;
+            }
+
+            // 6. Очистка переменных
+            currentFriendId = null;
+            currentChatId = null;
         }
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
         function sendMsg(txt, isSys = false, type = 'text') {
             const inputEl = document.getElementById('msgInput');
             const t = txt || inputEl.value.trim();
             if (!t) return;
+
+            // ========================================================
+            // --- НОВОЕ: СБРОС СТАТУСА "ПЕЧАТАЕТ" ---
+            // Сбрасываем таймер и статус в базе моментально при отправке
+            if (typeof typingTimeout !== 'undefined' && typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+
+            // Сбрасываем флаг и пишем в базу false
+            if (typeof isTyping !== 'undefined') isTyping = false;
+
+            if (currentChatId && currentUser) {
+                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
+                    isTyping: false
+                }).catch(() => { }); // Игнорируем ошибки (не критично)
+            }
+            // ========================================================
+
 
             // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
             if (isEditingMode && editMessageId) {
@@ -4416,14 +4548,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                                                                                                                                                                <div style="display:flex; align-items:center;">
-                                                                                                                                                                                                                                    ${avatarHtml}
-                                                                                                                                                                                                                                    <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                                                                                                                                                        <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                                                                                                                                                        <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                    <div style="display:flex; align-items:center;">
+                                                                                                                                                                                                                                        ${avatarHtml}
+                                                                                                                                                                                                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                                                                                                                                                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                                                                                                                                                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                        </div>
                                                                                                                                                                                                                                     </div>
-                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                `;
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
                                 }
@@ -4741,6 +4873,7 @@
         const sendBtn = document.getElementById('sendBtn');
         const voiceBtn = document.querySelector('.voice-btn');
         msgInput.addEventListener('input', function () {
+            handleTyping();
             if (this.value.trim().length > 0) {
                 sendBtn.classList.remove('hidden'); // <-- ИСПРАВЛЕНО (было hidden-btn)
                 sendBtn.style.display = 'flex';     // Теперь это сработает
@@ -5098,9 +5231,9 @@
                     document.getElementById('activeChat').classList.remove('hidden');
 
                     document.getElementById('chatTitle').innerHTML = `
-                        <div>${name}</div>
-                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                    `;
+                            <div>${name}</div>
+                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                        `;
 
                     // =======================================================
                     // ИСПРАВЛЕНИЕ: ЗАПУСКАЕМ СЛУШАТЕЛЬ СТАТУСА ПРИ ОБНОВЛЕНИИ
@@ -5123,7 +5256,11 @@
 
                             const el = document.getElementById('chatStatus');
                             if (el) {
-                                el.innerText = formatLastSeen(uData.lastSeen);
+                                // Обновляем статус ТОЛЬКО если сейчас НЕ идет анимация "печатает"
+                                if (!el.querySelector('.typing-text')) {
+                                    el.innerText = formatLastSeen(uData.lastSeen);
+                                    el.style.color = "#888";
+                                }
                             }
                         }
                     }, err => console.error("Ошибка слушателя статуса:", err));
@@ -5219,22 +5356,22 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file); // Берем картинку локально
                 contentHtml = `
-                                                                                                                                                                                                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                                        <div class="upload-spinner"></div>
-                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                `;
+                                                                                                                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                            <div class="upload-spinner"></div>
+                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                    `;
             } else {
                 contentHtml = `
-                                                                                                                                                                                                    <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                                        <div class="file-icon">📄</div>
-                                                                                                                                                                                                        <div class="file-info">
-                                                                                                                                                                                                            <div class="file-name">${DOMPurify.sanitize(file.name)}</div>
-                                                                                                                                                                                                            <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                            <div class="file-icon">📄</div>
+                                                                                                                                                                                                            <div class="file-info">
+                                                                                                                                                                                                                <div class="file-name">${DOMPurify.sanitize(file.name)}</div>
+                                                                                                                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                                         </div>
-                                                                                                                                                                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                `;
+                                                                                                                                                                                                    `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -5254,24 +5391,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                                                                                                                                                                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                                        <div class="upload-spinner"></div>
-                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                `;
+                                                                                                                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                            <div class="upload-spinner"></div>
+                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                    `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                                                                                                                                                                    <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                                        <div class="file-icon">📄</div>
-                                                                                                                                                                                                        <div class="file-info">
-                                                                                                                                                                                                            <div class="file-name">${file.name}</div>
-                                                                                                                                                                                                            <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                            <div class="file-icon">📄</div>
+                                                                                                                                                                                                            <div class="file-info">
+                                                                                                                                                                                                                <div class="file-name">${file.name}</div>
+                                                                                                                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                                         </div>
-                                                                                                                                                                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                `;
+                                                                                                                                                                                                    `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -5962,6 +6099,33 @@
             if (currentChatId) markCurrentChatRead();
         });
 
+        function handleTyping() {
+            if (!currentChatId || !currentUser) return;
+
+            const now = Date.now();
+
+            // 1. Если прошло больше 2 секунд с последнего обновления в базе - обновляем "Я печатаю"
+            if (!isTyping || (now - lastTypingTime > 2000)) {
+                isTyping = true;
+                lastTypingTime = now;
+
+                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
+                    isTyping: true,
+                    ts: firebase.firestore.FieldValue.serverTimestamp() // Важно для проверки актуальности
+                });
+            }
+
+            // 2. Сбрасываем старый таймер очистки
+            if (typingTimeout) clearTimeout(typingTimeout);
+
+            // 3. Ставим новый таймер: если через 3 секунды ничего не ввели — ставим "не печатает"
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
+                    isTyping: false
+                });
+            }, 3000);
+        }
 
     </script>
 
