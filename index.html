@@ -12,98 +12,14 @@
     <title>Novogram</title>
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <style>
-
-        /* --- НАЧАЛО: ЦВЕТОВЫЕ ПЕРЕМЕННЫЕ --- */
-        :root {
-            /* Дефолтная ТЁМНАЯ тема */
-            --bg-body: #121212;
-            --bg-sidebar: #1f1f1f;
-            --bg-header: #1f1f1f;
-            --bg-input: #1f1f1f;
-            --bg-item: #2d2d2d;
-            --bg-msg-other: #2d2d2d;
-            --text-primary: #eee;
-            --text-secondary: #888;
-            --border-color: #333;
-            --hover-color: #2a2a2a;
-            --auth-bg: #2d2d2d;
-            --accent-color: #007bff;
-            --msg-me-bg: #736AF0;
-            --icon-color: #ffffff;
-            --sheet-bg: #1f1f1f;
-            --pattern-opacity: 0.7;
-            --pattern-overlay: radial-gradient(circle at 50% 50%, rgba(10, 12, 16, 0.3) 0%, rgba(10, 12, 16, 0.7) 100%);
-        }
-
-        /* СВЕТЛАЯ ТЕМА (активируется атрибутом data-theme="light") */
-        [data-theme="light"] {
-            --bg-body: #8e9fa8; /* Фон чата (как в Telegram) */
-            --bg-sidebar: #ffffff;
-            --bg-header: #ffffff;
-            --bg-input: #f1f1f1;
-            --bg-item: #ffffff;
-            --bg-msg-other: #ffffff;
-            --text-primary: #000000;
-            --text-secondary: #707579;
-            --border-color: #dfe1e5;
-            --hover-color: #f4f4f5;
-            --auth-bg: #ffffff;
-            --accent-color: #3390ec;
-            --msg-me-bg: #3390ec;
-            --icon-color: #707579;
-            --sheet-bg: #ffffff;
-            --pattern-opacity: 0.15;
-            --pattern-overlay: none;
-        }
-        /* --- КОНЕЦ: ЦВЕТОВЫЕ ПЕРЕМЕННЫЕ --- */
-
-        /* Стили для меню выбора темы */
-        .theme-option {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
-        }
-
-            .theme-option:hover {
-                background: var(--hover-color);
-            }
-
-        .radio-circle {
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--text-secondary);
-            border-radius: 50%;
-            margin-right: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .theme-option.selected .radio-circle {
-            border-color: var(--accent-color);
-        }
-
-            .theme-option.selected .radio-circle::after {
-                content: "";
-                width: 10px;
-                height: 10px;
-                background: var(--accent-color);
-                border-radius: 50%;
-            }
-
-
-
         * {
             box-sizing: border-box;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: transparent; 
-            color: var(--text-primary);
+            background: #121212;
+            color: #eee;
             margin: 0;
             display: flex;
             height: 100dvh;
@@ -119,8 +35,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: transparent;
-            color: var(--text-primary);
+            background: #121212;
             z-index: 6000;
             display: flex;
             justify-content: center;
@@ -162,8 +77,8 @@
         /* Сайдбар */
         .sidebar {
             width: 320px;
-            background: var(--bg-sidebar); /* Теперь фон адаптивный */
-            border-right: 1px solid var(--border-color);
+            background: #1f1f1f;
+            border-right: 1px solid #333;
             display: flex;
             flex-direction: column;
             z-index: 10;
@@ -400,8 +315,8 @@
 
         .chat-header {
             padding: 10px 15px;
-            background: var(--bg-header);
-            border-bottom: 1px solid var(--border-color);
+            background: #1f1f1f;
+            border-bottom: 1px solid #333;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -428,7 +343,6 @@
         .chat-title {
             font-weight: bold;
             font-size: 16px;
-            color: var(--text-primary);
         }
 
         .chat-status {
@@ -478,10 +392,10 @@
             flex: 1;
             display: flex;
             align-items: center;
-            background: var(--bg-input);
+            background: #1f1f1f; /* Фон самого поля ввода */
             border-radius: 25px; /* Сильное скругление */
             padding: 5px 15px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #333;
             position: relative;
         }
 
@@ -489,7 +403,7 @@
                 flex: 1;
                 background: transparent;
                 border: none;
-                color: var(--text-primary);
+                color: white;
                 padding: 10px;
                 font-size: 15px;
                 outline: none;
@@ -581,8 +495,8 @@
         /* Чужие сообщения (слева) - серые */
         .msg-other {
             align-self: flex-start;
-            background: var(--bg-msg-other); /* В светлой теме станет белым */
-            color: var(--text-primary);
+            background: #2d2d2d; /* Темно-серый */
+            color: white;
             border-bottom-left-radius: 2px;
         }
 
@@ -671,8 +585,7 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: var(--sheet-bg);
-            color: var(--text-primary);
+            background: #1f1f1f;
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
             padding: 20px;
@@ -1046,7 +959,7 @@
             width: 100%;
             height: 100%;
             z-index: -1; /* Лежит под всем */
-            background-color: var(--bg-body);
+            background-color: #0a0c10;
         }
 
             #app-background::before {
@@ -1056,7 +969,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                opacity: var(--pattern-opacity);
+                opacity: 0.7;
                 pointer-events: none;
                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
                 background-size: 400px 400px;
@@ -1979,7 +1892,7 @@
         /* Панель ответа над вводом */
         .reply-bar {
             width: 100%;
-            background: var(--bg-sidebar);
+            background: #1f1f1f;
             border-top: 1px solid #333;
             padding: 8px 15px;
             display: flex;
@@ -2062,7 +1975,7 @@
 
             .birth-pickers select {
                 width: 100%;
-                background: var(--bg-sidebar);
+                background: #1f1f1f;
                 border: 1px solid #444;
                 color: white;
                 padding: 12px 10px;
@@ -2343,7 +2256,7 @@
 
             <div class="tg-divider"></div>
 
-            <div class="tg-item" onclick="openGeneralSettings()">
+            <div class="tg-item">
                 <div class="tg-item-icon" style="color: #7f91a4;">⚙️</div>
                 <div class="tg-item-content">
                     <div class="tg-item-value">Общие настройки</div>
@@ -5666,86 +5579,6 @@
             }
         }
 
-        // ==========================================
-        // ЛОГИКА СМЕНЫ ТЕМЫ
-        // ==========================================
-
-        function openGeneralSettings() {
-            // Показываем оверлей (затемнение)
-            document.getElementById('overlaySheet').style.display = 'block';
-
-            // Открываем шторку
-            const sheet = document.getElementById('generalSettingsSheet');
-            // Небольшая задержка нужна для анимации CSS (transform)
-            setTimeout(() => sheet.classList.add('open'), 10);
-
-            // Обновляем галочки (какая тема сейчас выбрана)
-            updateThemeUI();
-        }
-
-        function closeGeneralSettings() {
-            document.getElementById('generalSettingsSheet').classList.remove('open');
-
-            // Скрываем оверлей, но проверяем: вдруг профиль все еще открыт?
-            // Если профиль открыт, оверлей должен остаться.
-            setTimeout(() => {
-                const profileOpen = document.getElementById('profileSheet').classList.contains('open');
-                if (!profileOpen) {
-                    document.getElementById('overlaySheet').style.display = 'none';
-                }
-            }, 300);
-        }
-
-        function setTheme(themeName) {
-            // 1. Сохраняем выбор пользователя в браузере (чтобы не сбрасывалось при обновлении)
-            localStorage.setItem('appTheme', themeName);
-
-            // 2. Меняем тему
-            if (themeName === 'light') {
-                document.documentElement.setAttribute('data-theme', 'light');
-                // Меняем цвет полоски браузера на белый (для мобилок)
-                document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff');
-            } else {
-                document.documentElement.removeAttribute('data-theme');
-                // Меняем цвет полоски браузера на темный
-                document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1f1f1f');
-            }
-
-            // 3. Обновляем визуально галочки в меню
-            updateThemeUI();
-        }
-
-        function updateThemeUI() {
-            // Узнаем текущую тему (по умолчанию 'dark')
-            const current = localStorage.getItem('appTheme') || 'dark';
-
-            const lightOpt = document.getElementById('themeOptLight');
-            const darkOpt = document.getElementById('themeOptDark');
-
-            // Ставим класс .selected нужному пункту
-            if (current === 'light') {
-                lightOpt.classList.add('selected');
-                darkOpt.classList.remove('selected');
-            } else {
-                darkOpt.classList.add('selected');
-                lightOpt.classList.remove('selected');
-            }
-        }
-
-        // --- ВАЖНО: АВТОЗАПУСК ПРИ ЗАГРУЗКЕ ---
-        // Эта функция сама запускается при старте страницы и проверяет сохраненную тему
-        (function initTheme() {
-            const savedTheme = localStorage.getItem('appTheme') || 'dark';
-            if (savedTheme === 'light') {
-                document.documentElement.setAttribute('data-theme', 'light');
-                const metaTheme = document.querySelector('meta[name="theme-color"]');
-                if (metaTheme) metaTheme.setAttribute('content', '#ffffff');
-            }
-        })();
-
-        
-
-
     </script>
 
     <div id="birthModal" class="modal-overlay" style="display:none" onclick="closeBirthModal()">
@@ -5770,26 +5603,5 @@
         <span class="close-viewer-btn">&times;</span>
         <img id="imageViewerImg" src="" onclick="event.stopPropagation()">
     </div>
-    <div id="generalSettingsSheet" class="action-sheet" style="height: auto; max-height: 50%;">
-        <div style="font-size: 18px; font-weight: bold; margin-bottom: 20px; text-align: center;">Общие настройки</div>
-
-        <div style="color: var(--accent-color); font-size: 13px; font-weight: bold; margin-bottom: 10px; padding-left: 15px;">ТЕМА</div>
-
-        <div class="theme-option" onclick="setTheme('light')" id="themeOptLight">
-            <div class="radio-circle"></div>
-            <div>Светлая</div>
-        </div>
-
-        <div class="theme-option" onclick="setTheme('dark')" id="themeOptDark">
-            <div class="radio-circle"></div>
-            <div>Тёмная</div>
-        </div>
-
-        <div style="margin-top: 20px;">
-            <button class="action-btn" onclick="closeGeneralSettings()" style="width: 100%;">Закрыть</button>
-        </div>
-    </div>
-
-
 </body>
 </html>
