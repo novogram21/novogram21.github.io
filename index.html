@@ -5024,16 +5024,31 @@
         async function sendNotificationSecure(friendUid, messageText, msgType = 'text') {
             if (!friendUid || !messageText) return;
 
-            // Формируем текст
+            // 1. Формируем текст сообщения
             let displayText = messageText;
             if (msgType === 'image') displayText = '📷 Фотография';
             if (msgType === 'file') displayText = '📄 Файл';
 
-            // Получаем ТВОЕ имя из поля профиля (или ставим заглушку)
-            const myName = document.getElementById('profileName').value || "Пользователь";
+            // 2. Формируем Имя Отправителя (Имя + Фамилия)
+            const nameInput = document.getElementById('profileName');
+            const surnameInput = document.getElementById('profileSurname');
+
+            let senderName = "Пользователь"; // Значение по умолчанию
+
+            if (nameInput) {
+                const n = nameInput.value.trim();
+                const s = surnameInput ? surnameInput.value.trim() : "";
+
+                // Если есть имя, используем его
+                if (n) {
+                    senderName = n;
+                    // Если есть фамилия, добавляем её через пробел
+                    if (s) senderName += " " + s;
+                }
+            }
 
             try {
-                // 1. Получаем данные друга
+                // 3. Получаем данные получателя
                 const doc = await db.collection('users').doc(friendUid).get();
                 if (!doc.exists) return;
 
@@ -5043,7 +5058,7 @@
 
                 if (!tgId && !osId) return;
 
-                // 2. Отправляем запрос в Google Script с ИМЕНЕМ
+                // 4. Отправляем на сервер
                 await fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     mode: "no-cors",
@@ -5053,12 +5068,12 @@
                         secret: APP_SECRET_KEY,
                         tgId: tgId,
                         oneSignalId: osId,
-                        title: myName,   // <--- Отправляем твое имя как заголовок
-                        text: displayText // <--- Только текст сообщения
+                        title: senderName,   // <--- ТЕПЕРЬ ТУТ ПОЛНОЕ ИМЯ
+                        text: displayText
                     })
                 });
 
-                console.log("Уведомление отправлено");
+                console.log("Уведомление отправлено от:", senderName);
 
             } catch (e) {
                 console.error("Ошибка отправки:", e);
