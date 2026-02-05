@@ -5028,7 +5028,7 @@
             let displayText = messageText;
             if (msgType === 'image') displayText = '📷 Фотография';
             if (msgType === 'file') displayText = '📄 Файл';
-            const finalMessage = `📩 *Новое сообщение*\n${displayText}`;
+            const finalMessage = displayText;
 
             try {
                 // 1. Сначала получаем ID получателя из Firebase (это безопасно, ключи базы у нас настроены)
