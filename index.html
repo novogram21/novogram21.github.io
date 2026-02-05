@@ -3720,7 +3720,20 @@
                         }
                         else {
                             // Текст + ссылки + пометка (изм.)
-                            const txtWithLinks = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#4a9eff;text-decoration:underline;">$1</a>');
+                            // 1. Сначала обезвреживаем HTML (превращаем теги в текст)
+                            const safeText = m.txt
+                                .replace(/&/g, "&amp;")
+                                .replace(/</g, "&lt;")
+                                .replace(/>/g, "&gt;")
+                                .replace(/"/g, "&quot;")
+                                .replace(/'/g, "&#039;");
+
+                            // 2. И только потом превращаем ссылки в теги <a>
+                            const txtWithLinks = safeText.replace(
+                                /(https?:\/\/[^\s]+)/g,
+                                '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#4a9eff;text-decoration:underline;">$1</a>'
+                            );
+
                             contentHtml += `<span class="msg-text">${txtWithLinks}</span>`;
 
                             if (m.edited) {
