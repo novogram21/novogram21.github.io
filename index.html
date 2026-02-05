@@ -2255,7 +2255,40 @@
             </div>
         </div>
 
-        
+        <div class="edit-content-scroll" style="background: #17212b;">
+
+            <div class="tg-section-title">Язык</div>
+            <div class="tg-divider"></div>
+
+            <div class="tg-section-title">Перевод сообщений</div>
+
+            <div class="tg-item">
+                <div class="tg-item-content" style="border:none;">
+                    <div class="tg-item-value">Автоперевод входящих</div>
+                    <div class="tg-item-label">Переводить чужие сообщения</div>
+                </div>
+                <div style="padding-left: 10px;">
+                    <label class="tg-switch">
+                        <input type="checkbox" id="autoTranslateToggle" onchange="toggleAutoTranslate(this)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="tg-item" onclick="changeTranslateLang()">
+                <div class="tg-item-content">
+                    <div class="tg-item-value">Переводить на</div>
+                    <div class="tg-item-label" id="currentLangLabel">Загрузка...</div>
+                </div>
+                <div style="color: #6c7883;">›</div>
+            </div>
+
+            <div class="tg-divider"></div>
+            <div class="field-hint" style="padding: 10px 20px;">
+                Используется бесплатный API MyMemory. Возможны лимиты запросов.
+            </div>
+
+        </div>
     </div>
 
 
