@@ -3796,9 +3796,7 @@
 
                             contentHtml += `<span class="msg-text">${safeHtml}</span>`;
 
-                            if (m.edited) {
-                                contentHtml += `<span style="font-size:10px; color:#aaa; margin-left:4px;">(изм.)</span>`;
-                            }
+                            
                         }
 
                         if (!m.sys) {
@@ -3809,10 +3807,11 @@
                             }
 
                             let metaHtml = `
-                                                                                                                    <span class="msg-meta" style="${metaStyle}">
-                                                                                                                        <span class="msg-time" style="color: rgba(255,255,255,0.9); font-size: 11px;">${timeStr}</span>
-                                                                                                                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                                                                                                    </span>`;
+    <span class="msg-meta" style="${metaStyle}">
+        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+        <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+    </span>`;
 
                             if (msgType === 'image') {
                                 contentHtml += metaHtml + `</div>`;
