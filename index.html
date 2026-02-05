@@ -3688,6 +3688,8 @@
 
                     const batch = db.batch();
                     let needCommit = false;
+                    const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
+                    
 
                     list.innerHTML = '';
 
@@ -3727,10 +3729,12 @@
                         };
                         // ============================
 
-                        if (m.to === currentUser.uid && !m.read) {
+                        if (m.to === currentUser.uid && !m.read && isWindowActive) {
                             batch.update(doc.ref, { read: true });
                             needCommit = true;
                         }
+
+
 
                         let timeStr = '';
                         if (m.ts) {
