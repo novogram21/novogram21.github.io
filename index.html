@@ -4052,26 +4052,43 @@
             callTimerInt = setInterval(tick, 1000);
         }
         // Добавляем аргумент 'config'
+        // --- ИСПРАВЛЕНИЕ: Функция теперь принимает конфиг как аргумент ---
         function setupPeerConnection(config) {
             candidateQueue = [];
 
-            // Используем переданный конфиг ИЛИ дефолтный (на всякий случай)
+            // Если конфиг не передали, используем бесплатный STUN
             const finalConfig = config || { iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }] };
 
             pc = new RTCPeerConnection(finalConfig);
 
             pc.oniceconnectionstatechange = () => {
-                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-                    pc.getStats().then(stats => {
-                        stats.forEach(report => {
-                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                                const local = stats.get(report.localCandidateId);
-                                console.log(`🚀 Connection type: ${local ? local.candidateType : 'unknown'}`);
-                            }
-                        });
-                    });
+                if (pc.iceConnectionState === 'connected') {
+                    console.log("🚀 P2P Соединение установлено!");
                 }
             };
+
+            // Обработка кандидатов (пустая, так как логика в start/answer)
+            pc.onicecandidate = e => { };
+
+            pc.ontrack = e => {
+                const remoteVid = document.getElementById('remoteVideo');
+                remoteVid.muted = false;
+                if (remoteVid.srcObject !== e.streams[0]) {
+                    remoteVid.srcObject = e.streams[0];
+                    remoteVid.play().catch(console.error);
+                }
+            };
+
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'connected') {
+                    isConnected = true; wasCallConnected = true;
+                    updateCallStatus("В разговоре");
+                    stopAllTones(); startTimer(); startPing();
+                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                    endCall(false);
+                }
+            };
+        }
             pc.onicecandidate = e => { }; // Оставляем пустым, обработка в startCall/answerCall
             pc.ontrack = e => {
                 const remoteVid = document.getElementById('remoteVideo');
@@ -5122,7 +5139,39 @@
         // !!! ОБЯЗАТЕЛЬНО ЗАМЕНИ ССЫЛКУ НИЖЕ НА СВОЮ !!!
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGYrk10xkvkdYVQDDUhLWHiYZUHJOoKf0BsFFXXNmbmFi66fYP-rAS6uipmecT6UB5/exec";
         // --- БЕЗОПАСНЫЕ УВЕДОМЛЕНИЯ ---
-        const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc"; 
+        const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc";
+        // --- ИСПРАВЛЕНИЕ: Загрузка настроек с сервера ---
+        let cachedIceServers = null;
+
+        async function loadIceConfig() {
+            if (cachedIceServers) return cachedIceServers;
+
+            // Резервный сервер (бесплатный), если Google Script недоступен
+            const fallback = {
+                iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }]
+            };
+
+            try {
+                console.log("Загружаю настройки звонка...");
+                // Используем GET запрос к вашему скрипту
+                const url = `${GOOGLE_SCRIPT_URL}?action=getTurnCredentials&secret=${APP_SECRET_KEY}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === "success" && data.iceServers) {
+                    cachedIceServers = {
+                        iceServers: data.iceServers,
+                        iceCandidatePoolSize: 10
+                    };
+                    console.log("✅ Настройки звонка получены");
+                    return cachedIceServers;
+                }
+            } catch (e) {
+                console.warn("⚠️ Ошибка загрузки настроек, используем резерв:", e);
+            }
+            return fallback;
+        }
 
         async function sendNotificationSecure(friendUid, messageText, msgType = 'text') {
             if (!friendUid || !messageText) return;
