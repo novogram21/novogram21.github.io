@@ -5029,26 +5029,31 @@
             if (msgType === 'image') displayText = '📷 Фотография';
             if (msgType === 'file') displayText = '📄 Файл';
 
-            // 2. Формируем Имя Отправителя (Имя + Фамилия)
-            const nameInput = document.getElementById('profileName');
-            const surnameInput = document.getElementById('profileSurname');
+            // 2. Получаем МОЁ имя прямо из базы данных (Самый надежный способ)
+            let senderName = "Новое сообщение"; // Если вдруг имя не найдется
 
-            let senderName = "Пользователь"; // Значение по умолчанию
-
-            if (nameInput) {
-                const n = nameInput.value.trim();
-                const s = surnameInput ? surnameInput.value.trim() : "";
-
-                // Если есть имя, используем его
-                if (n) {
-                    senderName = n;
-                    // Если есть фамилия, добавляем её через пробел
-                    if (s) senderName += " " + s;
+            try {
+                // Если мы залогинены
+                if (currentUser) {
+                    const myDoc = await db.collection('users').doc(currentUser.uid).get();
+                    if (myDoc.exists) {
+                        const myData = myDoc.data();
+                        // Собираем Имя + Фамилия
+                        if (myData.name) {
+                            senderName = myData.name;
+                            if (myData.surname) senderName += " " + myData.surname;
+                        } else if (myData.username) {
+                            // Если имени нет, берем никнейм
+                            senderName = "@" + myData.username;
+                        }
+                    }
                 }
+            } catch (err) {
+                console.error("Не удалось получить имя отправителя:", err);
             }
 
             try {
-                // 3. Получаем данные получателя
+                // 3. Получаем данные получателя (чтобы узнать его ID для пуша)
                 const doc = await db.collection('users').doc(friendUid).get();
                 if (!doc.exists) return;
 
@@ -5068,7 +5073,7 @@
                         secret: APP_SECRET_KEY,
                         tgId: tgId,
                         oneSignalId: osId,
-                        title: senderName,   // <--- ТЕПЕРЬ ТУТ ПОЛНОЕ ИМЯ
+                        title: senderName,    // <--- Сюда пойдет Имя Фамилия из базы
                         text: displayText
                     })
                 });
