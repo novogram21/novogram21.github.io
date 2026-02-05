@@ -4216,7 +4216,13 @@
             await getMedia();
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-            await callDoc.set({ offer: { type: offer.type, sdp: offer.sdp }, caller: currentUser.uid, status: 'dialing' });
+            // Добавляем поле 'to', чтобы собеседник мог найти этот звонок
+            await callDoc.set({
+                offer: { type: offer.type, sdp: offer.sdp },
+                caller: currentUser.uid,
+                to: currentFriendId, // <--- ВАЖНОЕ ДОБАВЛЕНИЕ
+                status: 'dialing'
+            });
             callDoc.onSnapshot(async snap => {
                 if (!snap.exists) { endCall(false, true); return; }
                 const data = snap.data();
@@ -4298,7 +4304,7 @@
             btn.classList.remove('btn-screen-on'); lbl.innerText = 'Экран';
         }
         function listenForIncomingCalls() {
-            db.collection('calls').where('caller', '!=', currentUser.uid).onSnapshot(snap => {
+            db.collection('calls').where('to', '==', currentUser.uid).onSnapshot(snap => {
                 snap.docChanges().forEach(change => {
                     if (change.type === "added") {
                         if (change.doc.id.includes(currentUser.uid)) {
