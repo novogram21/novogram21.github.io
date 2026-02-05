@@ -3611,12 +3611,19 @@
                                 <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
                             `;
 
+
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
             if (statusEl) {
+                // Если данные уже есть в кэше — показываем сразу
                 if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
                     statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
-                } else {
+                }
+                // --- ИЗМЕНЕНИЕ: Если данных нет (перезагрузка), но имя загрузилось из базы выше
+                else if (userData && userData.lastSeen) {
+                    statusEl.innerText = formatLastSeen(userData.lastSeen);
+                }
+                else {
                     statusEl.innerText = 'загрузка...';
                 }
             }
