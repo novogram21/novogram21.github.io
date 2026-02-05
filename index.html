@@ -5915,6 +5915,48 @@
             }
         });
 
+        // --- ЛОГИКА ПРОЧТЕНИЯ ПРИ ВОЗВРАЩЕНИИ НА ВКЛАДКУ ---
+
+        function markCurrentChatRead() {
+            // Если чат не открыт или окно не активно - выходим
+            if (!currentChatId || !currentUser) return;
+            if (!document.hasFocus() || document.visibilityState !== 'visible') return;
+
+            // Ищем все непрочитанные сообщения в текущем чате, адресованные мне
+            db.collection('chats').doc(currentChatId).collection('msgs')
+                .where('to', '==', currentUser.uid)
+                .where('read', '==', false)
+                .get()
+                .then(snap => {
+                    if (snap.empty) return;
+
+                    const batch = db.batch();
+                    snap.docs.forEach(doc => {
+                        batch.update(doc.ref, { read: true });
+                    });
+
+                    batch.commit().then(() => {
+                        console.log('Сообщения помечены прочитанными при возвращении');
+                    });
+                })
+                .catch(err => console.error("Ошибка при пометке прочитанным:", err));
+        }
+
+        // Запускаем проверку, когда пользователь фокусируется на окне
+        window.addEventListener('focus', markCurrentChatRead);
+
+        // Запускаем проверку, когда вкладка становится видимой
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                markCurrentChatRead();
+            }
+        });
+
+        // Дополнительно: при клике в любую часть окна (на случай глюков фокуса)
+        window.addEventListener('click', () => {
+            // Небольшая задержка, чтобы не спамить запросами
+            if (currentChatId) markCurrentChatRead();
+        });
 
 
     </script>
