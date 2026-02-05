@@ -3028,20 +3028,26 @@
             });
         });
         function updateLastSeen() {
+            if (!currentUser) return;
+
             const now = Date.now();
-            // Если с последней активности прошло меньше 30 секунд - обновляем базу
-            if (now - lastActivityTime < 30000) {
+            // Если страница активна или была активность недавно
+            if (document.visibilityState === 'visible' || (now - lastActivityTime < 30000)) {
                 isOnline = true;
-                if (currentUser) {
-                    db.collection('users').doc(currentUser.uid).update({
-                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-                    }).catch(e => console.log('Err update lastSeen', e));
-                }
+                db.collection('users').doc(currentUser.uid).update({
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(e => console.log('Err update lastSeen', e));
             } else {
                 isOnline = false;
-                // Можно (опционально) явно поставить статус "офлайн" в базу, но лучше просто не обновлять дату
             }
         }
+
+        // Добавьте этот слушатель в конец скрипта
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                updateLastSeen();
+            }
+        });
         // Запускаем проверку каждые 15 секунд
         // Если активен -> обновит дату в базе.
         // Если НЕ активен -> не обновит, и через 30-60 сек для других он станет "был недавно"
@@ -3119,6 +3125,7 @@
                             document.getElementById('authScreen').classList.add('hidden');
                             document.getElementById('profileEmail').innerText = u.email;
                             updateLastSeen();
+                            
                             loadData();
                             listenForIncomingCalls();
                             loadTgId();
@@ -3593,6 +3600,7 @@
             document.getElementById('noChat').classList.add('hidden');
             document.getElementById('activeChat').classList.remove('hidden');
 
+            // --- ИЗМЕНЕНИЕ: Умная загрузка ---
             const titleEl = document.getElementById('chatTitle');
 
             // Если ключа нет в кэше, показываем лоадер
@@ -3602,43 +3610,35 @@
 
             // Ждем ключ (если он в кэше, это займет 0мс)
             await fetchChatKey(currentChatId);
+            // -------------------------------------
 
             // Установка нормального заголовка
             titleEl.innerHTML = `
-                <div>${name}</div>
-                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-            `;
+                                <div>${name}</div>
+                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                            `;
 
-            // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ИЛИ ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ---
+            // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
+            // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
             if (statusEl) {
-                // 1. Если данные уже есть в кэше — показываем сразу
+                // Если данные уже есть в кэше — показываем сразу
                 if (typeof usersCache !== 'undefined' && usersCache[fid] && usersCache[fid].lastSeen) {
                     statusEl.innerText = formatLastSeen(usersCache[fid].lastSeen);
                 }
+                // --- ИЗМЕНЕНИЕ: Если данных нет (перезагрузка), но имя загрузилось из базы выше
+                else if (userData && userData.lastSeen) {
+                    statusEl.innerText = formatLastSeen(userData.lastSeen);
+                }
                 else {
-                    // 2. Если кэш пуст (обновили страницу), ставим "загрузка..." и СРАЗУ тянем данные из базы
                     statusEl.innerText = 'загрузка...';
-
-                    db.collection('users').doc(fid).get().then(doc => {
-                        if (doc.exists) {
-                            const d = doc.data();
-                            // Сохраняем в кэш
-                            usersCache[fid] = d;
-                            // Если пользователь всё еще в этом чате — обновляем текст
-                            if (currentFriendId === fid) {
-                                statusEl.innerText = formatLastSeen(d.lastSeen);
-                            }
-                        }
-                    }).catch(e => console.error("Ошибка загрузки статуса:", e));
                 }
             }
-            // -------------------------------------------------------------
 
             // 1. Сброс старого слушателя
             if (chatStatusUnsub) chatStatusUnsub();
 
-            // 2. Новый слушатель (для обновлений в реальном времени)
+            // 2. Новый слушатель
             chatStatusUnsub = db.collection('users').doc(fid).onSnapshot(userSnap => {
                 if (userSnap.exists && currentFriendId === fid) {
                     const userData = userSnap.data();
@@ -3651,7 +3651,7 @@
                 }
             }, err => console.error("Ошибка слушателя статуса:", err));
 
-            // Загружаем сообщения
+            // Загружаем сообщения (теперь ключ уже есть в памяти, расшифровка сработает)
             loadMessages();
 
             // Фокус на инпут
