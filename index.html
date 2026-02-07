@@ -3886,131 +3886,122 @@
             }
         }
 
-        // --- 1. ОПТИМИЗИРОВАННАЯ ЗАГРУЗКА СООБЩЕНИЙ ---
+        // --- 1. ИСПРАВЛЕННАЯ ЗАГРУЗКА (ЖЕСТКАЯ СОРТИРОВКА) ---
         function loadMessages() {
             const list = document.getElementById('msgList');
 
             if (msgUnsub) msgUnsub();
 
+            // Очищаем список при смене чата
             list.innerHTML = '';
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
+            // Запрашиваем данные
             msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
-                .orderBy('ts', 'asc')
+                .orderBy('ts', 'asc') // Сортируем в базе (базовая сортировка)
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
 
                     const batch = db.batch();
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
+
+                    // Запоминаем, были ли мы внизу (для автоскролла)
                     const isScrolledToBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 150;
 
-                    // === 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ 🔥 ===
-                    // Получаем массив изменений
-                    let changes = snap.docChanges();
+                    // 1. Получаем ВСЕ документы в массив
+                    let allDocs = snap.docs;
 
-                    // ВРУЧНУЮ СОРТИРУЕМ ИХ ПЕРЕД ОТРИСОВКОЙ
-                    // Если время (ts) равно null (сообщение летит), считаем, что время = Date.now() (самое новое)
-                    // Это заставит локальное сообщение встать В КОНЕЦ, а не в начало
-                    changes.sort((a, b) => {
-                        const timeA = a.doc.data().ts ? a.doc.data().ts.toMillis() : Date.now() + 10000; // +10000 чтобы наверняка было последним
-                        const timeB = b.doc.data().ts ? b.doc.data().ts.toMillis() : Date.now() + 10000;
+                    // 2. ПРИНУДИТЕЛЬНАЯ СОРТИРОВКА В JS
+                    // Если ts == null (сообщение только отправлено), считаем его время = "Будущее"
+                    // Это гарантированно прибьёт его к низу списка
+                    allDocs.sort((a, b) => {
+                        const timeA = a.data().ts ? a.data().ts.toMillis() : Date.now() + 999999;
+                        const timeB = b.data().ts ? b.data().ts.toMillis() : Date.now() + 999999;
                         return timeA - timeB;
                     });
 
-                    changes.forEach(change => {
-                        const doc = change.doc;
-                        const rawData = doc.data();
+                    // 3. ОТРИСОВКА В СТРОГОМ ПОРЯДКЕ
+                    // Мы проходим по отсортированному массиву и вставляем/перемещаем элементы
+                    allDocs.forEach(doc => {
                         const msgId = doc.id;
+                        const rawData = doc.data();
 
+                        // Если сообщение удалено локально - пропускаем
                         if (deletedLocal.includes(msgId)) {
                             const el = document.getElementById('msg-' + msgId);
                             if (el) el.remove();
                             return;
                         }
 
+                        // Расшифровка
                         const m = { ...rawData };
                         m.txt = decryptText(rawData.txt, currentChatId);
                         const msgType = m.type || 'text';
 
-                        // --- 1. НОВОЕ СООБЩЕНИЕ ---
-                        if (change.type === 'added') {
-                            if (document.getElementById('msg-' + msgId)) return;
+                        // Ищем, есть ли уже этот div
+                        let div = document.getElementById('msg-' + msgId);
+                        const isNew = !div;
 
-                            const div = document.createElement('div');
+                        if (isNew) {
+                            // Если нет - создаем
+                            div = document.createElement('div');
                             div.id = 'msg-' + msgId;
-                            div.innerHTML = buildMessageHTML(m, msgId, msgType);
 
-                            if (m.sys) div.className = 'msg msg-sys';
-                            else if (m.from === currentUser.uid) div.className = 'msg msg-me';
-                            else div.className = 'msg msg-other';
-
+                            // Навешиваем обработчики (только один раз при создании)
                             div.oncontextmenu = (e) => {
                                 e.preventDefault(); e.stopPropagation();
                                 openContextMenu(e, msgId, m.from === currentUser.uid);
                             };
-
-                            // Для мобилок
                             div.onclick = (e) => {
                                 if (window.innerWidth <= 768 && e.target.tagName !== 'A' && e.target.tagName !== 'IMG') {
                                     e.stopPropagation();
                                     openContextMenu(e, msgId, m.from === currentUser.uid, true);
                                 }
                             };
-
-                            // Теперь, благодаря сортировке выше, appendChild добавит сообщение в правильном порядке
-                            list.appendChild(div);
-
-                            if (m.to === currentUser.uid && !m.read && isWindowActive) {
-                                batch.update(doc.ref, { read: true });
-                                needCommit = true;
-                            }
-
-                            if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate) {
-                                if (m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
-                                    appendTranslation(div, m.txt);
-                                }
-                            }
                         }
 
-                        // --- 2. ИЗМЕНЕНИЕ ---
-                        if (change.type === 'modified') {
-                            const existingDiv = document.getElementById('msg-' + msgId);
-                            if (existingDiv) {
-                                const ticksEl = existingDiv.querySelector('.msg-ticks');
-                                if (ticksEl && m.read) {
-                                    ticksEl.innerHTML = '<span style="margin-right: -4px;">✓</span>✓';
-                                }
-                                if (m.edited || change.doc.metadata.hasPendingWrites) {
-                                    existingDiv.innerHTML = buildMessageHTML(m, msgId, msgType);
-                                    if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate && m.from !== currentUser.uid && msgType === 'text') {
-                                        const oldTrans = existingDiv.querySelector('.translated-block');
-                                        if (oldTrans) oldTrans.remove();
-                                        appendTranslation(existingDiv, m.txt);
-                                    }
-                                }
-                                // При обновлении (когда сервер присвоил время) перемещаем вниз, чтобы закрепить позицию
-                                list.appendChild(existingDiv);
-                            }
+                        // Обновляем содержимое (и для новых, и для измененных)
+                        // Это решает проблему "пропадания", обновляя статус и текст
+                        div.innerHTML = buildMessageHTML(m, msgId, msgType);
+
+                        // Классы стилей
+                        if (m.sys) div.className = 'msg msg-sys';
+                        else if (m.from === currentUser.uid) div.className = 'msg msg-me';
+                        else div.className = 'msg msg-other';
+
+                        // --- САМОЕ ВАЖНОЕ: ВСТАВКА ---
+                        // appendChild в цикле по ОТСОРТИРОВАННОМУ массиву
+                        // Если элемент уже есть, он ПЕРЕМЕСТИТСЯ на правильное место (вниз)
+                        list.appendChild(div);
+
+                        // Логика прочтения
+                        if (m.to === currentUser.uid && !m.read && isWindowActive) {
+                            batch.update(doc.ref, { read: true });
+                            needCommit = true;
                         }
 
-                        // --- 3. УДАЛЕНИЕ ---
-                        if (change.type === 'removed') {
-                            const el = document.getElementById('msg-' + msgId);
-                            if (el) el.remove();
+                        // Перевод
+                        if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate) {
+                            if (m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
+                                appendTranslation(div, m.txt);
+                            }
                         }
                     });
 
                     if (needCommit) batch.commit();
 
-                    // Скролл
-                    if (isScrolledToBottom || snap.docChanges().length > 1) {
+                    // 4. СКРОЛЛ ВНИЗ
+                    // Скроллим, если это первая загрузка или если мы уже были внизу
+                    // snap.metadata.hasPendingWrites означает, что есть локальные (свежие) данные
+                    if (isScrolledToBottom || snap.metadata.hasPendingWrites || list.children.length < 10) {
                         setTimeout(() => {
                             list.scrollTop = list.scrollHeight;
                         }, 50);
                     }
                 });
 
+            // Фокус
             setTimeout(() => {
                 const inp = document.getElementById('msgInput');
                 if (inp) inp.focus();
