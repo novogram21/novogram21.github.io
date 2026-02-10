@@ -6102,9 +6102,16 @@
         async function sendNotificationSecure(friendUid, messageText, msgType = 'text', isCall = false) {
             if (!friendUid || !messageText) return;
 
-            let senderName = (currentUser && currentUser.displayName) || (currentUser && currentUser.email) || "Novogram";
-            if (usersCache[currentUser.uid] && usersCache[currentUser.uid].name) {
-                 senderName = usersCache[currentUser.uid].name;
+            // 1. Определяем имя отправителя
+            let senderName = "Novogram";
+            if (currentUser) {
+                if (usersCache[currentUser.uid] && usersCache[currentUser.uid].name) {
+                    senderName = usersCache[currentUser.uid].name;
+                } else if (currentUser.displayName) {
+                    senderName = currentUser.displayName;
+                } else {
+                    senderName = currentUser.email;
+                }
             }
 
             let displayText = messageText;
@@ -6113,43 +6120,48 @@
             if (isCall) displayText = '📞 Входящий звонок...';
 
             try {
-                // 1. Получаем данные друга из базы
+                // 2. Получаем данные получателя
                 const doc = await db.collection('users').doc(friendUid).get();
-                if (!doc.exists) {
-                    console.log("❌ Ошибка уведомления: Пользователь не найден в базе");
-                    return;
-                }
+                if (!doc.exists) return;
 
                 const userData = doc.data();
-                
-                // 2. Ищем токен FCM (Android)
-                const fcmToken = userData.fcmToken;
-                
-                if (!fcmToken) {
-                    console.log("⚠️ У пользователя нет FCM токена. Уведомление не отправлено.");
-                    // Это значит, что друг еще не зашел в новую версию приложения на Андроиде!
+
+                // Ищем все возможные токены
+                const fcmToken = userData.fcmToken || null;
+                const tgId = userData.tgChatId || null;
+                const osId = userData.oneSignalId || null;
+
+                if (!tgId && !osId && !fcmToken) {
+                    console.log("У получателя нет токенов для уведомлений.");
                     return;
                 }
 
-                console.log("🚀 Отправка уведомления на токен:", fcmToken);
-
-                // 3. Отправляем запрос на Google Apps Script
+                // 3. Отправляем запрос (ИСПРАВЛЕННЫЙ МЕТОД)
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
-                    mode: "no-cors",
-                    headers: { "Content-Type": "application/json" },
+                    redirect: "follow", // <-- ВАЖНО: Следовать за редиректом Google
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8" // <-- ВАЖНО: text/plain чтобы не было CORS ошибок
+                    },
                     body: JSON.stringify({
                         action: "notification",
                         secret: APP_SECRET_KEY,
-                        fcmToken: fcmToken,     
-                        title: senderName,      
-                        text: displayText,      
-                        isCall: isCall          
-                    })
-                });
 
-            } catch (e) { 
-                console.error("❌ Ошибка отправки уведомления:", e); 
+                        fcmToken: fcmToken,
+                        tgId: tgId,
+                        oneSignalId: osId,
+
+                        title: senderName,
+                        text: displayText,
+                        isCall: isCall
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => console.log("Статус отправки:", data))
+                    .catch(err => console.error("Ошибка запроса к скрипту:", err));
+
+            } catch (e) {
+                console.error("Ошибка в функции уведомления:", e);
             }
         }
 
