@@ -6103,9 +6103,8 @@
             if (!friendUid || !messageText) return;
 
             let senderName = (currentUser && currentUser.displayName) || (currentUser && currentUser.email) || "Novogram";
-            // Если есть имя в профиле, используем его
             if (usersCache[currentUser.uid] && usersCache[currentUser.uid].name) {
-                senderName = usersCache[currentUser.uid].name;
+                 senderName = usersCache[currentUser.uid].name;
             }
 
             let displayText = messageText;
@@ -6114,44 +6113,43 @@
             if (isCall) displayText = '📞 Входящий звонок...';
 
             try {
-                // 1. Получаем данные друга
+                // 1. Получаем данные друга из базы
                 const doc = await db.collection('users').doc(friendUid).get();
-                if (!doc.exists) return;
+                if (!doc.exists) {
+                    console.log("❌ Ошибка уведомления: Пользователь не найден в базе");
+                    return;
+                }
 
                 const userData = doc.data();
+                
+                // 2. Ищем токен FCM (Android)
+                const fcmToken = userData.fcmToken;
+                
+                if (!fcmToken) {
+                    console.log("⚠️ У пользователя нет FCM токена. Уведомление не отправлено.");
+                    // Это значит, что друг еще не зашел в новую версию приложения на Андроиде!
+                    return;
+                }
 
-                // 2. Ищем токены (Телеграм, OneSignal или наш новый FCM)
-                const fcmToken = userData.fcmToken || null; // <--- НОВОЕ
-                const tgId = userData.tgChatId || null;
-                const osId = userData.oneSignalId || null;
-
-                if (!tgId && !osId && !fcmToken) return;
+                console.log("🚀 Отправка уведомления на токен:", fcmToken);
 
                 // 3. Отправляем запрос на Google Apps Script
-                // Используем fetch без ожидания ответа (fire and forget), чтобы не тормозить чат
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        action: "notification", // Действие для скрипта
-                        secret: APP_SECRET_KEY, // Твой секретный ключ
-
-                        // Данные для отправки
-                        fcmToken: fcmToken,     // <--- НОВОЕ: Токен Андроида
-                        tgId: tgId,             // Токен Телеграма
-                        oneSignalId: osId,      // Токен OneSignal (если есть)
-
-                        title: senderName,      // Заголовок (Имя отправителя)
-                        text: displayText,      // Текст сообщения
-                        isCall: isCall          // Звонок или нет
+                        action: "notification",
+                        secret: APP_SECRET_KEY,
+                        fcmToken: fcmToken,     
+                        title: senderName,      
+                        text: displayText,      
+                        isCall: isCall          
                     })
                 });
 
-                console.log("📨 Сигнал уведомления отправлен для:", friendUid);
-
-            } catch (e) {
-                console.error("Ошибка уведомления:", e);
+            } catch (e) { 
+                console.error("❌ Ошибка отправки уведомления:", e); 
             }
         }
 
