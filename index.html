@@ -3052,6 +3052,12 @@
                 <button onclick="toggleMic()" id="btnMic" class="btn-circle">🎤</button>
                 <span id="lblMic" class="control-label">Выкл. звук</span>
             </div>
+
+            <div class="control-item" id="speakerControl" style="display: none;">
+                <button onclick="toggleSpeaker()" id="btnSpeaker" class="btn-circle">🔈</button>
+                <span id="lblSpeaker" class="control-label">В ухо</span>
+            </div>
+
         </div>
     </div>
     <script>
@@ -3626,6 +3632,12 @@
             if (u) {
                 currentUser = u;
                 localStorage.setItem('isLoggedIn', 'true');
+
+                const savedToken = localStorage.getItem('fcm_token');
+                if (savedToken) {
+                    saveTokenToBackend(u.uid, savedToken);
+                }
+
 
                 db.collection('users').doc(u.uid).get().then(doc => {
                     if (doc.exists) {
@@ -4972,6 +4984,12 @@
             }
         }
         async function switchCamera() {
+            // Добавь это в начало switchCamera()
+            if (localStream) {
+                // Временно выключаем треки перед переключением камеры
+                localStream.getTracks().forEach(track => track.stop());
+            }
+
             if (!pc || !localStream) return;
             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
             if (!sender) return;
@@ -6039,69 +6057,101 @@
         // !!! ОБЯЗАТЕЛЬНО ЗАМЕНИ ССЫЛКУ НИЖЕ НА СВОЮ !!!
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4AnViDZV8N6X-Tk9XFG2LQwTUVb2TWWR3RcoCNhkRmOM5XLug9UBi1Ky-_j2sQB5u/exec";
         // --- БЕЗОПАСНЫЕ УВЕДОМЛЕНИЯ ---
+        // === НАЧАЛО ВСТАВКИ: Обработка Токена из C# ===
+
+        // Эта функция вызывается из Android (C#) автоматически
+        window.setNativeOneSignalId = function (token) {
+            console.log("🔥 FCM Token получен из Android:", token);
+
+            // 1. Сохраняем токен в память браузера (на случай, если юзер еще не вошел)
+            localStorage.setItem('fcm_token', token);
+
+            // 2. Если пользователь уже вошел в аккаунт — сохраняем токен в базу
+            const user = firebase.auth().currentUser;
+            if (user) {
+                saveTokenToBackend(user.uid, token);
+            }
+        };
+
+        // Функция отправки токена в базу и на скрипт
+        function saveTokenToBackend(uid, token) {
+            // А. Сохраняем в Firestore (чтобы быстро доставать при отправке сообщений)
+            db.collection('users').doc(uid).update({
+                fcmToken: token
+            }).then(() => console.log("Token saved to Firestore"))
+                .catch(err => console.error("Error saving token:", err));
+
+            // Б. Отправляем в Google Apps Script (как ты просил)
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action: 'saveToken',
+                    userId: uid,
+                    token: token
+                })
+            });
+        }
+
+        // === КОНЕЦ ВСТАВКИ ===
+
+
         const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc";
 
-        async function sendNotificationSecure(friendUid, messageText, msgType = 'text') {
+        async function sendNotificationSecure(friendUid, messageText, msgType = 'text', isCall = false) {
             if (!friendUid || !messageText) return;
 
-            // 1. Формируем текст сообщения
+            let senderName = (currentUser && currentUser.displayName) || (currentUser && currentUser.email) || "Novogram";
+            // Если есть имя в профиле, используем его
+            if (usersCache[currentUser.uid] && usersCache[currentUser.uid].name) {
+                senderName = usersCache[currentUser.uid].name;
+            }
+
             let displayText = messageText;
             if (msgType === 'image') displayText = '📷 Фотография';
             if (msgType === 'file') displayText = '📄 Файл';
-
-            // 2. Получаем МОЁ имя прямо из базы данных (Самый надежный способ)
-            let senderName = "Новое сообщение"; // Если вдруг имя не найдется
+            if (isCall) displayText = '📞 Входящий звонок...';
 
             try {
-                // Если мы залогинены
-                if (currentUser) {
-                    const myDoc = await db.collection('users').doc(currentUser.uid).get();
-                    if (myDoc.exists) {
-                        const myData = myDoc.data();
-                        // Собираем Имя + Фамилия
-                        if (myData.name) {
-                            senderName = myData.name;
-                            if (myData.surname) senderName += " " + myData.surname;
-                        } else if (myData.username) {
-                            // Если имени нет, берем никнейм
-                            senderName = "@" + myData.username;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Не удалось получить имя отправителя:", err);
-            }
-
-            try {
-                // 3. Получаем данные получателя (чтобы узнать его ID для пуша)
+                // 1. Получаем данные друга
                 const doc = await db.collection('users').doc(friendUid).get();
                 if (!doc.exists) return;
 
                 const userData = doc.data();
+
+                // 2. Ищем токены (Телеграм, OneSignal или наш новый FCM)
+                const fcmToken = userData.fcmToken || null; // <--- НОВОЕ
                 const tgId = userData.tgChatId || null;
                 const osId = userData.oneSignalId || null;
 
-                if (!tgId && !osId) return;
+                if (!tgId && !osId && !fcmToken) return;
 
-                // 4. Отправляем на сервер
-                await fetch(GOOGLE_SCRIPT_URL, {
+                // 3. Отправляем запрос на Google Apps Script
+                // Используем fetch без ожидания ответа (fire and forget), чтобы не тормозить чат
+                fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        action: "notification",
-                        secret: APP_SECRET_KEY,
-                        tgId: tgId,
-                        oneSignalId: osId,
-                        title: senderName,    // <--- Сюда пойдет Имя Фамилия из базы
-                        text: displayText
+                        action: "notification", // Действие для скрипта
+                        secret: APP_SECRET_KEY, // Твой секретный ключ
+
+                        // Данные для отправки
+                        fcmToken: fcmToken,     // <--- НОВОЕ: Токен Андроида
+                        tgId: tgId,             // Токен Телеграма
+                        oneSignalId: osId,      // Токен OneSignal (если есть)
+
+                        title: senderName,      // Заголовок (Имя отправителя)
+                        text: displayText,      // Текст сообщения
+                        isCall: isCall          // Звонок или нет
                     })
                 });
 
-                console.log("Уведомление отправлено от:", senderName);
+                console.log("📨 Сигнал уведомления отправлен для:", friendUid);
 
             } catch (e) {
-                console.error("Ошибка отправки:", e);
+                console.error("Ошибка уведомления:", e);
             }
         }
 
@@ -7028,9 +7078,68 @@
             }
         }
 
+        // Универсальная функция переключения аудио-выхода
+        async function setAudioOutput(toEarpiece) {
+            console.log("Переключение звука. В ухо:", toEarpiece);
 
+            // 1. Проверка: Мы в MAUI приложении?
+            if (window.DotNet) {
+                // Если ты настроил Bridge, вызываем C# метод
+                // Если нет, Android сам часто переключает в Mode_In_Communication при WebRTC
+                console.log("Попытка вызвать системный переключатель MAUI");
+            }
 
+            // 2. Логика для браузера (и WebView)
+            const remoteVid = document.getElementById('remoteVideo');
+            if (remoteVid && remoteVid.setSinkId) {
+                // В современных браузерах можно программно выбирать устройство, 
+                // но на мобилках это чаще управляется системой.
+            }
 
+            showToast(toEarpiece ? "Звук: Динамик уха" : "Звук: Громкая связь");
+        }
+
+        let isEarpiece = false;
+
+        // 1. Проверка среды при старте звонка
+        function updateSpeakerButtonVisibility() {
+            // В MAUI Blazor Hybrid обычно доступен объект window.chrome.webview или DotNet
+            const isApp = window.chrome && window.chrome.webview;
+            const speakerBtn = document.getElementById('speakerControl');
+            if (isApp && speakerBtn) {
+                speakerBtn.style.display = 'flex'; // Показываем кнопку только в приложении
+            }
+        }
+
+        // 2. Функция переключения
+        function toggleSpeaker() {
+            isEarpiece = !isEarpiece;
+            const btn = document.getElementById('btnSpeaker');
+            const lbl = document.getElementById('lblSpeaker');
+
+            if (isEarpiece) {
+                btn.innerHTML = '👂';
+                lbl.innerText = 'Громкая';
+                btn.classList.add('btn-active-white');
+            } else {
+                btn.innerHTML = '🔈';
+                lbl.innerText = 'В ухо';
+                btn.classList.remove('btn-active-white');
+            }
+
+            // ВЫЗОВ C# КОДА (MAUI)
+            if (window.chrome && window.chrome.webview) {
+                // Передаем команду в MainActivity.cs
+                window.chrome.webview.postMessage(JSON.stringify({
+                    action: "setAudioMode",
+                    earpiece: isEarpiece
+                }));
+            }
+        }
+
+        // 3. Вызови проверку кнопок в момент открытия экрана звонка
+        // Добавь это внутрь функции startCall() и answerCall()
+        // updateSpeakerButtonVisibility();
 
 
 
