@@ -21,7 +21,16 @@
             color: #eee;
             margin: 0;
             display: flex;
-            height: 100dvh;
+            /* --- ИЗМЕНЕНИЯ ЗДЕСЬ --- */
+            position: fixed; /* Фиксируем позицию */
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0; /* Растягиваем до низа. Когда клава выйдет, bottom поднимется */
+            height: auto; /* Убираем 100dvh */
+            width: 100%;
+            /* ----------------------- */
+
             overflow: hidden;
             overscroll-behavior-y: none;
         }
@@ -2702,7 +2711,7 @@
 
                 <div style="display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 15px; box-sizing: border-box;">
                     <div class="input-container">
-                        <input type="text" id="msgInput" placeholder="Сообщение" onkeypress="if(event.key==='Enter') sendMsg()">
+                        <input type="text" id="msgInput" placeholder="Сообщение" onkeydown="handleChatInput(event)">
                         <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
                         <button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button>
                     </div>
@@ -6977,7 +6986,33 @@
             loadData();
         }
 
+        // --- НОВАЯ ФУНКЦИЯ ДЛЯ ВВОДА (ПОДДЕРЖИВАЕТ ВСЕ ЯЗЫКИ) ---
+        function handleChatInput(e) {
+            // Проверяем нажатие Enter
+            if (e.key === 'Enter') {
+                // Если зажат Shift, делаем перенос строки (если это textarea, но для input это просто игнор)
+                // Для обычного input: отправляем сообщение
+                if (!e.shiftKey) {
+                    e.preventDefault(); // Чтобы не было переноса или звука
+                    sendMsg();
+                }
+            }
+        }
 
+        // --- ФИКС КЛАВИАТУРЫ: Следим за изменением размера окна ---
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                // Когда клавиатура выезжает, высота viewport меняется
+                // Скроллим чат в самый низ, чтобы видеть последнее сообщение
+                const list = document.getElementById('msgList');
+                if (list) {
+                    // Небольшая задержка, чтобы браузер успел пересчитать layout
+                    setTimeout(() => {
+                        list.scrollTop = list.scrollHeight;
+                    }, 100);
+                }
+            });
+        }
 
     </script>
 
