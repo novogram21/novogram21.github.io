@@ -436,79 +436,132 @@
             }
 
 
-
-
+        /* --- НОВАЯ ПАНЕЛЬ ВВОДА (TELEGRAM STYLE) --- */
         .input-bar {
-            padding: 8px 8px 8px 8px; /* Немного отступов по краям */
-            /* Учитываем отступ снизу для iPhone/Android жестов */
-            padding-bottom: calc(8px + env(safe-area-inset-bottom));
-            background: #1f1f1f; /* Фон панели, как в TG */
-            display: flex;
-            align-items: flex-end; /* Выравнивание по низу (если текст в несколько строк) */
-            gap: 8px;
             width: 100%;
             max-width: 900px;
             margin: 0 auto;
+            background: #1f1f1f; /* Цвет панели */
+            min-height: 56px;
+            padding: 8px;
+            /* Учитываем отступ снизу для жестов Android/iOS */
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            display: flex;
+            align-items: flex-end; /* Выравнивание по низу */
+            gap: 8px;
             position: relative;
             z-index: 5;
         }
 
-        .input-container {
-            flex: 1;
+        /* Серый блок ввода */
+        .input-wrapper {
+            flex: 1; /* Занимает все доступное место */
+            background: #181818; /* Цвет поля ввода */
+            border-radius: 20px; /* Скругление */
             display: flex;
             align-items: center;
-            background: #1f1f1f; /* Фон самого поля ввода */
-            border-radius: 25px; /* Сильное скругление */
-            padding: 5px 15px;
-            border: 1px solid #333;
-            position: relative;
+            min-height: 42px;
+            padding: 0 12px;
+            transition: 0.2s;
+            border: 1px solid transparent;
         }
 
-            .input-container input {
+            .input-wrapper:focus-within {
+                border-color: #007bff; /* Подсветка при вводе */
+            }
+
+            /* Поле ввода текста */
+            .input-wrapper textarea {
                 flex: 1;
                 background: transparent;
                 border: none;
                 color: white;
-                padding: 10px;
-                font-size: 15px;
+                font-size: 16px;
+                max-height: 100px; /* Ограничение высоты */
+                padding: 10px 0;
                 outline: none;
+                resize: none; /* Убираем уголок растягивания */
+                font-family: inherit;
+                line-height: 1.4;
+                height: 40px; /* Начальная высота */
+                /* Скрываем скроллбар */
+                scrollbar-width: none;
             }
 
+                .input-wrapper textarea::-webkit-scrollbar {
+                    display: none;
+                }
 
-
-
-        /* Кнопка скрепки внутри поля */
-        .attach-btn {
+        /* Кнопки иконки (Скрепка и Смайл) */
+        .tg-icon-btn-input {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
             background: none;
             border: none;
             color: #888;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 5px;
             transition: 0.2s;
+            padding: 0;
+            flex-shrink: 0; /* Чтобы не сжимались */
         }
 
-            .attach-btn:hover {
-                color: #ccc;
+            .tg-icon-btn-input:hover {
+                color: #aaa;
             }
 
+            .tg-icon-btn-input svg {
+                width: 24px;
+                height: 24px;
+                fill: currentColor;
+            }
 
-
-
-        /* Круглая кнопка микрофона/отправки справа */
-        .voice-btn, .send-btn {
-            width: 45px;
-            height: 45px;
+        /* Круглая кнопка справа (Микрофон / Самолетик) */
+        .main-action-btn {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            transition: 0.2s;
-            flex-shrink: 0;
+            flex-shrink: 0; /* ВАЖНО: Запрещает кнопке сплющиваться! */
+            transition: transform 0.2s, background 0.2s;
         }
+
+        /* Стиль для микрофона (серый фон) */
+        .btn-mic {
+            background: #2d2d2d;
+            color: #fff;
+        }
+
+            .btn-mic:active {
+                transform: scale(0.95);
+            }
+
+        /* Стиль для отправки (синий фон) */
+        .btn-send {
+            background: #007bff;
+            color: white;
+        }
+
+            .btn-send:active {
+                transform: scale(0.95);
+            }
+
+        .hidden {
+            display: none !important;
+        }
+
+        
+
+        
+
+
+
 
         .voice-btn {
             background: #2d2d2d; /* Темный фон для микрофона */
@@ -529,14 +582,7 @@
                 background: #0056b3;
             }
 
-        .input-bar input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 20px;
-            border: 1px solid #444;
-            background: #2d2d2d;
-            color: white;
-        }
+       
 
 
 
@@ -2699,26 +2745,39 @@
                 </div>
             </div>
             <div id="msgList" class="messages"></div>
-            <div class="input-bar" style="flex-direction: column; gap: 0; padding: 0; align-items: stretch;">
+            <div class="input-bar">
 
-                <div id="replyBar" class="reply-bar hidden">
+                <div id="replyBar" class="reply-bar hidden" style="position: absolute; bottom: 100%; left:0; right:0; border-top-left-radius: 12px; border-top-right-radius: 12px;">
                     <div class="reply-icon">↩️</div>
                     <div class="reply-content">
-                        <div id="replyTitle" class="reply-title">Reply Name</div>
-                        <div id="replyText" class="reply-text">Message text...</div>
+                        <div id="replyTitle" class="reply-title">User</div>
+                        <div id="replyText" class="reply-text">Text...</div>
                     </div>
                     <button class="reply-close" onclick="cancelReplyOrEdit()">✖</button>
                 </div>
 
-                <div style="display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 15px; box-sizing: border-box;">
-                    <div class="input-container">
-                        <input type="text" id="msgInput" placeholder="Сообщение" onkeydown="handleChatInput(event)">
-                        <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
-                        <button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-                    </div>
-                    <button class="voice-btn" onclick="alert('Голосовые сообщения скоро будут!')">🎤</button>
-                    <button class="send-btn hidden" id="sendBtn" onclick="sendMsg()">➤</button>
+                <div class="input-wrapper">
+                    <button class="tg-icon-btn-input" onclick="alert('Смайлы скоро!')">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.17 8 15.33 8 13.83 8.67 13.83 9.5 14.5 11 15.33 11zm-6.66 0c.83 0 1.5-.67 1.5-1.5S9.5 8 8.67 8 7.17 8.67 7.17 9.5 7.84 11 8.67 11zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
+                    </button>
+
+                    <textarea id="msgInput" placeholder="Сообщение" rows="1" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
+
+                    <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
+
+                    <button class="tg-icon-btn-input" onclick="document.getElementById('fileInput').click()">
+                        <svg viewBox="0 0 24 24" style="transform: rotate(45deg);"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" /></svg>
+                    </button>
                 </div>
+
+                <button id="voiceBtn" class="main-action-btn btn-mic" onclick="alert('Голосовые скоро!')">
+                    <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
+                </button>
+
+                <button id="sendBtn" class="main-action-btn btn-send hidden" onclick="sendMsg()">
+                    <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white; margin-left: 2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+                </button>
+
             </div>
         </div>
     </div>
@@ -4483,8 +4542,8 @@
 
             if (!txt) {
                 inputEl.value = '';
-                document.getElementById('sendBtn').style.display = 'none';
-                document.querySelector('.voice-btn').style.display = 'flex';
+                inputEl.style.height = '40px'; // Сброс высоты
+                checkInputState(); // Обновление кнопок
                 inputEl.focus();
             }
             // УВЕДОМЛЕНИЯ (БЕЗОПАСНО ЧЕРЕЗ СЕРВЕР)
@@ -4620,7 +4679,10 @@
             const bar = document.getElementById('replyBar');
             if (bar) bar.classList.add('hidden');
 
-            document.getElementById('msgInput').value = '';
+            const inp = document.getElementById('msgInput');
+            inp.value = '';
+            inp.style.height = '40px'; // <-- ДОБАВИТЬ ЭТУ СТРОЧКУ (Сброс высоты)
+            checkInputState(); // <-- ДОБАВИТЬ ЭТУ СТРОЧКУ (Вернуть микрофон)
         }
 
 
@@ -6987,15 +7049,37 @@
             loadData();
         }
 
+        // Авто-увеличение высоты поля ввода
+        function autoResize(textarea) {
+            textarea.style.height = 'auto'; // Сброс
+            textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px'; // Максимум 100px
+        }
+
+        // Логика переключения кнопок Микрофон / Самолетик
+        function checkInputState() {
+            const val = document.getElementById('msgInput').value.trim();
+            const voiceBtn = document.getElementById('voiceBtn');
+            const sendBtn = document.getElementById('sendBtn');
+
+            if (val.length > 0) {
+                voiceBtn.classList.add('hidden');
+                sendBtn.classList.remove('hidden');
+            } else {
+                voiceBtn.classList.remove('hidden');
+                sendBtn.classList.add('hidden');
+            }
+        }
+
         // --- НОВАЯ ФУНКЦИЯ ДЛЯ ВВОДА (ПОДДЕРЖИВАЕТ ВСЕ ЯЗЫКИ) ---
         function handleChatInput(e) {
-            // Проверяем нажатие Enter
             if (e.key === 'Enter') {
-                // Если зажат Shift, делаем перенос строки (если это textarea, но для input это просто игнор)
-                // Для обычного input: отправляем сообщение
                 if (!e.shiftKey) {
-                    e.preventDefault(); // Чтобы не было переноса или звука
+                    e.preventDefault();
                     sendMsg();
+                    // Сброс высоты после отправки
+                    const inp = document.getElementById('msgInput');
+                    inp.style.height = '40px';
+                    checkInputState();
                 }
             }
         }
