@@ -439,15 +439,16 @@
 
 
         .input-bar {
-            padding: 10px 20px;
-            background: transparent; /* Прозрачный, чтобы видеть фон */
+            padding: 8px 8px 8px 8px; /* Немного отступов по краям */
+            /* Учитываем отступ снизу для iPhone/Android жестов */
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            background: #1f1f1f; /* Фон панели, как в TG */
             display: flex;
-            justify-content: center; /* Центрируем всё содержимое */
-            align-items: center;
-            gap: 10px;
+            align-items: flex-end; /* Выравнивание по низу (если текст в несколько строк) */
+            gap: 8px;
             width: 100%;
-            max-width: 900px; /* Ограничиваем ширину, чтобы на больших экранах было не слишком широко */
-            margin: 0 auto; /* Центрируем сам блок */
+            max-width: 900px;
+            margin: 0 auto;
             position: relative;
             z-index: 5;
         }
