@@ -445,32 +445,34 @@
 
         }
 
-                .messages {
-                        flex: 1;
-                        padding: 20px;
-                        overflow-y: auto;
-                        display: flex;
-                        flex-direction: column;
-                        gap: 8px;
-                        width: 100%;
-                        max-width: 900px;
-                        margin: 0 auto;
-                        background: transparent;
-                        position: relative;
-                        z-index: 1;
-                        min-height: 0; /* <--- ДОБАВЬТЕ ЭТУ СТРОКУ, ОНА ВАЖНА ДЛЯ FLEXBOX */
-
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background: transparent;
+            position: relative;
+            z-index: 1;
+            min-height: 0;
         }
+            .messages::before {
+                content: "";
+                margin-top: auto;
+            }
+
+            /* Важно! Сообщения должны быть ВЫШЕ фона */
+            .messages > * {
+                position: relative;
+                z-index: 1;
+            }
 
 
 
-
-        /* Важно! Сообщения должны быть ВЫШЕ фона */
-                    .messages > * {
-                            position: relative;
-                            z-index: 1;
-
-        }
 
                 .input-bar {
                         padding: 10px 20px;
@@ -1220,14 +1222,6 @@
 
 
 
-        /* Если у вас остались стили для #noChat::before и #noChat::after - УДАЛИТЕ ИХ */
-                .messages {
-                        background: transparent; /* Убираем фон */
-
-            /* Убираем псевдоэлементы ::before и ::after у .messages */
-
-        }
-
 
 
 
@@ -1238,14 +1232,6 @@
         }
 
 
-
-
-        /* Скрываем полосу прокрутки для IE, Edge и Firefox */
-                .messages {
-                        -ms-overflow-style: none; /* IE и Edge */
-                        scrollbar-width: none; /* Firefox */
-
-        }
 
 
 
