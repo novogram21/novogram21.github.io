@@ -4970,48 +4970,66 @@
             }
         }
         async function switchCamera() {
-            // Добавь это в начало switchCamera()
-            if (localStream) {
-                // Временно выключаем треки перед переключением камеры
-                localStream.getTracks().forEach(track => track.stop());
-            }
-
             if (!pc || !localStream) return;
+
+            // 1. Находим отправителя видео (Sender)
             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
             if (!sender) return;
-            // если сейчас шаринг экрана — вернёмся на камеру
+
+            // Если был шаринг экрана — выключаем его правильно
             if (sender.track && sender.track.label && sender.track.label.toLowerCase().includes('screen')) {
                 stopScreen(sender);
             }
+
+            // 2. Находим старый видео-трек
             const oldVideoTrack = localStream.getVideoTracks()[0];
+
+            // Запоминаем состояние (включено видео или выключено кнопкой)
             const wasEnabled = oldVideoTrack ? oldVideoTrack.enabled : true;
+
+            // 3. Определяем следующую камеру
             const nextFacing = (currentFacingMode === 'user') ? 'environment' : 'user';
-            // важно для Android: освобождаем текущую камеру
+
+            // 4. ВАЖНО: Останавливаем ТОЛЬКО видео. Аудио не трогаем!
             if (oldVideoTrack) oldVideoTrack.stop();
+
+            // 5. Получаем новый видео-поток (audio: false, так как микрофон у нас уже есть)
             let newStream;
             try {
-                newStream = await getStreamForFacing(nextFacing, false); // только видео
+                newStream = await getStreamForFacing(nextFacing, false);
             } catch (e) {
                 console.error(e);
                 alert("Не удалось переключить камеру");
                 return;
             }
+
             const newVideoTrack = newStream.getVideoTracks()[0];
-            newVideoTrack.enabled = wasEnabled;
-            // ключевое: меняем видеотрек без пересоздания звонка [web:16]
-            await sender.replaceTrack(newVideoTrack);
-            // пересобираем localStream: старый аудио + новый видео
-            const audioTrack = localStream.getAudioTracks()[0] || null;
-            localStream = new MediaStream();
-            if (audioTrack) localStream.addTrack(audioTrack);
-            localStream.addTrack(newVideoTrack);
-            document.getElementById('localVideo').srcObject = localStream;
+            newVideoTrack.enabled = wasEnabled; // Восстанавливаем состояние (если было выключено)
+
+            // 6. Заменяем видео-трек в соединении (собеседник увидит новую камеру)
+            try {
+                await sender.replaceTrack(newVideoTrack);
+            } catch (e) {
+                console.error("Ошибка замены трека:", e);
+            }
+
+            // 7. Пересобираем локальный поток: БЕРЕМ СТАРЫЙ АУДИО + НОВОЕ ВИДЕО
+            const audioTrack = localStream.getAudioTracks()[0]; // Живой аудио-трек
+            localStream = new MediaStream(); // Новый объект потока
+
+            if (audioTrack) {
+                localStream.addTrack(audioTrack); // Возвращаем живой микрофон
+            }
+            localStream.addTrack(newVideoTrack);  // Добавляем новую камеру
+
+            // 8. Обновляем <video> элемент на экране
+            const videoEl = document.getElementById('localVideo');
+            videoEl.srcObject = localStream;
+            videoEl.muted = true; // Себя мы не слышим
+
+            // 9. Обновляем переменные
             currentFacingMode = nextFacing;
             setLocalMirror(currentFacingMode);
-            // чистим временный стрим
-            newStream.getTracks().forEach(t => {
-                if (t !== newVideoTrack) t.stop();
-            });
         }
         async function startCall() {
             if (currentCallId) {
