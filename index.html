@@ -422,7 +422,6 @@
             position: relative;
             z-index: 1;
             min-height: 0;
-            opacity: 0;
             transition: opacity 0.15s ease-out; /* Плавное появление */
         }
 
@@ -4155,23 +4154,22 @@
         // --- ИСПРАВЛЕНИЕ 2: Умная загрузка без скачков ---
         // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ (ТЕПЕРЬ УДАЛЯЕТ СООБЩЕНИЯ) ---
         function loadMessages() {
+            // 1. Отключаем старый слушатель
             if (window.msgUnsub) {
                 window.msgUnsub();
                 window.msgUnsub = null;
             }
-            // 2. Очищаем экран от старых сообщений
-            document.getElementById('msgList').innerHTML = '';
 
-            list.innerHTML = '';
-            list.classList.remove('visible');
-            if (window.msgUnsub) window.msgUnsub();
             const list = document.getElementById('msgList');
+            list.innerHTML = '';
 
-            if (msgUnsub) msgUnsub(); // Отключаем старый слушатель
+            // <--- !!! ИЗМЕНЕНИЕ 1: Скрываем список перед загрузкой (добавляем класс)
+            list.classList.add('is-loading');
+            // ----------------------------------------------------------------------
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
-            msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
+            window.msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
                 .orderBy('ts', 'asc')
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
 
@@ -4179,21 +4177,20 @@
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
 
-                    // 1. СНАЧАЛА ОБРАБАТЫВАЕМ УДАЛЕНИЯ (Delete for Everyone)
-                    // Этого блока не хватало!
+                    // Удаления
                     snap.docChanges().forEach(change => {
                         if (change.type === 'removed') {
                             const el = document.getElementById('msg-' + change.doc.id);
-                            if (el) el.remove(); // Удаляем div из чата
+                            if (el) el.remove();
                         }
                     });
 
-                    // Проверяем, был ли скролл внизу
-                    const isScrolledToBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 200;
+                    // Проверка скролла (если мы уже видим чат)
+                    // Важно: если чат скрыт (is-loading), считаем что скролл нам не важен, мы всё равно прыгнем вниз
+                    const isScrolledToBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 300;
 
                     let allDocs = snap.docs;
 
-                    // Сортировка: null (новое) всегда в конец
                     allDocs.sort((a, b) => {
                         const timeA = a.data().ts ? a.data().ts.toMillis() : Date.now() + 999999999;
                         const timeB = b.data().ts ? b.data().ts.toMillis() : Date.now() + 999999999;
@@ -4204,7 +4201,6 @@
                         const msgId = doc.id;
                         const rawData = doc.data();
 
-                        // Если удалено локально ("Удалить у меня") - пропускаем и удаляем, если вдруг есть
                         if (deletedLocal.includes(msgId)) {
                             const el = document.getElementById('msg-' + msgId);
                             if (el) el.remove();
@@ -4215,16 +4211,13 @@
                         m.txt = decryptText(rawData.txt, currentChatId);
                         const msgType = m.type || 'text';
 
-                        // Ищем, есть ли сообщение уже на экране
                         let div = document.getElementById('msg-' + msgId);
                         const isNew = !div;
 
-                        // --- СОЗДАНИЕ НОВОГО СООБЩЕНИЯ ---
                         if (isNew) {
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
 
-                            // Классы
                             if (m.sys) div.className = 'msg msg-sys';
                             else if (m.from === currentUser.uid) div.className = 'msg msg-me';
                             else div.className = 'msg msg-other';
@@ -4239,45 +4232,17 @@
                                     openContextMenu(e, msgId, m.from === currentUser.uid, true);
                                 }
                             };
-
-                            // Вставляем в список
                             list.appendChild(div);
                         }
 
-                        // --- ПРОВЕРКА НА ИЗМЕНЕНИЯ (ЧТОБЫ НЕ ДЕРГАЛОСЬ) ---
-                        const currentReadState = div.getAttribute('data-read') === 'true';
-                        const currentEditedState = div.getAttribute('data-edited') === 'true';
+                        // Рендер контента
+                        const newHtml = buildMessageHTML(m, msgId, msgType);
+                        if (div.innerHTML !== newHtml) div.innerHTML = newHtml;
 
-                        // Нужно ли перерисовывать всё сообщение?
-                        const needsFullRender = isNew || (m.edited && !currentEditedState) || div.innerHTML === '';
-
-                        if (needsFullRender) {
-                            // РИСУЕМ ПОЛНОСТЬЮ
-                            div.innerHTML = buildMessageHTML(m, msgId, msgType);
-
-                            div.setAttribute('data-read', m.read);
-                            div.setAttribute('data-edited', !!m.edited);
-
-                            // --- ПЕРЕВОД ---
-                            if (globalTranslationCache[msgId]) {
-                                injectTranslationBlock(div, globalTranslationCache[msgId]);
-                            }
-                            else if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate) {
-                                if (m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
-                                    appendTranslation(div, m.txt, msgId);
-                                }
-                            }
-                        }
-                        else if (currentReadState !== m.read) {
-                            // --- ТОЛЬКО ОБНОВИТЬ ГАЛОЧКИ ---
-                            div.setAttribute('data-read', m.read);
-                            const tickSpan = div.querySelector('.msg-ticks');
-                            if (tickSpan && m.from === currentUser.uid) {
-                                tickSpan.innerHTML = m.read ? '<span style="margin-right:-4px;">✓</span>✓' : '✓';
-                            }
+                        if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate && m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
+                            appendTranslation(div, m.txt, msgId);
                         }
 
-                        // Логика прочтения
                         if (m.to === currentUser.uid && !m.read && isWindowActive) {
                             batch.update(doc.ref, { read: true });
                             needCommit = true;
@@ -4286,19 +4251,20 @@
 
                     if (needCommit) batch.commit();
 
-                    if (!list.classList.contains('visible')) {
-                        // Мгновенно прыгаем вниз без анимации
+                    // <--- !!! ИЗМЕНЕНИЕ 2: ЛОГИКА СКРОЛЛА И ПОЯВЛЕНИЯ
+
+                    // Если список сейчас скрыт (значит это ПЕРВАЯ загрузка при открытии)
+                    if (list.classList.contains('is-loading')) {
+                        // 1. Мгновенно крутим вниз (пока невидимо)
                         list.scrollTop = list.scrollHeight;
 
-                        // Показываем список в следующем кадре анимации (чтобы глаз не увидел прыжок)
+                        // 2. Ждем отрисовку браузера и показываем
                         window.requestAnimationFrame(() => {
-                            // На всякий случай еще раз, если картинки подгрузились и сдвинули высоту
-                            list.scrollTop = list.scrollHeight;
-                            list.classList.add('visible'); // Делаем видимым (opacity: 1)
+                            list.scrollTop = list.scrollHeight; // На всякий случай еще раз
+                            list.classList.remove('is-loading'); // <-- Убираем класс, чат появляется
                         });
                     }
-
-                    // Скроллим вниз только если пришло НОВОЕ сообщение и мы были внизу
+                    // Если чат уже открыт и пришло новое сообщение
                     else if (isScrolledToBottom || snap.metadata.hasPendingWrites) {
                         setTimeout(() => {
                             list.scrollTop = list.scrollHeight + 500;
@@ -4306,7 +4272,7 @@
                     }
                 });
 
-            // Фокус на поле ввода (если не мобила)
+            // Фокус
             setTimeout(() => {
                 const inp = document.getElementById('msgInput');
                 if (inp && window.innerWidth > 768) inp.focus();
