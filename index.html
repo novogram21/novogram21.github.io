@@ -422,12 +422,21 @@
             position: relative;
             z-index: 1;
             min-height: 0;
+            opacity: 0;
+            transition: opacity 0.15s ease-out; /* Плавное появление */
         }
+
+            .messages.visible {
+                opacity: 1;
+            }
 
             .messages::before {
                 content: "";
                 margin-top: auto;
             }
+
+           
+            
 
             /* Важно! Сообщения должны быть ВЫШЕ фона */
             .messages > * {
@@ -4153,7 +4162,9 @@
             // 2. Очищаем экран от старых сообщений
             document.getElementById('msgList').innerHTML = '';
 
-
+            list.innerHTML = '';
+            list.classList.remove('visible');
+            if (window.msgUnsub) window.msgUnsub();
             const list = document.getElementById('msgList');
 
             if (msgUnsub) msgUnsub(); // Отключаем старый слушатель
@@ -4275,8 +4286,20 @@
 
                     if (needCommit) batch.commit();
 
+                    if (!list.classList.contains('visible')) {
+                        // Мгновенно прыгаем вниз без анимации
+                        list.scrollTop = list.scrollHeight;
+
+                        // Показываем список в следующем кадре анимации (чтобы глаз не увидел прыжок)
+                        window.requestAnimationFrame(() => {
+                            // На всякий случай еще раз, если картинки подгрузились и сдвинули высоту
+                            list.scrollTop = list.scrollHeight;
+                            list.classList.add('visible'); // Делаем видимым (opacity: 1)
+                        });
+                    }
+
                     // Скроллим вниз только если пришло НОВОЕ сообщение и мы были внизу
-                    if (isScrolledToBottom || snap.metadata.hasPendingWrites) {
+                    elif (isScrolledToBottom || snap.metadata.hasPendingWrites) {
                         setTimeout(() => {
                             list.scrollTop = list.scrollHeight + 500;
                         }, 50);
