@@ -5956,22 +5956,29 @@
 
         // Функция отправки токена в базу и на скрипт
         function saveTokenToBackend(uid, token) {
-            // Сохраняем в базу данных (Firestore)
+            console.log("💾 Сохраняем токен в базу:", token);
+
+            // ИСПРАВЛЕНИЕ: Сохраняем токен как oneSignalId, так как Android-приложение присылает именно его
             db.collection('users').doc(uid).update({
-                fcmToken: token
+                oneSignalId: token,   // <--- ВАЖНО: сохраняем в правильное поле
+                fcmToken: token,      // Сохраняем и сюда на всякий случай (для совместимости)
+                lastTokenUpdate: firebase.firestore.FieldValue.serverTimestamp() // Чтобы видеть, когда обновлялось
             }).catch(err => console.log("Ошибка сохранения токена в БД:", err));
 
             // Отправляем скрипту (для пушей)
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action: 'saveToken',
-                    userId: uid,
-                    token: token
-                })
-            });
+            // Добавляем проверку на наличие URL
+            if (typeof GOOGLE_SCRIPT_URL !== 'undefined') {
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: 'saveToken',
+                        userId: uid,
+                        token: token
+                    })
+                }).catch(e => console.log("Ошибка отправки токена скрипту:", e));
+            }
         }
 
         // === КОНЕЦ ВСТАВКИ ===
@@ -6008,14 +6015,20 @@
                 const userData = doc.data();
 
                 // Ищем все возможные токены
+                // Ищем все возможные токены
                 const fcmToken = userData.fcmToken || null;
                 const tgId = userData.tgChatId || null;
-                const osId = userData.oneSignalId || null;
 
-                if (!tgId && !osId && !fcmToken) {
-                    console.log("У получателя нет токенов для уведомлений.");
-                    return;
+                // ИСПРАВЛЕНИЕ: Если oneSignalId пуст, пробуем взять fcmToken (так как Android мог сохранить его туда раньше)
+                // OneSignal ID имеет формат UUID (например: "6af8818f-..."), а FCM токен очень длинный.
+                let osId = userData.oneSignalId || null;
+
+                if (!osId && fcmToken && fcmToken.length < 100) {
+                    // Если fcmToken короткий (похож на OneSignal ID), используем его как osId
+                    osId = fcmToken;
                 }
+
+          
 
                 // 3. Отправляем запрос (ИСПРАВЛЕННЫЙ МЕТОД)
                 fetch(GOOGLE_SCRIPT_URL, {
