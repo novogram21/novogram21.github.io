@@ -4299,7 +4299,7 @@
                     }
 
                     // Скроллим вниз только если пришло НОВОЕ сообщение и мы были внизу
-                    elif (isScrolledToBottom || snap.metadata.hasPendingWrites) {
+                    else if (isScrolledToBottom || snap.metadata.hasPendingWrites) {
                         setTimeout(() => {
                             list.scrollTop = list.scrollHeight + 500;
                         }, 50);
