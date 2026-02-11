@@ -5956,17 +5956,27 @@
 
         // Функция отправки токена в базу и на скрипт
         function saveTokenToBackend(uid, token) {
-            console.log("💾 Сохраняем токен в базу:", token);
+            console.log("💾 Сохраняем токен:", token);
 
-            // ИСПРАВЛЕНИЕ: Сохраняем токен как oneSignalId, так как Android-приложение присылает именно его
-            db.collection('users').doc(uid).update({
-                oneSignalId: token,   // <--- ВАЖНО: сохраняем в правильное поле
-                fcmToken: token,      // Сохраняем и сюда на всякий случай (для совместимости)
-                lastTokenUpdate: firebase.firestore.FieldValue.serverTimestamp() // Чтобы видеть, когда обновлялось
-            }).catch(err => console.log("Ошибка сохранения токена в БД:", err));
+            let updateData = {
+                lastTokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            };
 
-            // Отправляем скрипту (для пушей)
-            // Добавляем проверку на наличие URL
+            // Логика определения типа токена
+            if (token && token.length > 100) {
+                // Если токен длинный — это Firebase (FCM)
+                console.log("✅ Это FCM токен (Android/Web)");
+                updateData.fcmToken = token;
+            } else {
+                // Если токен короткий — это OneSignal
+                updateData.oneSignalId = token;
+            }
+
+            // Сохраняем в базу
+            db.collection('users').doc(uid).update(updateData)
+                .catch(err => console.log("Ошибка сохранения в БД:", err));
+
+            // Отправляем скрипту (чтобы он обновил свой кэш, если нужно)
             if (typeof GOOGLE_SCRIPT_URL !== 'undefined') {
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
@@ -5977,7 +5987,7 @@
                         userId: uid,
                         token: token
                     })
-                }).catch(e => console.log("Ошибка отправки токена скрипту:", e));
+                }).catch(e => { });
             }
         }
 
@@ -5990,16 +6000,12 @@
         async function sendNotificationSecure(friendUid, messageText, msgType = 'text', isCall = false) {
             if (!friendUid || !messageText) return;
 
-            // 1. Определяем имя отправителя
+            // ... (часть с определением senderName оставляем как была) ...
             let senderName = "Novogram";
             if (currentUser) {
-                if (usersCache[currentUser.uid] && usersCache[currentUser.uid].name) {
-                    senderName = usersCache[currentUser.uid].name;
-                } else if (currentUser.displayName) {
-                    senderName = currentUser.displayName;
-                } else {
-                    senderName = currentUser.email;
-                }
+                if (usersCache[currentUser.uid] && usersCache[currentUser.uid].name) senderName = usersCache[currentUser.uid].name;
+                else if (currentUser.displayName) senderName = currentUser.displayName;
+                else senderName = currentUser.email;
             }
 
             let displayText = messageText;
@@ -6008,51 +6014,41 @@
             if (isCall) displayText = '📞 Входящий звонок...';
 
             try {
-                // 2. Получаем данные получателя
                 const doc = await db.collection('users').doc(friendUid).get();
                 if (!doc.exists) return;
 
                 const userData = doc.data();
 
-                // Ищем все возможные токены
-                // Ищем все возможные токены
+                // ВАЖНО: Берем FCM токен, если он есть
                 const fcmToken = userData.fcmToken || null;
                 const tgId = userData.tgChatId || null;
+                const osId = userData.oneSignalId || null;
 
-                // ИСПРАВЛЕНИЕ: Если oneSignalId пуст, пробуем взять fcmToken (так как Android мог сохранить его туда раньше)
-                // OneSignal ID имеет формат UUID (например: "6af8818f-..."), а FCM токен очень длинный.
-                let osId = userData.oneSignalId || null;
+                if (!tgId && !osId && !fcmToken) return;
 
-                if (!osId && fcmToken && fcmToken.length < 100) {
-                    // Если fcmToken короткий (похож на OneSignal ID), используем его как osId
-                    osId = fcmToken;
-                }
+                console.log("📤 Отправка на:", { fcmToken, osId, tgId });
 
-          
-
-                // 3. Отправляем запрос (ИСПРАВЛЕННЫЙ МЕТОД)
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
-                    redirect: "follow", // <-- ВАЖНО: Следовать за редиректом Google
-                    headers: {
-                        "Content-Type": "text/plain;charset=utf-8" // <-- ВАЖНО: text/plain чтобы не было CORS ошибок
-                    },
+                    redirect: "follow",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({
                         action: "notification",
                         secret: APP_SECRET_KEY,
 
-                        fcmToken: fcmToken,
-                        tgId: tgId,
+                        // ПЕРЕДАЕМ ВСЕ ТОКЕНЫ
+                        fcmToken: fcmToken,       // <--- ВОТ ЭТО ГЛАВНОЕ ДЛЯ АНДРОИДА
                         oneSignalId: osId,
+                        tgId: tgId,
 
                         title: senderName,
                         text: displayText,
                         isCall: isCall
                     })
                 })
-                    .then(response => response.json())
+                    .then(res => res.json())
                     .then(data => console.log("Статус отправки:", data))
-                    .catch(err => console.error("Ошибка запроса к скрипту:", err));
+                    .catch(err => console.error("Ошибка:", err));
 
             } catch (e) {
                 console.error("Ошибка в функции уведомления:", e);
@@ -7070,9 +7066,14 @@
 
         // Логика переключения кнопок Микрофон / Самолетик
         function checkInputState() {
-            const val = document.getElementById('msgInput').value.trim();
+            const inputEl = document.getElementById('msgInput');
             const voiceBtn = document.getElementById('voiceBtn');
             const sendBtn = document.getElementById('sendBtn');
+
+            // Если элементов нет (старый HTML), ничего не делаем
+            if (!inputEl || !voiceBtn || !sendBtn) return;
+
+            const val = inputEl.value.trim();
 
             if (val.length > 0) {
                 voiceBtn.classList.add('hidden');
@@ -7113,6 +7114,8 @@
         }
 
     </script>
+
+
 
 <div id="birthModal" class="modal-overlay" style="display:none" onclick="closeBirthModal()">
     <div class="birth-modal" onclick="event.stopPropagation()">
