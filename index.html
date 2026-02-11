@@ -4147,10 +4147,11 @@
         // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ (ТЕПЕРЬ УДАЛЯЕТ СООБЩЕНИЯ) ---
         function loadMessages() {
             if (window.msgUnsub) {
-                console.log("🛑 Отписка от предыдущего чата");
                 window.msgUnsub();
                 window.msgUnsub = null;
             }
+            // 2. Очищаем экран от старых сообщений
+            document.getElementById('msgList').innerHTML = '';
 
 
             const list = document.getElementById('msgList');
@@ -4456,6 +4457,12 @@
             document.getElementById('mainChatArea').classList.remove('active');
             document.getElementById('activeChat').classList.add('hidden');
             document.getElementById('noChat').classList.remove('hidden');
+
+            if (window.msgUnsub) {
+                window.msgUnsub();
+                window.msgUnsub = null;
+            }
+            document.getElementById('msgList').innerHTML = '';
 
             // 2. Сброс моего статуса "печатает" в базе (ДЕЛАЕМ ЭТО ДО сброса ID)
             if (currentChatId && currentUser) {
