@@ -444,6 +444,7 @@
             }
 
 
+
         /* --- НОВАЯ ПАНЕЛЬ ВВОДА (TELEGRAM STYLE) --- */
         .input-bar {
             width: 100%;
@@ -452,13 +453,20 @@
             background: #1f1f1f; /* Цвет панели */
             min-height: 56px;
             padding: 8px;
-            /* Учитываем отступ снизу для жестов Android/iOS */
-           
             display: flex;
             align-items: flex-end; /* Выравнивание по низу */
             gap: 8px;
             position: relative;
             z-index: 5;
+        }
+
+        /* Скругленный плавающий бар ТОЛЬКО для веб-версии (ПК) */
+        @media (min-width: 769px) {
+            .input-bar {
+                border-radius: 16px;
+                margin: 0 auto 20px auto; /* Центрируем и делаем отступ снизу */
+                width: calc(100% - 40px); /* Отступы по бокам */
+            }
         }
 
         /* Серый блок ввода */
