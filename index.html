@@ -27,7 +27,7 @@
             left: 0;
             right: 0;
             bottom: 0; /* Растягиваем до низа. Когда клава выйдет, bottom поднимется */
-            height: auto; /* Убираем 100dvh */
+            height: 100%; /* Убираем 100dvh */
             width: 100%;
             /* ----------------------- */
 
@@ -434,8 +434,8 @@
                 margin-top: auto;
             }
 
-           
-            
+
+
 
             /* Важно! Сообщения должны быть ВЫШЕ фона */
             .messages > * {
@@ -453,7 +453,7 @@
             min-height: 56px;
             padding: 8px;
             /* Учитываем отступ снизу для жестов Android/iOS */
-            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+           
             display: flex;
             align-items: flex-end; /* Выравнивание по низу */
             gap: 8px;
@@ -470,7 +470,7 @@
             align-items: center;
             min-height: 42px;
             padding: 0 12px;
-            transition: 0.2s;
+            transition: border-color 0.2s;
             border: 1px solid transparent;
         }
 
@@ -494,6 +494,10 @@
                 height: 40px; /* Начальная высота */
                 /* Скрываем скроллбар */
                 scrollbar-width: none;
+                line-height: 20px;
+                height: 40px; /* Держим высоту одной строки */
+                white-space: pre-wrap; /* Явно разрешаем перенос слов */
+                overflow-wrap: break-word;
             }
 
                 .input-wrapper textarea::-webkit-scrollbar {
@@ -2769,7 +2773,7 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.17 8 15.33 8 13.83 8.67 13.83 9.5 14.5 11 15.33 11zm-6.66 0c.83 0 1.5-.67 1.5-1.5S9.5 8 8.67 8 7.17 8.67 7.17 9.5 7.84 11 8.67 11zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
                     </button>
 
-                    <textarea id="msgInput" placeholder="Сообщение" rows="1" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
+                    <textarea id="msgInput" placeholder="Сообщение" inputmode="text" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
 
                     <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
 
@@ -3232,13 +3236,13 @@
                 : `<div style="width:35px;height:35px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>`;
             const displayNick = user.username ? `@${user.username}` : user.email;
             div.innerHTML = `
-                                                                                                                                                                                    ${avatarSrc}
-                                                                                                                                                                                    <div style="flex:1; overflow:hidden;">
-                                                                                                                                                                                        <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
-                                                                                                                                                                                        <div style="font-size:12px; color:#888;">${displayNick}</div>
-                                                                                                                                                                                    </div>
-                                                                                                                                                                                    <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
-                                                                                                                                                                                `;
+                                                                                                                                                                                        ${avatarSrc}
+                                                                                                                                                                                        <div style="flex:1; overflow:hidden;">
+                                                                                                                                                                                            <div style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${user.name || 'Пользователь'}</div>
+                                                                                                                                                                                            <div style="font-size:12px; color:#888;">${displayNick}</div>
+                                                                                                                                                                                        </div>
+                                                                                                                                                                                        <div style="font-size:18px; color:#007bff;">${isFriend ? '💬' : '➕'}</div>
+                                                                                                                                                                                    `;
             div.onclick = () => {
                 document.getElementById('searchResults').style.display = 'none';
                 document.getElementById('searchInput').value = '';
@@ -3613,16 +3617,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                                                                                                                                        ${avatar}
-                                                                                                                                                                                                                                                                                                                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                                                                                                                                                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                                                                                                                                                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                                                                                                                                                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                                                                                                                                                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                                                                                                                                            ${avatar}
+                                                                                                                                                                                                                                                                                                                                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                                                                                                                                                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                                                                                                                                                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                                                                                                                                                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                                                                                                                                                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                        `;
                         list.appendChild(div);
                     });
                 });
@@ -3826,19 +3830,19 @@
                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
             return `
-                    ${avatarHtml}
-                    <div class="user-name">${fName}</div>
-                    <div class="last-msg-row">
-                        <span class="last-msg" id="last-${chatId}">...</span>
-                    </div>
-                    <div class="meta-column">
-                        <span class="last-msg-date" id="date-${chatId}"></span>
-                        <div class="meta-bottom-row">
-                            <span id="status-${chatId}" class="list-ticks"></span>
-                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                        ${avatarHtml}
+                        <div class="user-name">${fName}</div>
+                        <div class="last-msg-row">
+                            <span class="last-msg" id="last-${chatId}">...</span>
                         </div>
-                    </div>
-                `;
+                        <div class="meta-column">
+                            <span class="last-msg-date" id="date-${chatId}"></span>
+                            <div class="meta-bottom-row">
+                                <span id="status-${chatId}" class="list-ticks"></span>
+                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                            </div>
+                        </div>
+                    `;
         }
 
         function loadData() {
@@ -3933,19 +3937,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                                                                ${avatarHtml}
-                                                                                <div class="user-name">${fName}</div>
-                                                                                <div class="last-msg-row">
-                                                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                </div>
-                                                                                <div class="meta-column">
-                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                    <div class="meta-bottom-row">
-                                                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                    ${avatarHtml}
+                                                                                    <div class="user-name">${fName}</div>
+                                                                                    <div class="last-msg-row">
+                                                                                        <span class="last-msg" id="last-${chatId}">...</span>
                                                                                     </div>
-                                                                                </div>
-                                                                            `;
+                                                                                    <div class="meta-column">
+                                                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                        <div class="meta-bottom-row">
+                                                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -4016,9 +4020,9 @@
 
             // Установка нормального заголовка
             titleEl.innerHTML = `
-                                        <div>${name}</div>
-                                        <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                    `;
+                                            <div>${name}</div>
+                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                        `;
 
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
@@ -4351,10 +4355,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                            <div class="msg-reply-name">${m.replyTo.name}</div>
-                                            <div class="msg-reply-text">${m.replyTo.text}</div>
-                                        </div>`;
+                                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                <div class="msg-reply-text">${m.replyTo.text}</div>
+                                            </div>`;
             }
 
             // Основной контент
@@ -4387,11 +4391,11 @@
                 }
 
                 let metaHtml = `
-                                        <span class="msg-meta" style="${metaStyle}">
-                                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                            <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                        </span>`;
+                                            <span class="msg-meta" style="${metaStyle}">
+                                                ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                                                <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                            </span>`;
 
                 if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                 else contentHtml += metaHtml;
@@ -5083,14 +5087,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                                                                                                                                                                                                    <div style="display:flex; align-items:center;">
-                                                                                                                                                                                                                                                                        ${avatarHtml}
-                                                                                                                                                                                                                                                                        <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                                                                                                                                                                                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                                                                                                                                                                                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                                                        <div style="display:flex; align-items:center;">
+                                                                                                                                                                                                                                                                            ${avatarHtml}
+                                                                                                                                                                                                                                                                            <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                                                                                                                                                                                                                                <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                                                                                                                                                                                                                                <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                                                            </div>
                                                                                                                                                                                                                                                                         </div>
-                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                                    `;
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
                                 }
@@ -5539,6 +5543,20 @@
         const msgInput = document.getElementById('msgInput');
         const sendBtn = document.getElementById('sendBtn');
         const voiceBtn = document.querySelector('.voice-btn');
+
+        msgInput.addEventListener('focus', function () {
+            // Если это самый первый фокус после загрузки чата
+            if (!this.dataset.keyboardFixed) {
+                this.dataset.keyboardFixed = "true";
+                // Мгновенно снимаем и возвращаем фокус
+                this.blur();
+                setTimeout(() => {
+                    this.focus();
+                }, 10);
+            }
+        });
+
+
         msgInput.addEventListener('input', function () {
             handleTyping();
             if (this.value.trim().length > 0) {
@@ -5551,13 +5569,7 @@
                 voiceBtn.style.display = 'flex';
             }
         });
-        // Добавляем отправку по Enter
-        msgInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMsg();
-            }
-        });
+        
         // --- АВТОПОВОРОТ ОКОШКА СВОЕГО ВИДЕО ---
         // --- PIP: drag + resize (красиво и без багов) ---
         const localVidEl = document.getElementById('localVideo');
@@ -5851,7 +5863,7 @@
             localStorage.removeItem('current_user_uid');
 
             // ВАЖНО: Мы НЕ удаляем 'fcm_token' из localStorage!
-            // Он привязан к ТЕЛЕФОНУ, а не к аккаунту. 
+            // Он привязан к ТЕЛЕФОНУ, а не к аккаунту.
             // Он понадобится, когда ты войдешь в ДРУГОЙ аккаунт.
 
             // 3. Разлогиниваемся
@@ -5917,9 +5929,9 @@
                     document.getElementById('activeChat').classList.remove('hidden');
 
                     document.getElementById('chatTitle').innerHTML = `
-                                                            <div>${name}</div>
-                                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                        `;
+                                                                <div>${name}</div>
+                                                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                                            `;
 
                     // =======================================================
                     // ИСПРАВЛЕНИЕ: ЗАПУСКАЕМ СЛУШАТЕЛЬ СТАТУСА ПРИ ОБНОВЛЕНИИ
@@ -6080,22 +6092,22 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file); // Берем картинку локально
                 contentHtml = `
-                                                                                                                                                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                                                                            <div class="upload-spinner"></div>
-                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                                                                <div class="upload-spinner"></div>
+                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                        `;
             } else {
                 contentHtml = `
-                                                                                                                                                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                                                                            <div class="file-icon">📄</div>
-                                                                                                                                                                                                                                            <div class="file-info">
-                                                                                                                                                                                                                                                <div class="file-name">${DOMPurify.sanitize(file.name)}</div>
-                                                                                                                                                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                            <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                                                                <div class="file-icon">📄</div>
+                                                                                                                                                                                                                                                <div class="file-info">
+                                                                                                                                                                                                                                                    <div class="file-name">${DOMPurify.sanitize(file.name)}</div>
+                                                                                                                                                                                                                                                    <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                                                                             </div>
-                                                                                                                                                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                        `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -6115,24 +6127,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                                                                                                                                                                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                                                                            <div class="upload-spinner"></div>
-                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                                                                <div class="upload-spinner"></div>
+                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                        `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                                                                                                                                                                                                        <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                                                                            <div class="file-icon">📄</div>
-                                                                                                                                                                                                                                            <div class="file-info">
-                                                                                                                                                                                                                                                <div class="file-name">${file.name}</div>
-                                                                                                                                                                                                                                                <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                            <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                                                                <div class="file-icon">📄</div>
+                                                                                                                                                                                                                                                <div class="file-info">
+                                                                                                                                                                                                                                                    <div class="file-name">${file.name}</div>
+                                                                                                                                                                                                                                                    <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                                                                             </div>
-                                                                                                                                                                                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                        `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -7092,16 +7104,31 @@
             }
         }
 
-        // --- НОВАЯ ФУНКЦИЯ ДЛЯ ВВОДА (ПОДДЕРЖИВАЕТ ВСЕ ЯЗЫКИ) ---
+        // --- УМНАЯ ФУНКЦИЯ ДЛЯ ВВОДА (С РАЗДЕЛЕНИЕМ ПК / ТЕЛЕФОН) ---
         function handleChatInput(e) {
             if (e.key === 'Enter') {
-                if (!e.shiftKey) {
-                    e.preventDefault();
-                    sendMsg();
-                    // Сброс высоты после отправки
-                    const inp = document.getElementById('msgInput');
-                    inp.style.height = '40px';
-                    checkInputState();
+                // Определяем, сидит ли пользователь с мобильного устройства
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                if (isMobile) {
+                    // НА ТЕЛЕФОНЕ: Просто позволяем системе сделать перенос строки. 
+                    // Ничего не блокируем и не отправляем сообщение.
+                    return;
+                } else {
+                    // НА ПК:
+                    if (e.shiftKey || e.ctrlKey) {
+                        // Если нажат Shift+Enter или Ctrl+Enter -> перенос строки
+                        return;
+                    } else {
+                        // Обычный Enter без модификаторов -> отправка сообщения
+                        e.preventDefault(); // Блокируем стандартный перенос строки
+                        sendMsg();
+
+                        // Сброс высоты поля после отправки
+                        const inp = document.getElementById('msgInput');
+                        inp.style.height = '40px';
+                        checkInputState();
+                    }
                 }
             }
         }
