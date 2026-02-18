@@ -4,6 +4,8 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1f1f1f" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
@@ -23,11 +25,11 @@
             display: flex;
             /* --- ИЗМЕНЕНИЯ ЗДЕСЬ --- */
             position: fixed; /* Фиксируем позицию */
-            top: env(safe-area-inset-top);
+            top: 0;
             left: 0;
             right: 0;
             bottom: 0; /* Растягиваем до низа. Когда клава выйдет, bottom поднимется */
-            height: auto; /* Убираем 100dvh */
+            height: 100dvh; /* Убираем 100dvh */
             width: 100%;
             /* ----------------------- */
 
@@ -94,7 +96,6 @@
             display: flex;
             flex-direction: column;
             z-index: 10;
-            padding-top: env(safe-area-inset-top);
         }
 
         .profile-bar {
@@ -373,7 +374,6 @@
         }
 
         .chat-header {
-            padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
             padding: 8px 15px; /* Как в ТГ */
             background: #212121; /* Цвет фона шапки ТГ */
             border-bottom: 1px solid #101010;
@@ -517,7 +517,7 @@
             margin: 0 auto;
             background: #1f1f1f; /* Цвет панели */
             min-height: 56px;
-            padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
+            padding: 8px;
             display: flex;
             align-items: flex-end; /* Выравнивание по низу */
             gap: 8px;
@@ -2609,6 +2609,7 @@
             cursor: pointer; /* ДОБАВЛЕНО */
             transition: background 0.2s; /* ДОБАВЛЕНО */
         }
+
             .chat-date-separator:active {
                 background: rgba(0, 0, 0, 0.6);
             }
