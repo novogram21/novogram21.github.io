@@ -485,19 +485,18 @@
                 border: none;
                 color: white;
                 font-size: 16px;
-                max-height: 100px; /* Ограничение высоты */
                 padding: 10px 0;
-                outline: none;
-                resize: none; /* Убираем уголок растягивания */
-                font-family: inherit;
-                line-height: 1.4;
-                height: 40px; /* Начальная высота */
-                /* Скрываем скроллбар */
-                scrollbar-width: none;
                 line-height: 20px;
-                height: 40px; /* Держим высоту одной строки */
-                white-space: pre-wrap; /* Явно разрешаем перенос слов */
-                overflow-wrap: break-word;
+                height: 40px; /* Строго 1 строка (20px текст + 20px отступы) */
+                min-height: 40px;
+                max-height: 100px;
+                outline: none;
+                resize: none;
+                font-family: inherit;
+                overflow-y: hidden; /* ВАЖНО: Убивает фантомный скроллбар, делающий 2 строки */
+                scrollbar-width: none;
+                box-sizing: border-box;
+                display: block;
             }
 
                 .input-wrapper textarea::-webkit-scrollbar {
@@ -2327,6 +2326,8 @@
         /* --- НОВОЕ: Оригинальный текст маленькими буквами --- */
         .msg-text {
             text-transform: lowercase;
+            white-space: pre-wrap; /* Заставляет браузер отображать абзацы (Enter) */
+            word-break: break-word;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -7085,8 +7086,12 @@
 
         // Авто-увеличение высоты поля ввода
         function autoResize(textarea) {
-            textarea.style.height = 'auto'; // Сброс
-            textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px'; // Максимум 100px
+            // Сбрасываем строго до 1 строки, а не до 'auto', чтобы WebView не тупил
+            textarea.style.height = '40px';
+
+            // Если контента больше, чем на 1 строку, увеличиваем высоту (до 100px)
+            const newHeight = Math.min(textarea.scrollHeight, 100);
+            textarea.style.height = newHeight + 'px';
         }
 
         // Логика переключения кнопок Микрофон / Самолетик
