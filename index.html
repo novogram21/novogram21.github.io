@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Novogram</title>
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <style>
@@ -372,41 +372,104 @@
         }
 
         .chat-header {
-            padding: 10px 15px;
-            background: #1f1f1f;
-            border-bottom: 1px solid #333;
+            padding: 8px 15px; /* Как в ТГ */
+            background: #212121; /* Цвет фона шапки ТГ */
+            border-bottom: 1px solid #101010;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 60px;
+            min-height: 56px;
         }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .chat-header-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+
 
         .back-btn {
             display: none;
             background: none;
             border: none;
-            color: #007bff;
-            font-size: 24px;
             cursor: pointer;
-            padding-right: 15px;
+            padding: 5px;
+            margin-left: -5px;
+            border-radius: 50%;
+            transition: background 0.2s;
         }
+
+            .back-btn:active {
+                background: rgba(255,255,255,0.1);
+            }
 
         .chat-header-info {
             display: flex;
             flex-direction: column;
+            justify-content: center;
             gap: 2px;
-            flex: 1;
+            overflow: hidden;
         }
 
         .chat-title {
-            font-weight: bold;
-            font-size: 16px;
+            font-weight: 600;
+            font-size: 15px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .chat-status {
-            font-size: 12px;
-            color: #888;
+            font-size: 13px;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+
+        .chat-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-icon-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+            .header-icon-btn:hover {
+                background: rgba(255, 255, 255, 0.08);
+            }
+
+            .header-icon-btn:active {
+                background: rgba(255, 255, 255, 0.15);
+            }
 
         .messages {
             flex: 1;
@@ -1503,7 +1566,192 @@
         }
 
 
+        /* --- ПОИСК ВНУТРИ ЧАТА (ТЕЛЕГРАМ СТИЛЬ) --- */
+        .chat-search-bar {
+            background: #212121; /* Цвет шапки */
+            display: flex;
+            align-items: center;
+            position: absolute;
+            top: 0; /* Накладываем прямо поверх шапки */
+            left: 0;
+            right: 0;
+            height: 57px; /* Точная высота шапки */
+            z-index: 20; /* Поверх всего */
+            padding: 0 10px 0 20px;
+        }
 
+            .chat-search-bar.hidden {
+                display: none !important;
+            }
+
+        .search-glass-icon {
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        #chatSearchInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 16px;
+            outline: none;
+            padding: 0;
+            height: 100%;
+        }
+
+            #chatSearchInput::placeholder {
+                color: #888;
+            }
+
+        .chat-search-count {
+            color: #aaa;
+            font-size: 14px;
+            margin: 0 10px;
+            white-space: nowrap;
+        }
+
+        .chat-search-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .chat-search-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            padding: 0;
+        }
+
+            .chat-search-btn:hover {
+                background: rgba(255,255,255,0.08);
+            }
+
+            .chat-search-btn:active {
+                background: rgba(255,255,255,0.15);
+            }
+
+            .chat-search-btn svg {
+                transition: fill 0.2s;
+            }
+
+            .chat-search-btn:hover svg {
+                fill: #fff;
+            }
+
+        .search-divider {
+            width: 1px;
+            height: 24px;
+            background: #333;
+            margin: 0 5px;
+        }
+
+        /* Подсветка текста */
+        .highlight {
+            background-color: rgba(255, 235, 59, 0.3);
+            color: inherit;
+            border-radius: 3px;
+        }
+
+            .highlight.active-match {
+                background-color: #ff9800;
+                color: #fff;
+            }
+
+
+        /* Выпадающее меню поиска по чату */
+        .chat-search-dropdown {
+            position: absolute;
+            top: 57px; /* Сразу под панелью поиска */
+            left: 0;
+            right: 0;
+            bottom: 0; /* Растягиваем до низа */
+            background: #212121; /* Фон как в ТГ */
+            z-index: 19; /* Под панелью поиска, но над чатом */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+            .chat-search-dropdown.hidden {
+                display: none !important;
+            }
+
+        .search-msg-item {
+            display: flex;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+            .search-msg-item:hover {
+                background: #2a2a2a;
+            }
+
+            .search-msg-item.active {
+                background: #2f2f2f; /* Подсветка выбранного пункта */
+            }
+
+        .search-msg-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            margin-right: 12px;
+            flex-shrink: 0;
+            object-fit: cover;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .search-msg-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .search-msg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 2px;
+        }
+
+        .search-msg-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-msg-time {
+            font-size: 12px;
+            color: #888;
+            flex-shrink: 0;
+            margin-left: 10px;
+        }
+
+        .search-msg-text {
+            font-size: 13px;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
         /* Имя и статус */
         .tg-profile-name-block {
@@ -2753,19 +3001,53 @@
         <div id="noChat" style="height:100%; display:flex; align-items:center; justify-content:center; color:#555;"></div>
         <div id="activeChat" class="hidden" style="height:100%; display:flex; flex-direction:column;">
             <div class="chat-header">
-                <button class="back-btn" onclick="closeChat()" style="background: none; border: none; cursor: pointer; padding: 0 15px 0 0; display: flex; align-items: center;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#007bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </button>
-                <div class="chat-header-info">
-                    <div class="chat-title" id="chatTitle">User</div>
-                    <div class="chat-status" id="chatStatus">загрузка...</div>
+                <div class="chat-header-left" onclick="alert('Профиль пользователя скоро!')">
+                    <button class="back-btn" onclick="event.stopPropagation(); closeChat();">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    </button>
+                    <div class="chat-header-avatar" id="chatHeaderAvatar">👤</div>
+                    <div class="chat-header-info">
+                        <div class="chat-title" id="chatTitle">User</div>
+                        <div class="chat-status" id="chatStatus">загрузка...</div>
+                    </div>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <button onclick="startCall()" style="background:#28a745; color:white; border:none; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:bold;">📹 Звонок</button>
+                <div class="chat-header-actions">
+                    <button class="header-icon-btn" onclick="toggleChatSearch()">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" /></svg>
+                    </button>
+                    <button class="header-icon-btn" onclick="startCall()">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
+                    </button>
+                    <button class="header-icon-btn" onclick="alert('Меню чата скоро!')">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" /></svg>
+                    </button>
                 </div>
             </div>
+
+            <div id="chatSearchBar" class="chat-search-bar hidden">
+                <svg class="search-glass-icon" viewBox="0 0 24 24" width="20" height="20" fill="#888"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" /></svg>
+
+                <input type="text" id="chatSearchInput" placeholder="Поиск" oninput="handleChatSearchInput(this.value)" onkeydown="if(event.key === 'Enter') navigateChatSearch(1)">
+
+                <span class="chat-search-count" id="chatSearchCount"></span>
+
+                <div class="chat-search-actions">
+                    <button class="chat-search-btn" onclick="navigateChatSearch(-1)" title="Предыдущее">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" /></svg>
+                    </button>
+                    <button class="chat-search-btn" onclick="navigateChatSearch(1)" title="Следующее">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg>
+                    </button>
+                    <div class="search-divider"></div>
+                    <button class="chat-search-btn" onclick="alert('Поиск по дате скоро!')" title="Календарь">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="#aaa"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" /></svg>
+                    </button>
+                    <button class="chat-search-btn" onclick="toggleChatSearch()" title="Закрыть" style="margin-left: 5px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="chatSearchDropdown" class="chat-search-dropdown hidden"></div>
             <div id="msgList" class="messages"></div>
             <div class="input-bar">
 
@@ -2783,8 +3065,7 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.17 8 15.33 8 13.83 8.67 13.83 9.5 14.5 11 15.33 11zm-6.66 0c.83 0 1.5-.67 1.5-1.5S9.5 8 8.67 8 7.17 8.67 7.17 9.5 7.84 11 8.67 11zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
                     </button>
 
-                    <textarea id="msgInput" placeholder="Сообщение" inputmode="text" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
-
+                    <textarea id="msgInput" placeholder="Сообщение" inputmode="text" spellcheck="true" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
                     <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
 
                     <button class="tg-icon-btn-input" onclick="document.getElementById('fileInput').click()">
@@ -5554,31 +5835,21 @@
         const sendBtn = document.getElementById('sendBtn');
         const voiceBtn = document.querySelector('.voice-btn');
 
-        msgInput.addEventListener('focus', function () {
-            // Если это самый первый фокус после загрузки чата
-            if (!this.dataset.keyboardFixed) {
-                this.dataset.keyboardFixed = "true";
-                // Мгновенно снимаем и возвращаем фокус
-                this.blur();
-                setTimeout(() => {
-                    this.focus();
-                }, 10);
-            }
-        });
-
-
         msgInput.addEventListener('input', function () {
             handleTyping();
             if (this.value.trim().length > 0) {
                 sendBtn.classList.remove('hidden'); // <-- ИСПРАВЛЕНО (было hidden-btn)
-                sendBtn.style.display = 'flex';     // Теперь это сработает
+                sendBtn.style.display = 'flex';     // Теперь это сработает
                 voiceBtn.style.display = 'none';
             } else {
-                sendBtn.classList.add('hidden');    // <-- ИСПРАВЛЕНО
+                sendBtn.classList.add('hidden');    // <-- ИСПРАВЛЕНО
                 sendBtn.style.display = 'none';
                 voiceBtn.style.display = 'flex';
             }
         });
+
+
+       
         
         // --- АВТОПОВОРОТ ОКОШКА СВОЕГО ВИДЕО ---
         // --- PIP: drag + resize (красиво и без багов) ---
@@ -5938,10 +6209,17 @@
                     document.getElementById('noChat').classList.add('hidden');
                     document.getElementById('activeChat').classList.remove('hidden');
 
-                    document.getElementById('chatTitle').innerHTML = `
-                                                                <div>${name}</div>
-                                                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                                            `;
+                    // Устанавливаем только имя (Ник в ТГ не пишется в шапке)
+                    document.getElementById('chatTitle').innerText = name;
+
+                    // Устанавливаем аватарку
+                    const headerAvatar = document.getElementById('chatHeaderAvatar');
+                    if (userData && userData.avatar) {
+                        headerAvatar.innerHTML = `<img src="${userData.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+                    } else {
+                        // Заглушка, если нет фото
+                        headerAvatar.innerHTML = '👤';
+                    }
 
                     // =======================================================
                     // ИСПРАВЛЕНИЕ: ЗАПУСКАЕМ СЛУШАТЕЛЬ СТАТУСА ПРИ ОБНОВЛЕНИИ
@@ -6951,6 +7229,188 @@
                 const name = langNames[targetLang] || targetLang.toUpperCase();
                 el.innerText = `${name} (${targetLang})`;
             }
+        }
+
+        // ==========================================
+        // ЛОГИКА ПОИСКА ПО ЧАТУ (ТЕЛЕГРАМ СТИЛЬ)
+        // ==========================================
+        let chatSearchMatches = [];
+        let chatSearchCurrentIndex = -1;
+        let chatSearchDebounce;
+
+        function toggleChatSearch() {
+            const bar = document.getElementById('chatSearchBar');
+            const dropdown = document.getElementById('chatSearchDropdown');
+            const inp = document.getElementById('chatSearchInput');
+
+            if (bar.classList.contains('hidden')) {
+                bar.classList.remove('hidden');
+                inp.focus();
+            } else {
+                bar.classList.add('hidden');
+                dropdown.classList.add('hidden');
+                inp.value = '';
+                clearChatSearch();
+            }
+        }
+
+        function handleChatSearchInput(query) {
+            clearTimeout(chatSearchDebounce);
+            chatSearchDebounce = setTimeout(() => {
+                performChatSearch(query);
+            }, 300); // Ищем через 0.3 сек после остановки ввода
+        }
+
+        function clearChatSearch() {
+            chatSearchMatches = [];
+            chatSearchCurrentIndex = -1;
+            document.getElementById('chatSearchCount').innerText = "";
+            document.getElementById('chatSearchDropdown').innerHTML = "";
+        }
+
+        function performChatSearch(query) {
+            clearChatSearch();
+            const dropdown = document.getElementById('chatSearchDropdown');
+
+            if (!query.trim()) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            const lowerQuery = query.toLowerCase();
+            const msgs = document.querySelectorAll('#msgList .msg');
+
+            // Получаем аватарки и имена для списка
+            const myAvatar = document.getElementById('myAvatarSmall').querySelector('img')?.src || '';
+            const friendAvatar = document.getElementById('chatHeaderAvatar').querySelector('img')?.src || '';
+            const myName = "Вы"; // Как в ТГ
+            const friendName = document.getElementById('chatTitle').innerText;
+
+            msgs.forEach(msgBlock => {
+                const textSpan = msgBlock.querySelector('.msg-text');
+                if (!textSpan) return;
+
+                const text = textSpan.innerText;
+                if (text.toLowerCase().includes(lowerQuery)) {
+                    const isMine = msgBlock.classList.contains('msg-me');
+                    const timeSpan = msgBlock.querySelector('.msg-time');
+                    const timeStr = timeSpan ? timeSpan.innerText : '';
+
+                    chatSearchMatches.push({
+                        id: msgBlock.id,
+                        text: text,
+                        isMine: isMine,
+                        name: isMine ? myName : friendName,
+                        avatar: isMine ? myAvatar : friendAvatar,
+                        time: timeStr,
+                        element: msgBlock
+                    });
+                }
+            });
+
+            // Рендерим выпадающий список
+            dropdown.innerHTML = '';
+            if (chatSearchMatches.length === 0) {
+                dropdown.innerHTML = '<div style="padding:20px; text-align:center; color:#888; font-size:14px;">Ничего не найдено</div>';
+            } else {
+                chatSearchMatches.forEach((res, index) => {
+                    // Подсветка текста регуляркой
+                    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+                    const highlightedText = res.text.replace(regex, '<span class="highlight active-match">$1</span>');
+
+                    const avatarHtml = res.avatar
+                        ? `<img src="${res.avatar}" class="search-msg-avatar">`
+                        : `<div class="search-msg-avatar">👤</div>`;
+
+                    const div = document.createElement('div');
+                    div.className = 'search-msg-item';
+                    div.id = 'search-item-' + index;
+                    div.innerHTML = `
+                        ${avatarHtml}
+                        <div class="search-msg-content">
+                            <div class="search-msg-header">
+                                <span class="search-msg-name">${res.name}</span>
+                                <span class="search-msg-time">${res.time}</span>
+                            </div>
+                            <div class="search-msg-text">${highlightedText}</div>
+                        </div>
+                    `;
+
+                    // По клику на элемент списка прыгаем к сообщению и скрываем меню
+                    div.onclick = () => {
+                        chatSearchCurrentIndex = index;
+                        jumpToMessageAndCloseDropdown();
+                    };
+
+                    dropdown.appendChild(div);
+                });
+            }
+
+            dropdown.classList.remove('hidden');
+
+            // Устанавливаем счетчик
+            if (chatSearchMatches.length > 0) {
+                // Выбираем самое последнее (новое) сообщение по умолчанию
+                chatSearchCurrentIndex = chatSearchMatches.length - 1;
+                updateSearchUI();
+            }
+        }
+
+        function navigateChatSearch(direction) {
+            if (chatSearchMatches.length === 0) return;
+
+            // Навигация стрелками
+            chatSearchCurrentIndex += direction;
+
+            // Зацикливание
+            if (chatSearchCurrentIndex < 0) chatSearchCurrentIndex = chatSearchMatches.length - 1;
+            if (chatSearchCurrentIndex >= chatSearchMatches.length) chatSearchCurrentIndex = 0;
+
+            updateSearchUI();
+
+            // Скроллим само сообщение в чате
+            const targetMsg = chatSearchMatches[chatSearchCurrentIndex].element;
+            targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            glowMessage(targetMsg);
+        }
+
+        function updateSearchUI() {
+            // Обновляем текст счетчика (в ТГ идет обратный отсчет: 1 из 10 - это самое свежее)
+            const displayIndex = chatSearchMatches.length - chatSearchCurrentIndex;
+            document.getElementById('chatSearchCount').innerText = `${displayIndex} из ${chatSearchMatches.length}`;
+
+            // Выделяем активный элемент в выпадающем списке
+            document.querySelectorAll('.search-msg-item').forEach(el => el.classList.remove('active'));
+            const activeItem = document.getElementById('search-item-' + chatSearchCurrentIndex);
+            if (activeItem) {
+                activeItem.classList.add('active');
+                activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function jumpToMessageAndCloseDropdown() {
+            const targetMsg = chatSearchMatches[chatSearchCurrentIndex].element;
+
+            // Скрываем меню, но оставляем шапку открытой
+            document.getElementById('chatSearchDropdown').classList.add('hidden');
+
+            // Скроллим к сообщению
+            targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateSearchUI(); // Обновить счетчик
+
+            glowMessage(targetMsg);
+        }
+
+        // Вспомогательная функция для вспышки (подсветки) сообщения при переходе к нему
+        function glowMessage(element) {
+            element.style.transition = 'background 0.5s ease';
+            const originalBg = element.style.background || element.style.backgroundColor;
+            // Делаем вспышку синей, как в ТГ, или серой
+            element.style.backgroundColor = 'rgba(115, 106, 240, 0.4)';
+            setTimeout(() => {
+                element.style.backgroundColor = originalBg;
+            }, 1000);
         }
 
         function updateLangLabel() {
