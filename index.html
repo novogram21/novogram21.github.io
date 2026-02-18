@@ -4,7 +4,6 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1f1f1f" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
@@ -375,6 +374,7 @@
 
         .chat-header {
             padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
+            padding: 8px 15px; /* Как в ТГ */
             background: #212121; /* Цвет фона шапки ТГ */
             border-bottom: 1px solid #101010;
             display: flex;
@@ -2609,7 +2609,6 @@
             cursor: pointer; /* ДОБАВЛЕНО */
             transition: background 0.2s; /* ДОБАВЛЕНО */
         }
-
             .chat-date-separator:active {
                 background: rgba(0, 0, 0, 0.6);
             }
