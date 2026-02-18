@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Novogram</title>
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <style>
@@ -416,13 +416,13 @@
             flex-direction: column;
             gap: 8px;
             width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
+            /* max-width: 900px; УДАЛИТЬ ЭТУ СТРОКУ */
+            /* margin: 0 auto; УДАЛИТЬ ЭТУ СТРОКУ */
             background: transparent;
             position: relative;
             z-index: 1;
             min-height: 0;
-            transition: opacity 0.15s ease-out; /* Плавное появление */
+            transition: opacity 0.15s ease-out;
         }
 
             .messages.visible {
@@ -447,16 +447,19 @@
         /* --- НОВАЯ ПАНЕЛЬ ВВОДА (TELEGRAM STYLE) --- */
         .input-bar {
             width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
-            background: #1f1f1f; /* Цвет панели */
+            /* max-width и margin удалены, чтобы бар тянулся на весь экран ПК */
+
+            background: rgba(31, 31, 31, 0.85); /* Полупрозрачный фон */
+            backdrop-filter: blur(15px); /* Эффект размытия */
+            -webkit-backdrop-filter: blur(15px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08); /* Красивая тонкая линия-разделитель */
+
             min-height: 56px;
-            padding: 8px;
-            /* Учитываем отступ снизу для жестов Android/iOS */
-           
+            /* Отступ снизу теперь автоматически учитывает полоску iPhone (safe-area) */
+            padding: 10px 15px calc(12px + env(safe-area-inset-bottom)) 15px;
             display: flex;
-            align-items: flex-end; /* Выравнивание по низу */
-            gap: 8px;
+            align-items: flex-end;
+            gap: 10px;
             position: relative;
             z-index: 5;
         }
@@ -475,7 +478,8 @@
         }
 
             .input-wrapper:focus-within {
-                border-color: #007bff; /* Подсветка при вводе */
+                border-color: rgba(255, 255, 255, 0.15); /* Вместо синего — легкая светлая обводка */
+                background: #1c1c1c; /* Поле чуть светлеет при вводе */
             }
 
             /* Поле ввода текста */
