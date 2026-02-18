@@ -447,19 +447,16 @@
         /* --- НОВАЯ ПАНЕЛЬ ВВОДА (TELEGRAM STYLE) --- */
         .input-bar {
             width: 100%;
-            /* max-width и margin удалены, чтобы бар тянулся на весь экран ПК */
-
-            background: rgba(31, 31, 31, 0.85); /* Полупрозрачный фон */
-            backdrop-filter: blur(15px); /* Эффект размытия */
-            -webkit-backdrop-filter: blur(15px);
-            border-top: 1px solid rgba(255, 255, 255, 0.08); /* Красивая тонкая линия-разделитель */
-
+            max-width: 900px;
+            margin: 0 auto;
+            background: #1f1f1f; /* Цвет панели */
             min-height: 56px;
-            /* Отступ снизу теперь автоматически учитывает полоску iPhone (safe-area) */
-            padding: 10px 15px calc(12px + env(safe-area-inset-bottom)) 15px;
+            padding: 8px;
+            /* Учитываем отступ снизу для жестов Android/iOS */
+           
             display: flex;
-            align-items: flex-end;
-            gap: 10px;
+            align-items: flex-end; /* Выравнивание по низу */
+            gap: 8px;
             position: relative;
             z-index: 5;
         }
