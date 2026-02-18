@@ -1572,12 +1572,12 @@
             display: flex;
             align-items: center;
             position: absolute;
-            top: 0; /* Накладываем прямо поверх шапки */
+            top: 0;
             left: 0;
             right: 0;
-            height: 57px; /* Точная высота шапки */
-            z-index: 20; /* Поверх всего */
-            padding: 0 10px 0 20px;
+            height: 57px;
+            z-index: 20;
+            padding: 0 5px 0 15px; /* Чуть уменьшили правый отступ */
         }
 
             .chat-search-bar.hidden {
@@ -1585,12 +1585,13 @@
             }
 
         .search-glass-icon {
-            margin-right: 15px;
+            margin-right: 10px;
             flex-shrink: 0;
         }
 
         #chatSearchInput {
             flex: 1;
+            min-width: 0; /* ВАЖНО: Разрешает инпуту сжиматься на телефонах */
             background: transparent;
             border: none;
             color: white;
@@ -1604,31 +1605,35 @@
                 color: #888;
             }
 
+
         .chat-search-count {
             color: #aaa;
             font-size: 14px;
-            margin: 0 10px;
+            margin: 0 5px;
             white-space: nowrap;
+            flex-shrink: 0; /* Не даем счетчику сжиматься */
         }
 
         .chat-search-actions {
             display: flex;
             align-items: center;
-            gap: 2px;
+            gap: 0px; /* Убрали лишние дырки между кнопками */
+            flex-shrink: 0; /* ВАЖНО: Не даем блоку с кнопками улетать за экран */
         }
 
         .chat-search-btn {
             background: none;
             border: none;
             cursor: pointer;
-            width: 40px;
-            height: 40px;
+            width: 36px; /* Чуть компактнее для телефона */
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: background 0.2s;
             padding: 0;
+            flex-shrink: 0;
         }
 
             .chat-search-btn:hover {
@@ -1670,27 +1675,46 @@
         /* Выпадающее меню поиска по чату */
         .chat-search-dropdown {
             position: absolute;
-            top: 57px; /* Сразу под панелью поиска */
-            left: 0;
-            right: 0;
-            bottom: 0; /* Растягиваем до низа */
-            background: #212121; /* Фон как в ТГ */
-            z-index: 19; /* Под панелью поиска, но над чатом */
+            top: 65px; /* Небольшой отступ вниз от шапки */
+            right: 15px; /* Выравниваем по правому краю на ПК */
+            width: 360px; /* Аккуратная фиксированная ширина */
+            max-height: 50vh; /* Максимум половина экрана в высоту */
+            background: #212121;
+            border: 1px solid #333; /* Тонкая рамка */
+            border-radius: 12px; /* Скругленные края */
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6); /* Красивая объемная тень */
+            z-index: 100; /* Поверх всех сообщений */
             overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
         }
 
-            .chat-search-dropdown.hidden {
-                display: none !important;
+        /* Адаптация для телефона (открывается по центру с отступами по краям) */
+        @media (max-width: 768px) {
+            .chat-search-dropdown {
+                left: 10px;
+                right: 10px;
+                width: auto;
+                max-height: 60vh; /* Чуть больше высоты на мобилке */
             }
+        }
+
+        .chat-search-dropdown.hidden {
+            display: none !important;
+        }
 
         .search-msg-item {
             display: flex;
-            padding: 8px 15px;
+            padding: 10px 15px;
             cursor: pointer;
             transition: background 0.1s;
+            border-bottom: 1px solid rgba(255,255,255,0.05); /* Еле заметная линия между пунктами */
         }
+
+            .search-msg-item:last-child {
+                border-bottom: none; /* Убираем линию у последнего элемента */
+            }
 
             .search-msg-item:hover {
                 background: #2a2a2a;
@@ -3978,14 +4002,8 @@
                     }
                     // Обновляем дату
                     if (dateEl && timeToDisplay > 0) {
-                        const date = new Date(timeToDisplay);
-                        const now = new Date();
-                        // Простая логика даты: часы:минуты или день
-                        if (date.toDateString() === now.toDateString()) {
-                            dateEl.innerText = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                        } else {
-                            dateEl.innerText = date.getDate() + '.' + (date.getMonth() + 1);
-                        }
+                        // ЗАМЕНИТЕ СТАРЫЙ IF/ELSE НА ЭТУ СТРОЧКУ:
+                        dateEl.innerText = formatTelegramDate(new Date(timeToDisplay));
                     }
                     // Обновляем сортировку списка
                     if (userDiv) {
@@ -7271,20 +7289,17 @@
         function performChatSearch(query) {
             clearChatSearch();
             const dropdown = document.getElementById('chatSearchDropdown');
-
-            if (!query.trim()) {
-                dropdown.classList.add('hidden');
-                return;
-            }
+            if (!query.trim()) { dropdown.classList.add('hidden'); return; }
 
             const lowerQuery = query.toLowerCase();
             const msgs = document.querySelectorAll('#msgList .msg');
 
-            // Получаем аватарки и имена для списка
-            const myAvatar = document.getElementById('myAvatarSmall').querySelector('img')?.src || '';
-            const friendAvatar = document.getElementById('chatHeaderAvatar').querySelector('img')?.src || '';
-            const myName = "Вы"; // Как в ТГ
-            const friendName = document.getElementById('chatTitle').innerText;
+            // Данные для отображения
+            const myData = JSON.parse(localStorage.getItem('user_profile_cache') || '{}');
+            const myAvatar = myData.avatar || '';
+            const friendData = usersCache[currentFriendId] || {};
+            const friendFullName = `${friendData.name || 'User'} ${friendData.surname || ''}`.trim();
+            const friendAvatar = friendData.avatar || '';
 
             msgs.forEach(msgBlock => {
                 const textSpan = msgBlock.querySelector('.msg-text');
@@ -7293,35 +7308,41 @@
                 const text = textSpan.innerText;
                 if (text.toLowerCase().includes(lowerQuery)) {
                     const isMine = msgBlock.classList.contains('msg-me');
-                    const timeSpan = msgBlock.querySelector('.msg-time');
-                    const timeStr = timeSpan ? timeSpan.innerText : '';
+
+                    // Извлекаем дату из атрибутов Firebase или DOM
+                    // В чате мы храним время в блоке .msg-time
+                    const timeEl = msgBlock.querySelector('.msg-time');
 
                     chatSearchMatches.push({
                         id: msgBlock.id,
                         text: text,
                         isMine: isMine,
-                        name: isMine ? myName : friendName,
+                        name: isMine ? "Вы" : friendFullName, // <--- ЗДЕСЬ ПРИНУДИТЕЛЬНО "ВЫ"
                         avatar: isMine ? myAvatar : friendAvatar,
-                        time: timeStr,
+                        // Используем новое форматирование (для поиска берем дату сообщения)
+                        time: timeEl ? timeEl.innerText : '',
                         element: msgBlock
                     });
                 }
             });
 
-            // Рендерим выпадающий список
             dropdown.innerHTML = '';
             if (chatSearchMatches.length === 0) {
                 dropdown.innerHTML = '<div style="padding:20px; text-align:center; color:#888; font-size:14px;">Ничего не найдено</div>';
             } else {
                 chatSearchMatches.forEach((res, index) => {
-                    // Подсветка текста регуляркой
                     const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     const regex = new RegExp(`(${escapedQuery})`, 'gi');
                     const highlightedText = res.text.replace(regex, '<span class="highlight active-match">$1</span>');
 
-                    const avatarHtml = res.avatar
-                        ? `<img src="${res.avatar}" class="search-msg-avatar">`
-                        : `<div class="search-msg-avatar">👤</div>`;
+                    // Логика отображения аватарок (фото или цветная заглушка)
+                    let avatarHtml;
+                    if (res.avatar) {
+                        avatarHtml = `<img src="${res.avatar}" class="search-msg-avatar" style="object-fit:cover;">`;
+                    } else {
+                        const firstLetter = res.name.charAt(0).toUpperCase();
+                        avatarHtml = `<div class="search-msg-avatar" style="background: linear-gradient(135deg, #6a11cb, #2575fc); color: white; font-weight: bold;">${firstLetter}</div>`;
+                    }
 
                     const div = document.createElement('div');
                     div.className = 'search-msg-item';
@@ -7337,7 +7358,6 @@
                         </div>
                     `;
 
-                    // По клику на элемент списка прыгаем к сообщению и скрываем меню
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -7349,9 +7369,7 @@
 
             dropdown.classList.remove('hidden');
 
-            // Устанавливаем счетчик
             if (chatSearchMatches.length > 0) {
-                // Выбираем самое последнее (новое) сообщение по умолчанию
                 chatSearchCurrentIndex = chatSearchMatches.length - 1;
                 updateSearchUI();
             }
@@ -7576,6 +7594,40 @@
                 voiceBtn.classList.remove('hidden');
                 sendBtn.classList.add('hidden');
             }
+        }
+
+        // Умное форматирование даты (как в Telegram)
+        function formatTelegramDate(date) {
+            if (!date) return "";
+            const now = new Date();
+            const msgDate = new Date(date);
+
+            // Сбрасываем время для сравнения только дат
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const target = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate()).getTime();
+            const diffDays = Math.floor((today - target) / (1000 * 60 * 60 * 24));
+
+            // Сегодня -> 14:30
+            if (diffDays === 0) {
+                return msgDate.getHours().toString().padStart(2, '0') + ':' + msgDate.getMinutes().toString().padStart(2, '0');
+            }
+            // Вчера -> вчера
+            if (diffDays === 1) return "вчера";
+            // Позавчера -> позавчера
+            if (diffDays === 2) return "позавчера";
+            // В пределах недели -> ПН, ВТ...
+            if (diffDays < 7) {
+                const weekDays = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+                return weekDays[msgDate.getDay()];
+            }
+            // В этом году -> 11.02
+            if (msgDate.getFullYear() === now.getFullYear()) {
+                return msgDate.getDate().toString().padStart(2, '0') + '.' + (msgDate.getMonth() + 1).toString().padStart(2, '0');
+            }
+            // Прошлые года -> 11.12.25
+            return msgDate.getDate().toString().padStart(2, '0') + '.' +
+                (msgDate.getMonth() + 1).toString().padStart(2, '0') + '.' +
+                msgDate.getFullYear().toString().slice(-2);
         }
 
         // --- УМНАЯ ФУНКЦИЯ ДЛЯ ВВОДА (С РАЗДЕЛЕНИЕМ ПК / ТЕЛЕФОН) ---
