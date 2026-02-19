@@ -5222,13 +5222,23 @@
                 if (pc.connectionState === 'connected') {
                     isConnected = true; wasCallConnected = true; updateCallStatus("В разговоре");
                     stopAllTones(); startTimer(); startPing();
-                    // Скрываем большую аватарку и показываем таймер вместо статуса
                     document.getElementById('callLargeAvatar').style.display = 'none';
                     document.getElementById('callStatusText').style.display = 'none';
                     document.getElementById('callTimer').style.display = 'block';
-
-                    // Показываем видео собеседника
                     document.getElementById('remoteVideo').style.opacity = '1';
+
+                    // === ВОТ ЭТОТ БЛОК ВАЖЕН ===
+                    // Как только видео пошло, Android сбросит звук в динамик.
+                    // Мы ждем полсекунды и бьем его по рукам, переводя звук в ухо.
+                    setTimeout(() => {
+                        isEarpiece = true; // Ставим переменную
+                        applySpeakerState(); // Меняем картинку кнопки
+                        if (typeof AudioApp !== 'undefined') {
+                            AudioApp.setMode("true"); // Бьем в C#
+                        }
+                    }, 500);
+                    // ==============================
+
                 } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
                     endCall(false);
                 }
@@ -5620,34 +5630,46 @@
                 showToast("При демонстрации экрана смена камеры недоступна");
                 return;
             }
-            // Переключаем мод
-            selectedPreviewMode = (selectedPreviewMode === 'user') ? 'environment' : 'user';
 
-            // Берем новый стрим
-            try {
-                const newStream = await getStreamForFacing(selectedPreviewMode, false);
-                const newTrack = newStream.getVideoTracks()[0];
-                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+            const nextMode = (selectedPreviewMode === 'user') ? 'environment' : 'user';
 
-                // Убиваем старый
-                const oldVideoTrack = localStream.getVideoTracks()[0];
-                if (oldVideoTrack) {
-                    oldVideoTrack.stop();
-                    localStream.removeTrack(oldVideoTrack);
-                }
-
-                // Вставляем новый
-                localStream.addTrack(newTrack);
-                document.getElementById('localVideo').srcObject = localStream;
-                setLocalMirror(selectedPreviewMode);
-                currentFacingMode = selectedPreviewMode;
-
-                if (sender) {
-                    await sender.replaceTrack(newTrack);
-                }
-            } catch (e) {
-                console.error("Ошибка при перевороте камеры", e);
+            // 1. ЖЕСТКО убиваем текущую камеру (Освобождаем ресурсы телефона)
+            const oldVideoTrack = localStream.getVideoTracks()[0];
+            if (oldVideoTrack) {
+                oldVideoTrack.enabled = false;
+                oldVideoTrack.stop();
+                localStream.removeTrack(oldVideoTrack);
             }
+
+            // 2. ДАЕМ АНДРОИДУ 300мс на закрытие объектива
+            setTimeout(async () => {
+                try {
+                    // Запрашиваем новую камеру (без exact, чтобы Android не капризничал)
+                    const newStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: nextMode },
+                        audio: false // Микрофон уже работает
+                    });
+
+                    const newTrack = newStream.getVideoTracks()[0];
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+
+                    // Добавляем новую камеру в поток
+                    localStream.addTrack(newTrack);
+                    document.getElementById('localVideo').srcObject = localStream;
+
+                    setLocalMirror(nextMode);
+                    selectedPreviewMode = nextMode;
+                    currentFacingMode = nextMode;
+
+                    if (sender) {
+                        await sender.replaceTrack(newTrack);
+                    }
+                } catch (e) {
+                    console.error("Ошибка при перевороте камеры", e);
+                    showToast("Не удалось переключить камеру");
+                    stopVideo();
+                }
+            }, 300);
         }
 
         async function toggleScreen() {
@@ -7901,14 +7923,16 @@
         // 2. Функция переключения
         function toggleSpeaker() {
             isEarpiece = !isEarpiece;
-            applySpeakerState();
+            applySpeakerState(); // Меняет иконку
 
-            // ВЫЗОВ C# КОДА (MAUI)
-            if (window.chrome && window.chrome.webview) {
-                window.chrome.webview.postMessage(JSON.stringify({
-                    action: "setAudioMode",
-                    earpiece: isEarpiece
-                }));
+            console.log("JS: Кнопка нажата. isEarpiece = " + isEarpiece);
+
+            if (window.AudioApp) {
+                console.log("JS: Мост найден! Отправляем команду в C#...");
+                window.AudioApp.setMode(isEarpiece ? "true" : "false");
+            } else {
+                console.error("JS: ОШИБКА! Объект window.AudioApp не существует.");
+                showToast("Ошибка: Мост с Android не найден!");
             }
         }
 
@@ -8024,26 +8048,45 @@
             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
             const videoTrack = localStream.getVideoTracks()[0];
 
+            // 1. Физически выключаем камеру
             if (videoTrack) {
                 videoTrack.enabled = false;
                 videoTrack.stop();
                 localStream.removeTrack(videoTrack);
             }
 
-            // ВАЖНО: Передаем NULL, чтобы у друга экран стал черным/пропал
+            // 2. ВАЖНО: Заменяем поток у друга на черный квадрат, а не на null
             if (sender) {
                 try {
-                    await sender.replaceTrack(null);
+                    await sender.replaceTrack(createBlackVideoTrack());
                 } catch (e) {
-                    console.log("replaceTrack(null) failed, ignoring", e);
+                    console.log("Ошибка замены на черный экран", e);
                 }
             }
 
+            // 3. Прячем свое маленькое окно
             document.getElementById('localPip').style.display = 'none';
             updateCamBtnUI(false);
 
-            // ВОЗВРАЩАЕМ КНОПКУ ДИНАМИКА
+            // 4. ВОЗВРАЩАЕМ КНОПКУ ДИНАМИКА НА МЕСТО КРУТИЛКИ
             restoreFlipToSpeaker();
+        }
+
+        function createBlackVideoTrack() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+
+            // Каждые 100мс рисуем черный квадрат, чтобы WebRTC отправлял кадры!
+            setInterval(() => {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }, 100);
+
+            // Захватываем 10 кадров в секунду
+            const stream = canvas.captureStream(10);
+            return stream.getVideoTracks()[0];
         }
 
         function applySpeakerState() {
