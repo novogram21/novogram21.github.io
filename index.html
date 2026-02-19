@@ -21,11 +21,15 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            /* Как в Telegram: dvh заставит интерфейс подстраиваться под панели браузера */
-            height: 100dvh;
+            /* Фикс iOS: жестко 100%, убираем багованный 100dvh */
+            height: 100%;
+            position: fixed; /* ОБЯЗАТЕЛЬНО возвращаем, иначе iOS сдвинет экран при клике на инпут! */
+            top: 0;
+            left: 0;
             overflow: hidden;
             overscroll-behavior-y: none;
-            background-color: #0a0c10;
+            /* Это сделает зону часов и WiFi серой сверху */
+            background-color: #212121;
         }
 
         body {
@@ -98,7 +102,8 @@
         }
 
         .profile-bar {
-            padding: 12px 15px;
+            /* Прибавляем челку к верхнему отступу */
+            padding: calc(12px + env(safe-area-inset-top)) 15px 12px 15px;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -373,13 +378,14 @@
         }
 
         .chat-header {
-            padding: 8px 15px;
+            /* Прибавляем челку к верхнему отступу */
+            padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
             background: #212121;
             border-bottom: 1px solid #101010;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 56px;
+            min-height: calc(56px + env(safe-area-inset-top)); /* Учитываем челку в высоте */
         }
 
         .chat-header-left {
@@ -1180,11 +1186,12 @@
 
 
         #app-background {
-            position: absolute; /* ВАЖНО: changed to absolute */
-            top: 0;
+            position: absolute;
+            /* Опускаем темный фон ниже статус-бара, чтобы там остался серый от body */
+            top: env(safe-area-inset-top);
             left: 0;
             width: 100%;
-            height: 100%;
+            height: calc(100% - env(safe-area-inset-top));
             z-index: -1;
             background-color: #0a0c10;
         }
@@ -1495,10 +1502,10 @@
 
         /* --- Стили профиля как в Telegram --- */
 
-        /* Фон шапки (зеленый паттерн) */
         .tg-header-bg {
             background: #5a9e57;
-            padding: 10px 15px 20px 15px;
+            /* Сдвигаем контент ниже челки */
+            padding: calc(10px + env(safe-area-inset-top)) 15px 20px 15px;
             color: white;
             position: relative;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -1576,8 +1583,9 @@
             top: 0;
             left: 0;
             right: 0;
-            padding: 0 5px 0 15px;
-            height: 57px;
+            /* Отступ и высота с учетом челки */
+            padding: env(safe-area-inset-top) 5px 0 15px;
+            height: calc(57px + env(safe-area-inset-top));
             z-index: 20;
         }
 
@@ -3370,7 +3378,7 @@
         let isUsernameValid = true; // И эту
         let usernameCheckTimeout = null; // И эту
 
-               // --- ИСПРАВЛЕННЫЙ ПОИСК (БЕЗ ДУБЛИКАТОВ) ---
+        // --- ИСПРАВЛЕННЫЙ ПОИСК (БЕЗ ДУБЛИКАТОВ) ---
         let searchTimeout = null;
 
         async function handleSearchInput(input) {
@@ -3462,13 +3470,13 @@
                 : `<div class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">${fullName.charAt(0).toUpperCase()}</div>`;
 
             div.innerHTML = `
-        ${avatarHtml}
-        <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-            <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-            <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-        </div>
-        <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
-    `;
+            ${avatarHtml}
+            <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+            </div>
+            <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
+        `;
 
             // Событие клика теперь надежно закреплено за узлом
             div.onclick = () => {
@@ -3483,7 +3491,7 @@
             return div;
         }
 
-        
+
 
 
         async function performSearch(query) {
@@ -3570,7 +3578,7 @@
             }
         }
         // Вспомогательная функция для создания HTML элемента результата
-        
+
         // Новая функция отправки заявки по ID (а не email)
         async function sendFriendRequestToId(targetUid) {
             try {
@@ -3932,16 +3940,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                                                                                                                                                                                                                                                                                                                                                            ${avatar}
-                                                                                                                                                                                                                                                                                                                                                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                                                                                                                                                                                                                                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                                                                                                                                                                                                                                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                                                                                                                                                                                                                                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                                                                                                                                                                                                                                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                                                                                                                                                                ${avatar}
+                                                                                                                                                                                                                                                                                                                                                                                                <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                                                                                                                                                                                                                                                                                                                                    ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                                                                                                                                                                                                                                                                                                                                    <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                                                                                                                                                                                                                                                                                                                                    <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                                                                                                                                                                                                                                                                                                                                    <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                            `;
                         list.appendChild(div);
                     });
                 });
@@ -4139,19 +4147,19 @@
                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
             return `
-                        ${avatarHtml}
-                        <div class="user-name">${fName}</div>
-                        <div class="last-msg-row">
-                            <span class="last-msg" id="last-${chatId}">...</span>
-                        </div>
-                        <div class="meta-column">
-                            <span class="last-msg-date" id="date-${chatId}"></span>
-                            <div class="meta-bottom-row">
-                                <span id="status-${chatId}" class="list-ticks"></span>
-                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                            ${avatarHtml}
+                            <div class="user-name">${fName}</div>
+                            <div class="last-msg-row">
+                                <span class="last-msg" id="last-${chatId}">...</span>
                             </div>
-                        </div>
-                    `;
+                            <div class="meta-column">
+                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                <div class="meta-bottom-row">
+                                    <span id="status-${chatId}" class="list-ticks"></span>
+                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                </div>
+                            </div>
+                        `;
         }
 
         function loadData() {
@@ -4246,19 +4254,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                                                                    ${avatarHtml}
-                                                                                    <div class="user-name">${fName}</div>
-                                                                                    <div class="last-msg-row">
-                                                                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                    </div>
-                                                                                    <div class="meta-column">
-                                                                                        <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                        <div class="meta-bottom-row">
-                                                                                            <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                        ${avatarHtml}
+                                                                                        <div class="user-name">${fName}</div>
+                                                                                        <div class="last-msg-row">
+                                                                                            <span class="last-msg" id="last-${chatId}">...</span>
                                                                                         </div>
-                                                                                    </div>
-                                                                                `;
+                                                                                        <div class="meta-column">
+                                                                                            <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                            <div class="meta-bottom-row">
+                                                                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -4329,9 +4337,9 @@
 
             // Установка нормального заголовка
             titleEl.innerHTML = `
-                                            <div>${name}</div>
-                                            <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
-                                        `;
+                                                <div>${name}</div>
+                                                <div style="font-size:11px; font-weight:normal; color:#888;">${nick}</div>
+                                            `;
 
             // --- БЫСТРЫЙ СТАТУС ИЗ КЭША ---
             const statusEl = document.getElementById('chatStatus');
@@ -4450,7 +4458,7 @@
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
                 if (isMobile) {
-                    // ТРЮК: Ставим inputmode='none'. 
+                    // ТРЮК: Ставим inputmode='none'.
                     // Браузер ставит фокус (курсор мигает), но клавиатура НЕ открывается.
                     inp.setAttribute('inputmode', 'none');
                     inp.focus();
@@ -4686,10 +4694,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                                <div class="msg-reply-name">${m.replyTo.name}</div>
-                                                <div class="msg-reply-text">${m.replyTo.text}</div>
-                                            </div>`;
+                                                <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                    <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                    <div class="msg-reply-text">${m.replyTo.text}</div>
+                                                </div>`;
             }
 
             // Основной контент
@@ -4722,11 +4730,11 @@
                 }
 
                 let metaHtml = `
-                                            <span class="msg-meta" style="${metaStyle}">
-                                                ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                                <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                            </span>`;
+                                                <span class="msg-meta" style="${metaStyle}">
+                                                    ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                                                    <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                                                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                                </span>`;
 
                 if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                 else contentHtml += metaHtml;
@@ -5418,14 +5426,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                                                                                                                                                                                                                                                                        <div style="display:flex; align-items:center;">
-                                                                                                                                                                                                                                                                            ${avatarHtml}
-                                                                                                                                                                                                                                                                            <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                                                                                                                                                                                                                                                                                <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                                                                                                                                                                                                                                                                                <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                                                            <div style="display:flex; align-items:center;">
+                                                                                                                                                                                                                                                                                ${avatarHtml}
+                                                                                                                                                                                                                                                                                <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                                                                                                                                                                                                                                                                                    <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                                                                                                                                                                                                                                                                                    <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                                                                                                                                                                                                                                                                                </div>
                                                                                                                                                                                                                                                                             </div>
-                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                        `;
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
                                 }
@@ -5889,8 +5897,8 @@
         });
 
 
-       
-        
+
+
         // --- АВТОПОВОРОТ ОКОШКА СВОЕГО ВИДЕО ---
         // --- PIP: drag + resize (красиво и без багов) ---
         const localVidEl = document.getElementById('localVideo');
@@ -6085,7 +6093,7 @@
         function isMobileDevice() {
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
-        
+
         function checkLocalVideoOrientation() {
             if (!localStream) return;
             const videoTrack = localStream.getVideoTracks()[0];
@@ -6404,7 +6412,7 @@
         }
 
 
-        
+
         // --- 1. Функция для показа "временного" сообщения (превью) ---
         function showTempMessage(file) {
             const list = document.getElementById('msgList');
@@ -6417,24 +6425,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                                                                                                                                                                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                                                                                                                                                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                                                                                                                                                                                                <div class="upload-spinner"></div>
-                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                                                                                                                                                                                                    <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                                                                                                                                                                                                    <div class="upload-spinner"></div>
+                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                            `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                                                                                                                                                                                                            <div class="chat-file-card" style="opacity: 0.7;">
-                                                                                                                                                                                                                                                <div class="file-icon">📄</div>
-                                                                                                                                                                                                                                                <div class="file-info">
-                                                                                                                                                                                                                                                    <div class="file-name">${file.name}</div>
-                                                                                                                                                                                                                                                    <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                                <div class="chat-file-card" style="opacity: 0.7;">
+                                                                                                                                                                                                                                                    <div class="file-icon">📄</div>
+                                                                                                                                                                                                                                                    <div class="file-info">
+                                                                                                                                                                                                                                                        <div class="file-name">${file.name}</div>
+                                                                                                                                                                                                                                                        <div class="file-action">Загрузка...</div>
+                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                    <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
                                                                                                                                                                                                                                                 </div>
-                                                                                                                                                                                                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                            `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -6576,8 +6584,8 @@
             document.getElementById('searchBackBtn').style.display = 'none';
         }
 
-    
-        
+
+
         // И обнови openSearchUI, чтобы display переключался
         function openSearchUI() {
             document.getElementById('profileBtn').style.display = 'none';
@@ -6776,7 +6784,7 @@
             reader.readAsDataURL(file);
         }
 
-        
+
 
         // Переменная для таймера (добавьте в начало скрипта, если еще нет)
         // let usernameCheckTimeout = null;
@@ -7425,15 +7433,15 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                        ${avatarHtml}
-                        <div class="search-msg-content">
-                            <div class="search-msg-header">
-                                <span class="search-msg-name">${res.name}</span>
-                                <span class="search-msg-time">${res.time}</span>
+                            ${avatarHtml}
+                            <div class="search-msg-content">
+                                <div class="search-msg-header">
+                                    <span class="search-msg-name">${res.name}</span>
+                                    <span class="search-msg-time">${res.time}</span>
+                                </div>
+                                <div class="search-msg-text">${highlightedText}</div>
                             </div>
-                            <div class="search-msg-text">${highlightedText}</div>
-                        </div>
-                    `;
+                        `;
 
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
@@ -7714,7 +7722,7 @@
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
                 if (isMobile) {
-                    // НА ТЕЛЕФОНЕ: Просто позволяем системе сделать перенос строки. 
+                    // НА ТЕЛЕФОНЕ: Просто позволяем системе сделать перенос строки.
                     // Ничего не блокируем и не отправляем сообщение.
                     return;
                 } else {
@@ -7736,7 +7744,7 @@
             }
         }
 
-        
+
 
     </script>
 
