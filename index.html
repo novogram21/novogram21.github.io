@@ -925,9 +925,20 @@
         #remoteVideo {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Растягиваем на весь экран */
-            opacity: 0; /* Скрыто до ответа */
+            object-fit: cover;
+            opacity: 0;
             transition: opacity 0.5s;
+            pointer-events: none; /* Запрещаем случайные нажатия на невидимый плеер */
+        }
+
+        /* ПОЛНОСТЬЮ УБИВАЕМ СИСТЕМНЫЕ КНОПКИ ПЛЕЕРА ANDROID WEBVIEW */
+        video::-webkit-media-controls {
+            display: none !important;
+        }
+
+        video::-webkit-media-controls-start-playback-button {
+            display: none !important;
+            -webkit-appearance: none;
         }
 
         .local-video-container {
@@ -3272,12 +3283,15 @@
             <video id="remoteVideo" autoplay playsinline></video>
             <div class="local-video-container" id="localPip">
                 <video id="localVideo" autoplay muted playsinline></video>
-                <div class="pip-resize-handle" aria-hidden="true"></div>
-            </div>
+                <div class="pip-resize-handle" aria-hidden="true"></div>аfunction getTgGradient(str)
         </div>
 
         <div class="call-header" id="callHeaderInfo">
-            <img id="callLargeAvatar" class="call-large-avatar" src="" onerror="this.style.display='none'">
+            <div id="callLargeAvatarWrapper" style="width: 120px; height: 120px; border-radius: 50%; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: bold; color: white; overflow: hidden;">
+                <img id="callLargeAvatar" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                <span id="callLargeAvatarText" style="display: none;">U</span>
+            </div>
+
             <div class="call-name" id="callScreenName">User</div>
             <div class="call-status-text" id="callStatusText">Соединение...</div>
             <div id="callTimer" style="font-size: 18px; font-family: monospace; margin-top: 5px; display: none;">00:00</div>
@@ -3782,6 +3796,65 @@
                 }
             });
         });
+
+        // НОВЫЕ КРАСИВЫЕ ГРАДИЕНТЫ КАК В TELEGRAM
+        const tgGradients = [
+            'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)', // Сине-фиолетовый
+            'linear-gradient(135deg, #ff0844 0%, #ffb199 100%)', // Красно-оранжевый
+            'linear-gradient(135deg, #0ba360 0%, #3cba92 100%)', // Изумрудный
+            'linear-gradient(135deg, #f83600 0%, #f9d423 100%)', // Солнечный
+            'linear-gradient(135deg, #b224ef 0%, #7579ff 100%)', // Розово-голубой
+            'linear-gradient(135deg, #16a085 0%, #f4d03f 100%)'  // Желто-зеленый
+        ];
+
+        // Выбираем цвет на основе ID пользователя (чтобы цвет всегда был одинаковым для одного человека)
+        function getTgGradient(str) {
+            if (!str) return tgGradients[0];
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) hash += str.charCodeAt(i);
+            return tgGradients[hash % tgGradients.length];
+        }
+
+        // Общая функция для отрисовки красивого экрана звонка
+        function setupCallScreenUI(friendId, friendData) {
+            const fName = friendData.name || friendData.username || 'Пользователь';
+            document.getElementById('callScreenName').innerText = fName;
+
+            const wrapper = document.getElementById('callLargeAvatarWrapper');
+            const imgEl = document.getElementById('callLargeAvatar');
+            const txtEl = document.getElementById('callLargeAvatarText');
+            const bgBlurEl = document.getElementById('callBgBlur');
+
+            // === ФИКС 1: СБРАСЫВАЕМ ЭКРАН ===
+            // Прячем видеоплеер, чтобы он не перекрывал наш фон черным квадратом
+            document.getElementById('remoteVideo').style.opacity = '0';
+            wrapper.style.display = 'flex'; // Возвращаем аватарку на экран
+
+            const gradient = getTgGradient(friendId);
+
+            if (friendData.avatar) {
+                // Если есть фото пользователя
+                imgEl.src = friendData.avatar;
+                imgEl.style.display = 'block';
+                txtEl.style.display = 'none';
+                wrapper.style.background = 'transparent';
+
+                // Задний фон: размытое фото
+                bgBlurEl.style.background = `url('${friendData.avatar}') center/cover no-repeat`;
+                bgBlurEl.style.filter = 'blur(40px) brightness(0.4)';
+            } else {
+                // Если фото нет (Стиль Telegram)
+                imgEl.style.display = 'none';
+                txtEl.innerText = fName.charAt(0).toUpperCase(); // Первая буква имени
+                txtEl.style.display = 'block';
+                wrapper.style.background = gradient; // Красивый кружок
+
+                // === ФИКС 2: УБИРАЕМ BLUR ДЛЯ ГРАДИЕНТА НА ANDROID ===
+                bgBlurEl.style.background = gradient;
+                bgBlurEl.style.filter = 'brightness(0.5)'; // Размытие убрано, оставляем только затемнение!
+            }
+        }
+
         function updateLastSeen() {
             const now = Date.now();
             // Если с последней активности прошло меньше 30 секунд - обновляем базу
@@ -5197,19 +5270,16 @@
         function setupPeerConnection() {
             candidateQueue = [];
             pc = new RTCPeerConnection(iceServers);
+
             pc.oniceconnectionstatechange = () => {
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-                    pc.getStats().then(stats => {
-                        stats.forEach(report => {
-                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                                const local = stats.get(report.localCandidateId);
-                                console.log(`🚀 Connection: ${local.candidateType}`);
-                            }
-                        });
-                    });
+                    // Логика соединения...
                 }
             };
+
             pc.onicecandidate = e => { };
+
+            // КОГДА ПРИХОДЯТ ДАННЫЕ ОТ ДРУГА
             pc.ontrack = e => {
                 const remoteVid = document.getElementById('remoteVideo');
                 remoteVid.muted = false;
@@ -5217,27 +5287,31 @@
                     remoteVid.srcObject = e.streams[0];
                     remoteVid.play().catch(console.error);
                 }
+                // МЫ БОЛЬШЕ НЕ ПРЯЧЕМ АВАТАРКУ ЗДЕСЬ!
+                // Теперь этим управляет база данных (Firestore).
             };
+
+            // КОГДА ЗВОНОК СОЕДИНЕН
             pc.onconnectionstatechange = () => {
                 if (pc.connectionState === 'connected') {
                     isConnected = true; wasCallConnected = true; updateCallStatus("В разговоре");
                     stopAllTones(); startTimer(); startPing();
-                    document.getElementById('callLargeAvatar').style.display = 'none';
+
+                    // Прячем текст статуса и показываем таймер
                     document.getElementById('callStatusText').style.display = 'none';
                     document.getElementById('callTimer').style.display = 'block';
-                    document.getElementById('remoteVideo').style.opacity = '1';
 
-                    // === ВОТ ЭТОТ БЛОК ВАЖЕН ===
-                    // Как только видео пошло, Android сбросит звук в динамик.
-                    // Мы ждем полсекунды и бьем его по рукам, переводя звук в ухо.
+                    // МЫ БОЛЬШЕ НЕ ПРЯЧЕМ АВАТАРКУ И НЕ ВКЛЮЧАЕМ ВИДЕО ЗДЕСЬ!
+                    // Это будет делать pc.ontrack, только если есть видео.
+
+                    // Жестко переводим звук в ухо через 0.5 сек после ответа
                     setTimeout(() => {
-                        isEarpiece = true; // Ставим переменную
-                        applySpeakerState(); // Меняем картинку кнопки
+                        isEarpiece = true;
+                        applySpeakerState();
                         if (typeof AudioApp !== 'undefined') {
-                            AudioApp.setMode("true"); // Бьем в C#
+                            AudioApp.setMode("true");
                         }
                     }, 500);
-                    // ==============================
 
                 } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
                     endCall(false);
@@ -5391,39 +5465,40 @@
                 } catch (e) { currentCallId = null; }
             }
             if (isConnected) return alert("Вы уже в звонке!");
+
             amICaller = true; wasCallConnected = false;
             document.getElementById('callTimer').innerText = "00:00";
-            callStartTime = 0; // Сбрасываем время начала
+            callStartTime = 0;
             if (callTimerInt) clearInterval(callTimerInt);
+
             const newCallId = [currentUser.uid, currentFriendId].sort().join('_');
             const callDoc = db.collection('calls').doc(newCallId);
             const snap = await callDoc.get();
             if (snap.exists && snap.data().caller !== currentUser.uid) { return alert("Линия занята!"); }
+
             currentCallId = newCallId;
+
+            // 1. ОТКРЫВАЕМ ЭКРАН ЗВОНКА
             document.getElementById('callScreen').style.display = 'flex';
             updateCallControlsVisibility();
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             updateCallStatus("Соединение...");
 
-            const friendData = usersCache[currentFriendId] || {};
-            const fName = friendData.name || friendData.username || 'Пользователь';
-            document.getElementById('callScreenName').innerText = fName;
-
-            const avatarEl = document.getElementById('callLargeAvatar');
-            const bgBlurEl = document.getElementById('callBgBlur');
-
-            if (friendData.avatar) {
-                avatarEl.src = friendData.avatar;
-                avatarEl.style.display = 'block';
-                bgBlurEl.style.backgroundImage = `url('${friendData.avatar}')`;
-            } else {
-                avatarEl.style.display = 'none';
-                bgBlurEl.style.background = '#2a2a2a'; // Если нет фото, делаем серый фон
+            // 2. === ЖЕСТКО ВРУБАЕМ ЗВУК "В УХО" ДО НАЧАЛА ГУДКОВ ===
+            isEarpiece = true;
+            applySpeakerState();
+            if (typeof AudioApp !== 'undefined') {
+                AudioApp.setMode("true");
             }
+
+            // 3. === РИСУЕМ КРАСИВЫЙ ДИЗАЙН TELEGRAM ===
+            const friendData = usersCache[currentFriendId] || {};
+            setupCallScreenUI(currentFriendId, friendData);
+
+            // 4. ЗАПУСКАЕМ ГУДКИ (Они теперь пойдут в ухо!)
             playConnectingTone();
 
-
-            // Уведомление о звонке в Телеграм
+            // 5. Логика сети
             if (currentFriendId) {
                 db.collection('users').doc(currentFriendId).get().then(doc => {
                     if (doc.exists && doc.data().tgChatId) {
@@ -5436,17 +5511,34 @@
             await getMedia();
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-            // Добавляем поле 'to', чтобы собеседник мог найти этот звонок
             await callDoc.set({
                 offer: { type: offer.type, sdp: offer.sdp },
                 caller: currentUser.uid,
-                to: currentFriendId, // <--- ВАЖНОЕ ДОБАВЛЕНИЕ
-                status: 'dialing'
+                to: currentFriendId,
+                status: 'dialing',
+                callerVideo: false,  // <-- ДОБАВЛЕНО
+                answererVideo: false
             });
             callDoc.onSnapshot(async snap => {
                 if (!snap.exists) { endCall(false, true); return; }
                 const data = snap.data();
                 if (data.status === 'ringing' && !isConnected) { updateCallStatus("Звонок..."); playRingingTone(); }
+
+                // === УМНАЯ СИНХРОНИЗАЦИЯ ВИДЕО ЧЕРЕЗ БАЗУ ===
+                // Смотрим: если я звонящий, проверяем статус друга (answerer). Если я друг - проверяю caller'а.
+                const isRemoteVideoOn = amICaller ? data.answererVideo : data.callerVideo;
+                const remoteVid = document.getElementById('remoteVideo');
+                const wrapper = document.getElementById('callLargeAvatarWrapper');
+
+                if (isRemoteVideoOn) {
+                    remoteVid.style.opacity = '1';
+                    if (wrapper) wrapper.style.display = 'none';
+                } else {
+                    remoteVid.style.opacity = '0';
+                    if (wrapper) wrapper.style.display = 'flex';
+                }
+                // ============================================
+
                 if (pc && !pc.currentRemoteDescription && data && data.answer) {
                     await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                     flushCandidateQueue();
@@ -5463,26 +5555,25 @@
             callStartTime = 0;
             if (callTimerInt) clearInterval(callTimerInt);
             document.getElementById('incomingPopup').style.display = 'none';
+
+            // 1. ОТКРЫВАЕМ ЭКРАН
             document.getElementById('callScreen').style.display = 'flex';
             updateCallControlsVisibility();
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             updateCallStatus("Соединение...");
-            // --- Установка данных профиля в экран звонка ---
-            const friendData = usersCache[currentFriendId] || {};
-            const fName = friendData.name || friendData.username || 'Пользователь';
-            document.getElementById('callScreenName').innerText = fName;
 
-            const avatarEl = document.getElementById('callLargeAvatar');
-            const bgBlurEl = document.getElementById('callBgBlur');
-
-            if (friendData.avatar) {
-                avatarEl.src = friendData.avatar;
-                avatarEl.style.display = 'block';
-                bgBlurEl.style.backgroundImage = `url('${friendData.avatar}')`;
-            } else {
-                avatarEl.style.display = 'none';
-                bgBlurEl.style.background = '#2a2a2a'; // Если нет фото, делаем серый фон
+            // 2. === ЖЕСТКО ВРУБАЕМ ЗВУК "В УХО" ПРИ ОТВЕТЕ ===
+            isEarpiece = true;
+            applySpeakerState();
+            if (typeof AudioApp !== 'undefined') {
+                AudioApp.setMode("true");
             }
+
+            // 3. === РИСУЕМ КРАСИВЫЙ ДИЗАЙН TELEGRAM ===
+            const friendData = usersCache[currentFriendId] || {};
+            setupCallScreenUI(currentFriendId, friendData);
+
+            // 4. Логика сети
             const callDoc = db.collection('calls').doc(currentCallId);
             const data = (await callDoc.get()).data();
             setupPeerConnection();
@@ -5493,9 +5584,23 @@
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'connected' });
-            callDoc.onSnapshot(snap => { if (!snap.exists) endCall(false, true); });
-            callDoc.collection('offerCandidates').onSnapshot(snap => {
-                snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
+            callDoc.onSnapshot(snap => {
+                if (!snap.exists) { endCall(false, true); return; }
+                const data = snap.data();
+
+                // === УМНАЯ СИНХРОНИЗАЦИЯ ВИДЕО ЧЕРЕЗ БАЗУ ===
+                const isRemoteVideoOn = amICaller ? data.answererVideo : data.callerVideo;
+                const remoteVid = document.getElementById('remoteVideo');
+                const wrapper = document.getElementById('callLargeAvatarWrapper');
+
+                if (isRemoteVideoOn) {
+                    remoteVid.style.opacity = '1';
+                    if (wrapper) wrapper.style.display = 'none';
+                } else {
+                    remoteVid.style.opacity = '0';
+                    if (wrapper) wrapper.style.display = 'flex';
+                }
+                // ============================================
             });
         }
         function toggleMic() {
@@ -5612,7 +5717,8 @@
             const lbl = document.getElementById('lblSpeaker');
             if (!btn || !lbl) return;
 
-            btn.onclick = quickFlipCamera; // Новая функция для быстрого свапа
+            btn.onclick = quickFlipCamera; // Ставим клик на смену камеры
+            // Рисуем иконку круговых стрелок
             btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>';
             btn.classList.remove('btn-active-white');
             btn.style.background = 'rgba(255, 255, 255, 0.2)';
@@ -5621,8 +5727,18 @@
 
         function restoreFlipToSpeaker() {
             const btn = document.getElementById('btnSpeaker');
-            if (btn) btn.onclick = toggleSpeaker;
-            applySpeakerState(); // Восстановит иконки и текст
+            const lbl = document.getElementById('lblSpeaker');
+
+            if (btn) {
+                btn.onclick = toggleSpeaker; // Возвращаем клик на звук
+                btn.style.background = ''; // Очищаем инлайн-стиль, чтобы работал CSS
+            }
+
+            if (lbl) {
+                lbl.innerText = ''; // ВАЖНО: Сбрасываем текст "Камера", чтобы снять блокировку!
+            }
+
+            applySpeakerState(); // Теперь иконка и текст точно обновятся
         }
 
         async function quickFlipCamera() {
@@ -8029,15 +8145,23 @@
             document.getElementById('localPip').style.display = 'block';
             updateCamBtnUI(true);
 
-            // МЕНЯЕМ КНОПКУ ДИНАМИКА НА ПОВОРОТ КАМЕРЫ
-            transformSpeakerToFlip();
-
-            // Если это был скриншаринг, вешаем остановку по кнопке браузера
-            if (selectedPreviewMode === 'screen') {
-                previewVideoTrack.onended = () => stopVideo();
+            // === НОВОЕ: АВТОМАТИЧЕСКИ ВКЛЮЧАЕМ ГРОМКУЮ СВЯЗЬ ===
+            isEarpiece = false;
+            if (typeof AudioApp !== 'undefined') {
+                AudioApp.setMode("false"); // Передаем команду в C# (Громкая связь)
             }
 
-            // Закрываем шторку (НО поток не стопаем, он ушел в localStream!)
+            // МЕНЯЕМ КНОПКУ ДИНАМИКА НА ПОВОРОТ КАМЕРЫ
+            // МЕНЯЕМ КНОПКУ ДИНАМИКА НА ПОВОРОТ КАМЕРЫ (Уже было у тебя)
+            transformSpeakerToFlip();
+
+            // НОВОЕ: Сообщаем другу через базу, что мы включили камеру
+            if (currentCallId) {
+                const updateField = amICaller ? { callerVideo: true } : { answererVideo: true };
+                db.collection('calls').doc(currentCallId).update(updateField).catch(() => { });
+            }
+
+            // Закрываем шторку 
             previewStream = null;
             document.getElementById('videoPreviewScreen').style.display = 'none';
         }
@@ -8055,7 +8179,7 @@
                 localStream.removeTrack(videoTrack);
             }
 
-            // 2. ВАЖНО: Заменяем поток у друга на черный квадрат, а не на null
+            // 2. Заменяем поток у друга на черный квадрат (защита от зависания)
             if (sender) {
                 try {
                     await sender.replaceTrack(createBlackVideoTrack());
@@ -8068,8 +8192,19 @@
             document.getElementById('localPip').style.display = 'none';
             updateCamBtnUI(false);
 
+            // === НОВОЕ: ВОЗВРАЩАЕМ ЗВУК "В УХО" ===
+            isEarpiece = true;
+            if (typeof AudioApp !== 'undefined') {
+                AudioApp.setMode("true"); // Передаем команду в C# (В ухо)
+            }
+
             // 4. ВОЗВРАЩАЕМ КНОПКУ ДИНАМИКА НА МЕСТО КРУТИЛКИ
             restoreFlipToSpeaker();
+
+            if (currentCallId) {
+                const updateField = amICaller ? { callerVideo: false } : { answererVideo: false };
+                db.collection('calls').doc(currentCallId).update(updateField).catch(() => { });
+            }
         }
 
         function createBlackVideoTrack() {
@@ -8094,7 +8229,7 @@
             const lbl = document.getElementById('lblSpeaker');
             if (!btn || !lbl) return;
 
-            // Если кнопка сейчас "Перевернуть камеру" - не трогаем её
+            // Если кнопка сейчас "Камера" - не перерисовываем её в динамик
             if (lbl.innerText === 'Камера') return;
 
             if (isEarpiece) {
