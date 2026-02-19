@@ -21,15 +21,11 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0; /* СТРОГО 0, это навсегда убьет черную полосу внизу */
+            /* Как в Telegram: dvh заставит интерфейс подстраиваться под панели браузера */
+            height: 100dvh;
             overflow: hidden;
             overscroll-behavior-y: none;
-            background-color: #1f1f1f; /* В цвет вашей нижней панели */
+            background-color: #0a0c10;
         }
 
         body {
@@ -37,6 +33,7 @@
             display: flex;
             background: transparent;
             color: #eee;
+            /* УБРАН position: fixed, из-за которого системная панель перекрывала низ */
         }
 
 
@@ -524,7 +521,7 @@
             gap: 8px;
             position: relative;
             z-index: 5;
-            /* Фон закрасит самый низ, а само поле ввода поднимется над системной полосой */
+            /* Telegram-стандарт: 8px по бокам и безопасный отступ снизу от полоски iOS */
             padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
         }
 
@@ -1074,8 +1071,7 @@
                 position: absolute;
                 top: 0;
                 left: 0;
-                bottom: 0; /* ВАЖНО: Прибиваем к низу вместо height: 100% */
-                height: auto;
+                height: 100%; /* Теперь он будет идеально занимать 100dvh без полос */
                 z-index: 20;
             }
 
