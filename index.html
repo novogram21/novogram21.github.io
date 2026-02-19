@@ -7655,12 +7655,17 @@
 
         // Авто-увеличение высоты поля ввода
         function autoResize(textarea) {
-            // Сбрасываем строго до 1 строки, а не до 'auto', чтобы WebView не тупил
+            // Сбрасываем высоту до минимальной (одна строка)
             textarea.style.height = '20px';
 
-            // Если контента больше, чем на 1 строку, увеличиваем высоту (до 100px)
-            const newHeight = Math.min(textarea.scrollHeight, 100);
-            textarea.style.height = newHeight + 'px';
+            // Устанавливаем новую высоту в зависимости от контента
+            const newHeight = Math.max(20, textarea.scrollHeight - 22);
+            // -22 нужно, чтобы вычесть внутренние отступы и оставить только высоту текста
+
+            textarea.style.height = (newHeight > 120 ? 120 : newHeight) + 'px';
+
+            // Если текст превысил лимит, включаем скролл, если нет — прячем
+            textarea.style.overflowY = textarea.scrollHeight > 120 ? 'auto' : 'hidden';
         }
 
         // Логика переключения кнопок Микрофон / Самолетик
