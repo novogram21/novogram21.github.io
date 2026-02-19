@@ -37,9 +37,8 @@
             margin: 0;
             padding: 0;
             position: fixed;
-            top: env(safe-area-inset-top);
-            /* СДВИГАЕМ МАКСИМАЛЬНО ВНИЗ (симметрично верху) */
-            bottom: calc(0px - env(safe-area-inset-bottom));
+            top: env(safe-area-inset-top); /* Верх под челкой (как вы и просили) */
+            bottom: 0; /* СТРОГО 0: прибиваем панель в самый низ без отступов и полос */
             left: 0;
             right: 0;
             display: flex;
