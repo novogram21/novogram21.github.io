@@ -21,8 +21,8 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%; /* Занимаем весь экран от края до края */
-            position: fixed; /* Намертво фиксируем */
+            height: 100%; /* Строго 100%, больше никаких игр с высотой */
+            position: fixed; /* Намертво к краям экрана */
             top: 0;
             left: 0;
             right: 0;
@@ -36,6 +36,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             color: #eee;
+            background: transparent;
         }
 
 
@@ -100,12 +101,12 @@
         }
 
         .profile-bar {
-            /* Залезаем под челку */
+            /* Залезаем под челку, фон закрасит статус-бар */
             padding: calc(12px + env(safe-area-inset-top)) 15px 12px 15px;
             display: flex;
             align-items: center;
             gap: 12px;
-            background: #252525;
+            background: #212121; /* Серый фон, как вы и хотели */
         }
 
 
@@ -376,7 +377,6 @@
         }
 
         .chat-header {
-            /* Залезаем под челку */
             padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
             background: #212121;
             border-bottom: 1px solid #101010;
@@ -526,8 +526,8 @@
             gap: 8px;
             position: relative;
             z-index: 5;
-            /* Отступ снизу для безопасной зоны iOS */
-            padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
+            /* Ограничиваем отступ, чтобы он не багался из-за клавиатуры */
+            padding: 8px 8px calc(8px + min(34px, env(safe-area-inset-bottom, 0px))) 8px;
         }
 
         /* Скругленный плавающий бар ТОЛЬКО для веб-версии (ПК) */
@@ -801,6 +801,7 @@
         }
 
         .action-sheet {
+            /* Оставляем старые стили */
             position: fixed;
             bottom: 0;
             left: 0;
@@ -808,10 +809,10 @@
             background: #1f1f1f;
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
-            /* Увеличиваем нижний padding на размер системной полоски */
-            padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px;
+            padding: 20px;
             z-index: 5000;
             transform: translateY(100%);
+            /* ДОБАВЛЯЕМ ЭТО: скрываем от таба/фокуса, когда закрыто */
             visibility: hidden;
             transition: transform 0.3s, visibility 0s linear 0.3s;
         }
@@ -1499,9 +1500,9 @@
 
         /* --- Стили профиля как в Telegram --- */
 
+        /* Фон шапки (зеленый паттерн) */
         .tg-header-bg {
             background: #5a9e57;
-            /* Залезаем под челку профиля */
             padding: calc(10px + env(safe-area-inset-top)) 15px 20px 15px;
             color: white;
             position: relative;
@@ -1679,7 +1680,7 @@
 
         .chat-search-dropdown {
             position: absolute;
-            top: calc(65px + env(safe-area-inset-top));
+            top: calc(65px + env(safe-area-inset-top)); /* Сдвигаем ниже поиска */
             right: 15px;
             width: 360px;
             max-height: 50vh;
