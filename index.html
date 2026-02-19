@@ -538,6 +538,20 @@
             }
         }
 
+        /* Адаптация звонка для ПК (Окно по центру) */
+        @media (min-width: 769px) {
+            .call-screen {
+                width: 360px !important;
+                height: 640px !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                border-radius: 20px !important;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.8) !important;
+                border: 1px solid #333 !important;
+            }
+        }
+
         /* Серый блок ввода */
         .input-wrapper {
             flex: 1; /* Занимает все доступное место */
@@ -2908,6 +2922,23 @@
         </div>
     </div>
 
+    <div id="videoOptionsSheet" class="action-sheet">
+        <div class="sheet-title">Трансляция видео</div>
+        <div class="context-list">
+            <div class="context-item" onclick="startVideo('user')">
+                <span class="context-icon">🤳</span> Передняя камера
+            </div>
+            <div class="context-item" onclick="startVideo('environment')">
+                <span class="context-icon">📸</span> Задняя камера
+            </div>
+            <div class="context-item" onclick="startVideo('screen')">
+                <span class="context-icon">🖥️</span> Экран устройства
+            </div>
+        </div>
+        <button class="action-btn" style="margin-top: 10px; width: 100%;" onclick="stopVideo()">Выключить видео</button>
+        <button class="action-btn" style="margin-top: 5px; width: 100%; background: transparent; color: #888;" onclick="closeAllSheets()">Отмена</button>
+    </div>
+
     <!-- ОКНО РЕДАКТИРОВАНИЯ ПРОФИЛЯ -->
     <div id="editProfileSheet" class="action-sheet full-screen-sheet">
         <div class="tg-header-bg">
@@ -3253,36 +3284,24 @@
 
         <div class="controls">
             <div class="control-item">
-                <button onclick="toggleCamera()" id="btnCam" class="btn-circle btn-active-white">
+                <button onclick="toggleMic()" id="btnMic" class="btn-circle btn-active-white">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                </button>
+                <span id="lblMic" class="control-label">Выкл. звук</span>
+            </div>
+
+            <div class="control-item">
+                <button onclick="openVideoOptions()" id="btnCam" class="btn-circle btn-active-white">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                 </button>
                 <span id="lblCam" class="control-label">Вкл. видео</span>
             </div>
 
-            <div class="control-item" id="btnFlipItem">
-                <button onclick="switchCamera()" id="btnFlip" class="btn-circle">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
-                </button>
-                <span class="control-label">Камера</span>
-            </div>
-
-            <div class="control-item" id="btnScrItem" style="display:none;">
-                <button onclick="toggleScreen()" id="btnScr" class="btn-circle">🖥️</button>
-                <span id="lblScr" class="control-label">Экран</span>
-            </div>
-
-            <div class="control-item">
-                <button onclick="toggleMic()" id="btnMic" class="btn-circle">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                </button>
-                <span id="lblMic" class="control-label">Микрофон</span>
-            </div>
-
-            <div class="control-item" id="speakerControl" style="display: none;">
-                <button onclick="toggleSpeaker()" id="btnSpeaker" class="btn-circle">
+            <div class="control-item" id="speakerControl" style="display: block;">
+                <button onclick="toggleSpeaker()" id="btnSpeaker" class="btn-circle btn-active-white">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
                 </button>
-                <span id="lblSpeaker" class="control-label">Звук</span>
+                <span id="lblSpeaker" class="control-label">Громкая</span>
             </div>
 
             <div class="control-item">
@@ -5136,6 +5155,7 @@
             document.getElementById('deleteSheet')?.classList.remove('open');
             document.getElementById('profileSheet')?.classList.remove('open');
             document.getElementById('editProfileSheet')?.classList.remove('open'); // Добавим и это на всякий случай
+            document.getElementById('videoOptionsSheet')?.classList.remove('open');
 
             const menu = document.getElementById('contextMenu');
             if (menu) {
@@ -5274,9 +5294,12 @@
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
                 setLocalMirror(currentFacingMode);
-                // как было у тебя: видео по умолчанию выключено, микрофон включен
+
+                // ВЫКЛЮЧАЕМ ВИДЕО И ПРЯЧЕМ СВОЕ ОКОШКО ПРИ СТАРТЕ
                 localStream.getVideoTracks()[0].enabled = false;
+                document.getElementById('localPip').style.display = 'none';
                 updateCamBtnUI(false);
+
                 localStream.getAudioTracks()[0].enabled = true;
                 updateMicBtnUI(true);
                 localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -5469,8 +5492,15 @@
         }
         function updateMicBtnUI(enabled) {
             const btn = document.getElementById('btnMic'); const lbl = document.getElementById('lblMic');
-            if (enabled) { btn.classList.remove('btn-active-white'); btn.innerHTML = '🎤'; lbl.innerText = 'Выкл. звук'; }
-            else { btn.classList.add('btn-active-white'); btn.innerHTML = '🔇'; lbl.innerText = 'Вкл. звук'; }
+            if (enabled) {
+                btn.classList.remove('btn-active-white');
+                btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+                lbl.innerText = 'Выкл. звук';
+            } else {
+                btn.classList.add('btn-active-white');
+                btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+                lbl.innerText = 'Вкл. звук';
+            }
         }
         function toggleCamera() {
             if (!localStream) return;
@@ -5478,10 +5508,88 @@
             if (sender && sender.track.label.includes('screen')) stopScreen(sender);
             const track = localStream.getVideoTracks()[0]; track.enabled = !track.enabled; updateCamBtnUI(track.enabled);
         }
+
+        function openVideoOptions() {
+            document.getElementById('overlaySheet').style.display = 'block';
+            const sheet = document.getElementById('videoOptionsSheet');
+            setTimeout(() => sheet.classList.add('open'), 10);
+        }
+
+        async function startVideo(mode) {
+            closeAllSheets();
+            if (!localStream || !pc) return;
+
+            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+            const oldVideoTrack = localStream.getVideoTracks()[0];
+
+            let newStream;
+            try {
+                if (mode === 'screen') {
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                    if (isIOS) return alert("Демонстрация экрана не поддерживается на iPhone.");
+                    newStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                } else {
+                    newStream = await getStreamForFacing(mode, false);
+                    currentFacingMode = mode;
+                    setLocalMirror(mode);
+                }
+            } catch (e) {
+                console.error("Ошибка доступа к камере/экрану:", e);
+                return;
+            }
+
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            newVideoTrack.enabled = true;
+
+            if (oldVideoTrack) oldVideoTrack.stop();
+
+            if (sender) {
+                await sender.replaceTrack(newVideoTrack);
+            }
+
+            // Пересобираем локальный поток, чтобы и микрофон и новое видео были вместе
+            const audioTrack = localStream.getAudioTracks()[0];
+            localStream = new MediaStream();
+            if (audioTrack) localStream.addTrack(audioTrack);
+            localStream.addTrack(newVideoTrack);
+
+            document.getElementById('localVideo').srcObject = localStream;
+
+            // ВАЖНО: Показываем свое окно!
+            document.getElementById('localPip').style.display = 'block';
+            updateCamBtnUI(true);
+
+            if (mode === 'screen') {
+                newVideoTrack.onended = () => stopVideo();
+            }
+        }
+
+        function stopVideo() {
+            closeAllSheets();
+            if (!localStream) return;
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = false;
+                videoTrack.stop();
+            }
+            // ВАЖНО: Скрываем свое окно!
+            document.getElementById('localPip').style.display = 'none';
+            updateCamBtnUI(false);
+        }
+
         function updateCamBtnUI(enabled) {
             const btn = document.getElementById('btnCam'); const lbl = document.getElementById('lblCam');
-            if (enabled) { btn.classList.add('btn-active-white'); btn.innerHTML = '📷'; lbl.innerText = 'Выкл. видео'; }
-            else { btn.classList.remove('btn-active-white'); btn.innerHTML = '📵'; lbl.innerText = 'Вкл. видео'; }
+            if (enabled) {
+                btn.classList.remove('btn-active-white');
+                btn.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path></svg>';
+                lbl.innerText = 'Выкл. видео';
+                btn.onclick = stopVideo; // Нажатие выключает камеру
+            } else {
+                btn.classList.add('btn-active-white');
+                btn.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+                lbl.innerText = 'Вкл. видео';
+                btn.onclick = openVideoOptions; // Нажатие открывает меню
+            }
         }
         async function toggleScreen() {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
