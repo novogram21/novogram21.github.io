@@ -5652,9 +5652,13 @@
                     if (wrapper) wrapper.style.display = 'flex';
                 }
 
-                if (pc && !pc.currentRemoteDescription && data && data.answer) {
-                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    flushCandidateQueue();
+                if (pc && data.answer && pc.signalingState === 'have-local-offer') {
+                    try {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                        flushCandidateQueue();
+                    } catch (err) {
+                        console.error("Ошибка при установке remoteDescription:", err);
+                    }
                 }
             });
 
