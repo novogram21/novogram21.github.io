@@ -3519,25 +3519,37 @@
         // ========================================================
         const iceServers = {
             iceServers: [
-                // 1. Google STUN (Прямые IP-адреса, чтобы не зависеть от DNS мобильного оператора)
+                // 1. Google STUN (Прямые IP, чтобы обойти ошибку -105)
                 { urls: "stun:142.250.14.127:19302" },
                 { urls: "stun:108.177.15.127:19302" },
                 { urls: "stun:74.125.142.127:19302" },
 
-                // 2. Дополнительные публичные STUN сервера (напрямую по IP)
+                // 2. Альтернативные публичные STUN (напрямую по IP)
                 { urls: "stun:216.93.246.18:3478" },
                 { urls: "stun:193.122.95.84:3478" },
 
-                // 3. TURN Сервер (Прямой IP-адрес OpenRelay - нужен для жесткого мобильного интернета)
+                // 3. Твой TURN сервер metered.ca (переведенный в IP-адреса)
+                // Сервер 1
                 {
-                    urls: "turn:185.86.16.126:3478",
-                    username: "openrelayproject",
-                    credential: "openrelayproject"
+                    urls: "turn:3.220.142.50:80",
+                    username: "ae2c0c3b821722b03a252928",
+                    credential: "TVZk6SgD8cbvbQlB"
                 },
                 {
-                    urls: "turn:185.86.16.126:443?transport=tcp",
-                    username: "openrelayproject",
-                    credential: "openrelayproject"
+                    urls: "turn:3.220.142.50:443",
+                    username: "ae2c0c3b821722b03a252928",
+                    credential: "TVZk6SgD8cbvbQlB"
+                },
+                // Сервер 2 (резервный IP для metered.ca)
+                {
+                    urls: "turn:54.210.134.116:80",
+                    username: "ae2c0c3b821722b03a252928",
+                    credential: "TVZk6SgD8cbvbQlB"
+                },
+                {
+                    urls: "turn:54.210.134.116:443?transport=tcp",
+                    username: "ae2c0c3b821722b03a252928",
+                    credential: "TVZk6SgD8cbvbQlB"
                 }
             ],
             iceCandidatePoolSize: 10
