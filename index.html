@@ -23,16 +23,21 @@
             color: #eee;
             margin: 0;
             display: flex;
-            /* --- ИЗМЕНЕНИЯ ЗДЕСЬ --- */
-            position: fixed; /* Фиксируем позицию */
+            /* ИСПРАВЛЕНИЕ ДЛЯ iOS */
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0; /* Растягиваем до низа. Когда клава выйдет, bottom поднимется */
-            height: 100dvh; /* Убираем 100dvh */
+            /* Убираем жесткий bottom: 0 и высоту 100dvh, используем 100% */
+            bottom: 0;
             width: 100%;
-            /* ----------------------- */
-
+            height: 100%; /* Для старых браузеров */
+            height: -webkit-fill-available; /* КРИТИЧЕСКИ ВАЖНО ДЛЯ iOS SAFARI */
+            /* Добавляем внутренние отступы для безопасных зон (челка и полоска внизу) */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
             overflow: hidden;
             overscroll-behavior-y: none;
         }
@@ -523,7 +528,7 @@
             gap: 8px;
             position: relative;
             z-index: 5;
-            padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
+            padding: 8px;
         }
 
         /* Скругленный плавающий бар ТОЛЬКО для веб-версии (ПК) */
@@ -1501,7 +1506,7 @@
         .tg-header-bg {
             background: #5a9e57;
             /* ИЗМЕНЕНО: учитываем безопасную зону сверху (челку) */
-            padding: calc(10px + env(safe-area-inset-top)) 15px 20px 15px;
+            padding: 10px 15px 20px 15px;
             color: white;
             position: relative;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
