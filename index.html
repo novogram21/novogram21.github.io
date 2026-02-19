@@ -21,31 +21,22 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%; /* Строго 100%, больше никаких игр с высотой */
-            position: fixed; /* Намертво к краям экрана */
+            height: 100%;
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
+            bottom: 0; /* СТРОГО 0, это навсегда убьет черную полосу внизу */
             overflow: hidden;
             overscroll-behavior-y: none;
-            background-color: #0a0c10;
+            background-color: #1f1f1f; /* В цвет вашей нижней панели */
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 0;
-            position: fixed;
-            top: env(safe-area-inset-top); /* Верх под челкой (как вы и просили) */
-            bottom: 0; /* СТРОГО 0: прибиваем панель в самый низ без отступов и полос */
-            left: 0;
-            right: 0;
             display: flex;
             background: transparent;
             color: #eee;
-            overflow: hidden;
-            overscroll-behavior-y: none;
         }
 
 
@@ -521,8 +512,7 @@
 
 
 
-        
-        /* --- НОВАЯ ПАНЕЛЬ ВВОДА (TELEGRAM STYLE) --- */
+
         .input-bar {
             width: 100%;
             max-width: 900px;
@@ -534,8 +524,8 @@
             gap: 8px;
             position: relative;
             z-index: 5;
-            /* УБИРАЕМ ЖИРНУЮ ПОЛОСУ: оставляем просто 8px со всех сторон */
-            padding: 8px;
+            /* Фон закрасит самый низ, а само поле ввода поднимется над системной полосой */
+            padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
         }
 
         /* Скругленный плавающий бар ТОЛЬКО для веб-версии (ПК) */
