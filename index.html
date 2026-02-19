@@ -519,7 +519,7 @@
             max-width: 900px;
             margin: 0 auto;
             background: #1f1f1f; /* Цвет панели */
-            min-height: 56px;
+            min-height: 52px;
             padding: 8px;
             display: flex;
             align-items: flex-end; /* Выравнивание по низу */
@@ -563,11 +563,11 @@
                 border: none;
                 color: white;
                 font-size: 16px;
-                padding: 10px 0;
+                padding: 11px 0;
                 line-height: 20px;
-                height: 40px; /* Строго 1 строка (20px текст + 20px отступы) */
-                min-height: 40px;
-                max-height: 100px;
+                height: 20px; /* Строго 1 строка (20px текст + 20px отступы) */
+                min-height: 20px;
+                max-height: 120px;
                 outline: none;
                 resize: none;
                 font-family: inherit;
@@ -7656,7 +7656,7 @@
         // Авто-увеличение высоты поля ввода
         function autoResize(textarea) {
             // Сбрасываем строго до 1 строки, а не до 'auto', чтобы WebView не тупил
-            textarea.style.height = '40px';
+            textarea.style.height = '20px';
 
             // Если контента больше, чем на 1 строку, увеличиваем высоту (до 100px)
             const newHeight = Math.min(textarea.scrollHeight, 100);
