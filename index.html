@@ -538,26 +538,27 @@
             }
         }
 
-        /* 1. БОЛЬШОЕ ОКНО ЗВОНКА НА ПК */
         @media (min-width: 769px) {
             .call-screen {
-                width: 800px !important; /* Сделали широким */
-                height: 600px !important; /* Сделали высоким */
+                width: 380px !important;
+                height: 680px !important;
                 max-width: 90vw !important;
                 max-height: 90vh !important;
                 border-radius: 24px !important;
-                top: 50% !important; /* Центрируем по вертикали */
-                left: 50% !important; /* Центрируем по горизонтали */
-                transform: translate(-50%, -50%) !important; /* Сдвигаем на половину ширины/высоты */
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                border: 1px solid #333 !important;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.8) !important;
             }
         }
 
-        /* 2. ПОЛНОЕ УНИЧТОЖЕНИЕ КНОПКИ PLAY НА ANDROID WEBVIEW */
         video {
-            pointer-events: none; /* Запрещаем кликать по видео, чтобы не вызывать плеер */
+            pointer-events: none; /* Запрет кликов */
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-            /* Жесткие правила для скрытия всех контролов Webkit */
             video::-webkit-media-controls,
             video::-webkit-media-controls-enclosure,
             video::-webkit-media-controls-panel,
@@ -2818,11 +2819,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: black;
+            background-color: #1c1c1d;
             z-index: 5000;
             display: none;
             opacity: 0;
-            transition: opacity 0.1s ease-in-out;
+            transition: opacity 0.2s ease-in-out;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -5550,33 +5551,30 @@
             setLocalMirror(currentFacingMode);
         }
         async function startCall() {
-            // === ИСПРАВЛЕНИЕ 5: Возврат в звонок, если он уже идет ===
-            if (currentCallId) {
-                const screen = document.getElementById('callScreen');
-                if (screen.style.display !== 'none') {
-                    // Звонок УЖЕ на экране, просто не даем запустить второй
-                    return;
-                } else if (document.getElementById('activeCallBanner').classList.contains('visible')) {
-                    // Звонок свернут - разворачиваем!
-                    restoreCall();
-                    return;
-                } else {
-                    // Звонок есть в переменных, но почему-то не на экране. Очищаем старый.
-                    currentCallId = null;
-                    isConnected = false;
-                }
-            }
-
-            amICaller = true; wasCallConnected = false;
-            document.getElementById('callTimer').innerText = "00:00";
-            callStartTime = 0;
-            if (callTimerInt) clearInterval(callTimerInt);
-
+            // === ИСПРАВЛЕНИЕ 5: ВОЗВРАТ В ЗВОНОК ===
             const newCallId = [currentUser.uid, currentFriendId].sort().join('_');
             const callDoc = db.collection('calls').doc(newCallId);
             const snap = await callDoc.get();
-            if (snap.exists && snap.data().caller !== currentUser.uid) { return alert("Линия занята!"); }
 
+            if (snap.exists) {
+                const data = snap.data();
+                // Если звонок УЖЕ идет и МЫ в нем участвуем
+                if (data.caller === currentUser.uid || data.to === currentUser.uid) {
+                    currentCallId = newCallId;
+                    amICaller = (data.caller === currentUser.uid); // Вспоминаем, кто мы
+                    restoreCall(); // Разворачиваем окно звонка
+                    return;
+                } else {
+                    return alert("Линия занята!");
+                }
+            }
+
+            // Начинаем НОВЫЙ звонок
+            amICaller = true;
+            wasCallConnected = false;
+            document.getElementById('callTimer').innerText = "00:00";
+            callStartTime = 0;
+            if (callTimerInt) clearInterval(callTimerInt);
             currentCallId = newCallId;
 
             // 1. ОТКРЫВАЕМ ЭКРАН ЗВОНКА
@@ -5587,15 +5585,12 @@
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             updateCallStatus("Соединение...");
 
-            // 2. === ЖЕСТКО ВРУБАЕМ ЗВУК "В УХО" ДО НАЧАЛА ГУДКОВ ===
+            // 2. ЖЕСТКО ВРУБАЕМ ЗВУК "В УХО"
             isEarpiece = true;
             applySpeakerState();
-            if (typeof AudioApp !== 'undefined') {
-                AudioApp.setMode("true");
-            }
+            if (typeof AudioApp !== 'undefined') AudioApp.setMode("true");
 
-            // 3. === РИСУЕМ КРАСИВЫЙ ДИЗАЙН TELEGRAM ===
-            // Загружаем данные того, кому звоним!
+            // 3. РИСУЕМ КРАСИВЫЙ ДИЗАЙН TELEGRAM
             let friendData = usersCache[currentFriendId];
             if (!friendData) {
                 const doc = await db.collection('users').doc(currentFriendId).get();
@@ -5604,37 +5599,38 @@
             }
             setupCallScreenUI(currentFriendId, friendData || {});
 
-            // 4. ЗАПУСКАЕМ ГУДКИ (Они теперь пойдут в ухо!)
             playConnectingTone();
 
-            // 5. Логика сети
+            // Уведомление в ТГ
             if (currentFriendId) {
                 db.collection('users').doc(currentFriendId).get().then(doc => {
                     if (doc.exists && doc.data().tgChatId) {
-                        sendTelegramNotification(doc.data().tgChatId, `📞 *Входящий звонок*\nОт: ${currentUser.email}\nЗайдите на сайт, чтобы ответить!`);
+                        sendTelegramNotification(doc.data().tgChatId, `📞 *Входящий звонок*\nОт: ${currentUser.email}\nЗайдите в приложение!`);
                     }
                 });
             }
+
             setupPeerConnection();
             pc.onicecandidate = e => { if (e.candidate) callDoc.collection('offerCandidates').add(e.candidate.toJSON()); };
             await getMedia();
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
+
             await callDoc.set({
                 offer: { type: offer.type, sdp: offer.sdp },
                 caller: currentUser.uid,
                 to: currentFriendId,
                 status: 'dialing',
-                callerVideo: false,  // <-- ДОБАВЛЕНО
+                callerVideo: false,
                 answererVideo: false
             });
+
             callDoc.onSnapshot(async snap => {
                 if (!snap.exists) { endCall(false, true); return; }
                 const data = snap.data();
                 if (data.status === 'ringing' && !isConnected) { updateCallStatus("Звонок..."); playRingingTone(); }
 
-                // === УМНАЯ СИНХРОНИЗАЦИЯ ВИДЕО ЧЕРЕЗ БАЗУ ===
-                // Смотрим: если я звонящий, проверяем статус друга (answerer). Если я друг - проверяю caller'а.
+                // Синхронизация видео
                 const isRemoteVideoOn = amICaller ? data.answererVideo : data.callerVideo;
                 const remoteVid = document.getElementById('remoteVideo');
                 const wrapper = document.getElementById('callLargeAvatarWrapper');
@@ -5646,19 +5642,20 @@
                     remoteVid.style.opacity = '0';
                     if (wrapper) wrapper.style.display = 'flex';
                 }
-                // ============================================
 
                 if (pc && !pc.currentRemoteDescription && data && data.answer) {
                     await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                     flushCandidateQueue();
                 }
             });
+
             callDoc.collection('answerCandidates').onSnapshot(snap => {
                 snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
             });
         }
         async function answerCall() {
-            amICaller = false; wasCallConnected = false;
+            amICaller = false;
+            wasCallConnected = false;
             document.getElementById('ringtone').pause();
             document.getElementById('callTimer').innerText = "00:00";
             callStartTime = 0;
@@ -5673,22 +5670,18 @@
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             updateCallStatus("Соединение...");
 
-            // 2. === ЖЕСТКО ВРУБАЕМ ЗВУК "В УХО" ПРИ ОТВЕТЕ ===
             isEarpiece = true;
             applySpeakerState();
-            if (typeof AudioApp !== 'undefined') {
-                AudioApp.setMode("true");
-            }
+            if (typeof AudioApp !== 'undefined') AudioApp.setMode("true");
 
-            // 3. === РИСУЕМ КРАСИВЫЙ ДИЗАЙН TELEGRAM ===
-            // === ИСПРАВЛЕНИЕ 1: Загружаем данные звонящего (того, кто нам звонит), а не свои! ===
+            // === ИСПРАВЛЕНИЕ 1: Правильный профиль звонящего ===
             const callDocRef = db.collection('calls').doc(currentCallId);
             const callDocSnap = await callDocRef.get();
             const callData = callDocSnap.data();
 
-            // Определяем ID того, с кем мы разговариваем. Так как мы отвечаем, звонящий - это caller.
+            // ID того, кто нам звонит
             const otherPersonId = callData.caller;
-            currentFriendId = otherPersonId; // Обновляем глобальную переменную на всякий случай
+            currentFriendId = otherPersonId; // Обновляем глобальную переменную чата
 
             let friendData = usersCache[otherPersonId];
             if (!friendData) {
@@ -5696,9 +5689,10 @@
                 friendData = doc.data();
                 usersCache[otherPersonId] = friendData;
             }
+            // Рисуем дизайн
             setupCallScreenUI(otherPersonId, friendData || {});
+            // ====================================================
 
-            // 4. Логика сети
             setupPeerConnection();
             pc.onicecandidate = e => { if (e.candidate) callDocRef.collection('answerCandidates').add(e.candidate.toJSON()); };
             await getMedia();
@@ -5707,11 +5701,12 @@
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             await callDocRef.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'connected' });
+
             callDocRef.onSnapshot(snap => {
                 if (!snap.exists) { endCall(false, true); return; }
                 const data = snap.data();
 
-                // === УМНАЯ СИНХРОНИЗАЦИЯ ВИДЕО ЧЕРЕЗ БАЗУ ===
+                // Синхронизация видео
                 const isRemoteVideoOn = amICaller ? data.answererVideo : data.callerVideo;
                 const remoteVid = document.getElementById('remoteVideo');
                 const wrapper = document.getElementById('callLargeAvatarWrapper');
@@ -5723,7 +5718,6 @@
                     remoteVid.style.opacity = '0';
                     if (wrapper) wrapper.style.display = 'flex';
                 }
-                // ============================================
             });
         }
         function toggleMic() {
@@ -5867,67 +5861,57 @@
         // === ИСПРАВЛЕНИЕ 2 и 3: Плавное переключение камер без треугольников ===
         async function quickFlipCamera() {
             if (selectedPreviewMode === 'screen') {
-                showToast("При демонстрации экрана смена камеры недоступна");
-                return;
+                showToast("Смена камеры недоступна"); return;
             }
-
             const nextMode = (selectedPreviewMode === 'user') ? 'environment' : 'user';
 
-            // Показываем черный экран поверх нашего видео, чтобы скрыть зависание и треугольник
+            // 1. Включаем черную шторку (чтобы скрыть лаги Андроида)
             const overlay = document.getElementById('cameraSwitchOverlay');
             overlay.style.display = 'block';
-            setTimeout(() => { overlay.style.opacity = '1'; }, 10); // Плавное затемнение
+            setTimeout(() => { overlay.style.opacity = '1'; }, 10);
 
-            // 1. ЖЕСТКО убиваем текущую камеру
-            const oldVideoTrack = localStream.getVideoTracks()[0];
-            if (oldVideoTrack) {
-                oldVideoTrack.enabled = false;
-                oldVideoTrack.stop();
-                localStream.removeTrack(oldVideoTrack);
-            }
-
-            // Убираем srcObject, чтобы видео-тег очистился и не показывал треугольник
-            document.getElementById('localVideo').srcObject = null;
-
-            // 2. ДАЕМ АНДРОИДУ ВРЕМЯ на закрытие объектива (увеличим до 500мс для надежности)
-            setTimeout(async () => {
-                try {
-                    // Запрашиваем новую камеру
-                    const newStream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: nextMode },
-                        audio: false
-                    });
-
-                    const newTrack = newStream.getVideoTracks()[0];
-                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-
-                    // Добавляем новую камеру в поток
-                    localStream.addTrack(newTrack);
-                    document.getElementById('localVideo').srcObject = localStream;
-
-                    setLocalMirror(nextMode);
-                    selectedPreviewMode = nextMode;
-                    currentFacingMode = nextMode;
-
-                    if (sender) {
-                        await sender.replaceTrack(newTrack);
-                    }
-
-                    // Убираем черный экран, когда видео появилось
-                    setTimeout(() => {
-                        overlay.style.opacity = '0';
-                        setTimeout(() => { overlay.style.display = 'none'; }, 100);
-                    }, 200);
-
-                } catch (e) {
-                    console.error("Ошибка при перевороте камеры", e);
-                    showToast("Не удалось переключить камеру. Попробуйте еще раз.");
-                    overlay.style.opacity = '0';
-                    setTimeout(() => { overlay.style.display = 'none'; }, 100);
-                    // Возвращаем старую кнопку, если камера не открылась
-                    stopVideo();
+            // 2. Ждем, пока шторка закроет экран, затем убиваем старую камеру
+            setTimeout(() => {
+                const oldVideoTrack = localStream.getVideoTracks()[0];
+                if (oldVideoTrack) {
+                    oldVideoTrack.enabled = false;
+                    oldVideoTrack.stop();
+                    localStream.removeTrack(oldVideoTrack);
                 }
-            }, 500); // 500мс - оптимальное время для старых и новых Андроидов
+
+                // ВАЖНО: Мы НЕ делаем srcObject = null, чтобы не вызвать треугольник. 
+                // Видео просто застынет под черной шторкой.
+
+                // 3. Даем Андроиду 600мс на освобождение "железа" камеры
+                setTimeout(async () => {
+                    try {
+                        const newStream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: nextMode }, audio: false
+                        });
+                        const newTrack = newStream.getVideoTracks()[0];
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+
+                        // Добавляем новую камеру
+                        localStream.addTrack(newTrack);
+
+                        setLocalMirror(nextMode);
+                        selectedPreviewMode = nextMode;
+                        currentFacingMode = nextMode;
+
+                        if (sender) await sender.replaceTrack(newTrack);
+
+                        // 4. Плавно убираем черную шторку
+                        overlay.style.opacity = '0';
+                        setTimeout(() => { overlay.style.display = 'none'; }, 200);
+                    } catch (e) {
+                        console.error("Ошибка при перевороте", e);
+                        showToast("Не удалось переключить. Камера занята.");
+                        overlay.style.opacity = '0';
+                        setTimeout(() => { overlay.style.display = 'none'; }, 200);
+                        stopVideo();
+                    }
+                }, 600); // 600ms - железная гарантия, что камера освободилась
+            }, 100);
         }
 
         async function toggleScreen() {
@@ -8259,28 +8243,27 @@
         async function executePreviewCameraSwitch(mode) {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             if (mode === 'screen' && isIOS) {
-                alert("Демонстрация экрана не поддерживается на iPhone.");
-                clickPreviewTab(selectedPreviewMode); // Возвращаем обратно
+                alert("Демонстрация экрана недоступна на iPhone.");
+                clickPreviewTab(selectedPreviewMode);
                 return;
             }
-
             selectedPreviewMode = mode;
 
-            // ЖЕСТКО убиваем старую камеру перед открытием новой
+            // Жестко убиваем старую перед запуском новой
             if (previewStream) {
                 previewStream.getTracks().forEach(t => {
                     t.enabled = false;
                     t.stop();
                 });
-                previewStream = null;
+                // Не обнуляем srcObject, пусть висит старый кадр
             }
 
             try {
                 if (mode === 'screen') {
                     previewStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 } else {
-                    // Используем setTimeout, чтобы дать Андроиду время закрыть объектив
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // Таймаут для освобождения аппаратной камеры
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     previewStream = await getStreamForFacing(mode, false);
                 }
 
