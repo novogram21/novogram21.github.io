@@ -18,9 +18,9 @@
         }
 
         html {
-            background-color: #212121;
+            background-color: #212121; /* Серый фон для статус-бара (где часы и Wi-Fi) */
             width: 100%;
-            height: 100dvh; /* Динамическая высота */
+            height: 100%;
             overflow: hidden;
         }
 
@@ -28,17 +28,16 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            /* Убираем fixed, оставляем относительное позиционирование */
-            position: relative;
-            height: 100%;
-            width: 100%;
+            position: fixed; /* Жестко прибиваем к экрану */
+            top: env(safe-area-inset-top); /* Опускаем весь интерфейс ровно из-под челки */
+            bottom: 0; /* Прибиваем интерфейс к низу. Черная полоса исчезнет! */
+            left: 0;
+            right: 0;
             display: flex;
             background: transparent;
             color: #eee;
             overflow: hidden;
             overscroll-behavior-y: none;
-            /* Добавляем отступ сверху здесь, чтобы не ломать высоту контейнера */
-            padding-top: env(safe-area-inset-top);
         }
 
 
@@ -519,26 +518,15 @@
             width: 100%;
             max-width: 900px;
             margin: 0 auto;
-            background: #1f1f1f;
+            background: #1f1f1f; /* Цвет панели */
             min-height: 56px;
+            padding: 8px;
             display: flex;
-            align-items: flex-end;
+            align-items: flex-end; /* Выравнивание по низу */
             gap: 8px;
             position: relative;
             z-index: 5;
-            /* Используем переменную для нижнего отступа */
-            padding: 8px 8px var(--safe-bottom, 8px) 8px;
-            transition: padding 0.1s ease;
-        }
-
-            .input-bar:focus-within {
-                --safe-bottom: 8px !important;
-            }
-
-        @supports (padding: env(safe-area-inset-bottom)) {
-            .input-bar {
-                --safe-bottom: calc(8px + env(safe-area-inset-bottom));
-            }
+            padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
         }
 
         /* Скругленный плавающий бар ТОЛЬКО для веб-версии (ПК) */
@@ -575,16 +563,17 @@
                 border: none;
                 color: white;
                 font-size: 16px;
-                /* Строго фиксируем padding и line-height для исключения невидимого скролла */
                 padding: 10px 0;
                 line-height: 20px;
-                height: 40px;
+                height: 40px; /* Строго 1 строка (20px текст + 20px отступы) */
                 min-height: 40px;
-                max-height: 120px;
+                max-height: 100px;
                 outline: none;
                 resize: none;
                 font-family: inherit;
-                overflow-y: hidden; /* Прячем скролл, пока текста мало */
+                overflow-y: hidden; /* ВАЖНО: Убивает фантомный скроллбар, делающий 2 строки */
+                scrollbar-width: none;
+                box-sizing: border-box;
                 display: block;
                 -webkit-user-select: text !important;
                 user-select: text !important;
