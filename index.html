@@ -21,15 +21,15 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%; /* Никаких dvh, строго 100% */
-            position: fixed; /* Намертво прибиваем к краям экрана */
+            height: 100%; /* Строго 100%, больше никаких игр с высотой */
+            position: fixed; /* Намертво к краям экрана */
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
             overflow: hidden;
             overscroll-behavior-y: none;
-            background-color: #212121; /* Серый фон, чтобы закрасить зону часов и Wi-Fi */
+            background-color: #0a0c10;
         }
 
         body {
@@ -101,12 +101,11 @@
         }
 
         .profile-bar {
-            /* Залезаем под челку, фон закрасит статус-бар */
-            padding: calc(12px + env(safe-area-inset-top)) 15px 12px 15px;
+            padding: 12px 15px;
             display: flex;
             align-items: center;
             gap: 12px;
-            background: #212121; /* Серый фон, как вы и хотели */
+            background: #252525;
         }
 
 
@@ -377,13 +376,13 @@
         }
 
         .chat-header {
-            padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
+            padding: 8px 15px;
             background: #212121;
             border-bottom: 1px solid #101010;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: calc(56px + env(safe-area-inset-top));
+            min-height: 56px;
         }
 
         .chat-header-left {
@@ -526,7 +525,8 @@
             gap: 8px;
             position: relative;
             z-index: 5;
-            padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
+            /* Ограничиваем отступ, чтобы он не багался из-за клавиатуры */
+            padding: 8px 8px calc(8px + min(34px, env(safe-area-inset-bottom, 0px))) 8px;
         }
 
         /* Скругленный плавающий бар ТОЛЬКО для веб-версии (ПК) */
@@ -1185,11 +1185,11 @@
 
 
         #app-background {
-            position: absolute;
-            top: env(safe-area-inset-top); /* Темный фон начинается строго под челкой */
+            position: absolute; /* ВАЖНО: changed to absolute */
+            top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
+            width: 100%;
+            height: 100%;
             z-index: -1;
             background-color: #0a0c10;
         }
@@ -1503,7 +1503,7 @@
         /* Фон шапки (зеленый паттерн) */
         .tg-header-bg {
             background: #5a9e57;
-            padding: calc(10px + env(safe-area-inset-top)) 15px 20px 15px;
+            padding: 10px 15px 20px 15px;
             color: white;
             position: relative;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -1581,8 +1581,8 @@
             top: 0;
             left: 0;
             right: 0;
-            padding: env(safe-area-inset-top) 5px 0 15px;
-            height: calc(57px + env(safe-area-inset-top));
+            padding: 0 5px 0 15px;
+            height: 57px;
             z-index: 20;
         }
 
@@ -1680,7 +1680,7 @@
 
         .chat-search-dropdown {
             position: absolute;
-            top: calc(65px + env(safe-area-inset-top)); /* Сдвигаем ниже поиска */
+            top: 65px;
             right: 15px;
             width: 360px;
             max-height: 50vh;
