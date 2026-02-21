@@ -68,18 +68,7 @@
             user-select: text !important;
         }
 
-        /* Добавить в CSS */
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: env(safe-area-inset-bottom);
-            background: #17181c;
-            z-index: 5;
-            pointer-events: none;
-        }
+        
 
 
         body {
@@ -94,7 +83,7 @@
             left: 0;
             right: 0;
             bottom: 0; /* Растягиваем до низа. Когда клава выйдет, bottom поднимется */
-            height: 100dvh; /* Убираем 100dvh */
+            
             width: 100%;
             /* ----------------------- */
 
@@ -171,7 +160,7 @@
 
         /* Сайдбар */
         .sidebar {
-            padding-bottom: env(safe-area-inset-bottom);
+            
             width: 340px;
             background: #17181c; /* Мягкий матовый темно-серый вместо глухого черного */
             border-right: 1px solid rgba(255, 255, 255, 0.04);
