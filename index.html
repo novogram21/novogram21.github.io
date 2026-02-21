@@ -6795,7 +6795,36 @@
 
                     // =======================================================
 
+                    // =======================================================
+
                     loadMessages();
+
+                    // --- НОВОЕ: АВТОФОКУС ПРИ ВХОДЕ В ЧАТ ---
+                    setTimeout(() => {
+                        const inp = document.getElementById('msgInput');
+                        if (!inp) return;
+
+                        // Проверяем, мобилка ли это
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                        if (isMobile) {
+                            // ТРЮК ДЛЯ ТЕЛЕФОНОВ: Ставим inputmode='none'. 
+                            // Браузер ставит фокус (курсор мигает), но огромная клавиатура НЕ перекрывает чат сразу.
+                            inp.setAttribute('inputmode', 'none');
+                            inp.focus();
+
+                            // Когда пользователь реально касается поля — возвращаем полноценную клавиатуру
+                            inp.addEventListener('pointerdown', function () {
+                                inp.removeAttribute('inputmode');
+                            }, { once: true });
+                        } else {
+                            // На ПК просто даем обычный фокус
+                            inp.removeAttribute('inputmode');
+                            inp.focus();
+                        }
+                    }, 300); // Ждем 300мс, пока закончится анимация появления чата
+                    // ------------------------------------------
+
                 } else {
                     // Юзер не найден
                     window.location.hash = '';
