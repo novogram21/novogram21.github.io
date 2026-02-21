@@ -1083,26 +1083,48 @@
             }
 
             .chat-area {
-                display: none;
+                display: flex !important; /* Всегда flex, чтобы работала анимация */
                 width: 100%;
-                position: absolute;
+                position: fixed; /* fixed лучше для выезжающих панелей */
                 top: 0;
                 left: 0;
                 height: 100%;
                 z-index: 20;
+                background: #0a0c10; /* Плотный фон, чтобы перекрыть список контактов под ним */
+                /* Анимация сдвига */
+                transform: translateX(100%);
+                visibility: hidden;
+                transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.35s;
             }
 
                 .chat-area.active {
-                    display: flex;
+                    transform: translateX(0); /* Выезжает на экран */
+                    visibility: visible;
                 }
 
-            .sidebar.hidden-mobile {
-                display: none;
-            }
+            /* УБИРАЕМ .sidebar.hidden-mobile { display: none; } 
+       Мы больше не прячем сайдбар резко, чат просто выезжает поверх него! */
 
             .back-btn {
                 display: block;
             }
+        }
+
+        /* --- Добавьте это ВНЕ медиа-запроса (для красивой анимации на ПК) --- */
+        @keyframes chatContentSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .chat-slide-animate {
+            animation: chatContentSlide 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
 
@@ -4328,12 +4350,18 @@
             currentChatId = [currentUser.uid, fid].sort().join('_');
 
             if (window.innerWidth <= 768) {
-                document.getElementById('mainSidebar').classList.add('hidden-mobile');
+                // Больше не прячем сайдбар, чат выедет поверх него
                 document.getElementById('mainChatArea').classList.add('active');
             }
 
             document.getElementById('noChat').classList.add('hidden');
-            document.getElementById('activeChat').classList.remove('hidden');
+            const activeChatElement = document.getElementById('activeChat');
+            activeChatElement.classList.remove('hidden');
+
+            // Запускаем красивую анимацию появления для ПК и телефонов
+            activeChatElement.classList.remove('chat-slide-animate');
+            void activeChatElement.offsetWidth; // Сбрасываем браузерный кэш стилей (Reflow), чтобы анимация сработала заново
+            activeChatElement.classList.add('chat-slide-animate');
             if (currentFriendId !== fid) {
                 document.getElementById('msgList').innerHTML = '';
             }
@@ -4798,10 +4826,21 @@
         }
         function performCloseUI() {
             // 1. Сброс UI
-            document.getElementById('mainSidebar').classList.remove('hidden-mobile');
-            document.getElementById('mainChatArea').classList.remove('active');
-            document.getElementById('activeChat').classList.add('hidden');
-            document.getElementById('noChat').classList.remove('hidden');
+            // 1. Сброс UI
+            if (window.innerWidth <= 768) {
+                // Убираем класс, чтобы чат плавно уехал вправо
+                document.getElementById('mainChatArea').classList.remove('active');
+
+                // Ждём 350мс (пока закончится анимация CSS), и только потом скрываем внутренности
+                setTimeout(() => {
+                    document.getElementById('activeChat').classList.add('hidden');
+                    document.getElementById('noChat').classList.remove('hidden');
+                }, 350);
+            } else {
+                // На ПК переключаем мгновенно
+                document.getElementById('activeChat').classList.add('hidden');
+                document.getElementById('noChat').classList.remove('hidden');
+            }
 
             if (window.msgUnsub) {
                 window.msgUnsub();
