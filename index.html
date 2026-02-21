@@ -8037,8 +8037,12 @@
                 list.addEventListener('touchmove', handleChatTouchMove, { passive: false });
                 list.addEventListener('touchend', handleChatTouchEnd);
                 list.addEventListener('touchcancel', handleChatTouchEnd);
-                list.addEventListener('contextmenu', handleDesktopSideRightClick);
-                list.addEventListener('click', handleDesktopSideLeftClick);
+                if (!container.dataset.eventsAdded) {
+                    container.addEventListener('contextmenu', handleDesktopSideRightClick);
+                    container.addEventListener('dblclick', handleDesktopSideDoubleClick);
+                    container.dataset.eventsAdded = 'true';
+                }
+                // --------------------------------------------------------
 
                 container.appendChild(list);
                 isNew = true;
@@ -8212,32 +8216,32 @@
 
         // Правый клик (Вызов меню)
         function handleDesktopSideRightClick(e) {
-            if (window.innerWidth <= 768) return; // Работает только на компьютерах/планшетах
+            if (window.innerWidth <= 768) return;
 
-            // Если кликнули именно по пустому фону контейнера, а не внутри самого пузыря
-            if (e.target.classList.contains('messages')) {
-                const msgEl = getMsgByYCoordinate(e.clientY);
-                if (msgEl) {
-                    e.preventDefault(); // Отключаем стандартное браузерное меню
-                    const msgId = msgEl.id.replace('msg-', '');
-                    const isMine = msgEl.classList.contains('msg-me');
+            // Игнорируем, если кликнули прямо по самому сообщению (у него есть свой обработчик)
+            if (e.target.closest('.msg')) return;
 
-                    // Открываем наше красивое контекстное меню прямо под мышкой
-                    openContextMenu(e, msgId, isMine);
-                }
+            const msgEl = getMsgByYCoordinate(e.clientY);
+            if (msgEl) {
+                e.preventDefault();
+                const msgId = msgEl.id.replace('msg-', '');
+                const isMine = msgEl.classList.contains('msg-me');
+
+                openContextMenu(e, msgId, isMine);
             }
         }
 
-        // Левый клик (Быстрый ответ)
-        function handleDesktopSideLeftClick(e) {
+        // ДВОЙНОЙ левый клик по пустому месту (Быстрый ответ как в Telegram)
+        function handleDesktopSideDoubleClick(e) {
             if (window.innerWidth <= 768) return;
 
-            if (e.target.classList.contains('messages')) {
-                const msgEl = getMsgByYCoordinate(e.clientY);
-                if (msgEl) {
-                    // Используем вашу готовую функцию ответа (которая срабатывает при свайпе на телефоне)
-                    triggerSwipeReply(msgEl);
-                }
+            // Игнорируем двойной клик по самому тексту (чтобы вы могли спокойно выделять текст мышкой)
+            if (e.target.closest('.msg')) return;
+
+            const msgEl = getMsgByYCoordinate(e.clientY);
+            if (msgEl) {
+                e.preventDefault();
+                triggerSwipeReply(msgEl);
             }
         }
 
