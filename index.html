@@ -257,7 +257,18 @@
             position: absolute;
             top: 5px;
             right: 10px;
+            /* Плавность */
+            display: block !important;
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+
+            .tab-badge.hidden {
+                display: block !important;
+                opacity: 0 !important;
+                transform: scale(0) !important;
+            }
 
         .list-container {
             flex: 1;
@@ -382,11 +393,28 @@
             min-width: 20px;
             text-align: center;
             line-height: 1.2;
-            display: none;
+            /* Настройки плавной анимации */
+            display: block !important;
+            opacity: 1;
+            transform: scale(1);
+            transform-origin: center;
+            transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), max-width 0.2s ease, min-width 0.2s ease, padding 0.2s ease, margin 0.2s ease;
+            max-width: 40px;
+            overflow: hidden;
+            white-space: nowrap;
         }
 
-            .badge-count:not(.hidden) {
-                display: block;
+            /* Состояние, когда скрипт прячет счетчик (прочитано) */
+            .badge-count.hidden {
+                display: block !important; /* Блокируем резкое скрытие */
+                opacity: 0 !important;
+                transform: scale(0) !important; /* Схлопываем в точку */
+                max-width: 0 !important;
+                min-width: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important; /* Убираем отступ */
+                border: none !important;
             }
 
         .chat-area {
