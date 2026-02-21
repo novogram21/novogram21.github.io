@@ -53,7 +53,23 @@
             overscroll-behavior-y: none;
         }
 
+        /* =========================================
+   ОПТИМИЗАЦИЯ ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ 
+   ========================================= */
+        .is-app .chat-date-separator,
+        .is-app .floating-date {
+            /* Отключаем тяжелое размытие в WebView, оно вызывает тормоза на Android */
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            /* Делаем фон чуть более плотным, чтобы компенсировать отсутствие блюра */
+            background: rgba(40, 40, 40, 0.95) !important;
+        }
 
+        .is-app .messages {
+            /* Включаем аппаратное ускорение скролла */
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
+        }
 
 
         /* Авторизация */
@@ -1898,7 +1914,29 @@
         }
 
 
+        /* --- Анимация загрузки диалогов (Telegram style) --- */
+        .tg-spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            width: 100%;
+        }
 
+        .tg-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(115, 106, 240, 0.2); /* Полупрозрачный фиолетовый */
+            border-top-color: #736AF0; /* Яркий фиолетовый */
+            border-radius: 50%;
+            animation: tg-spin 0.8s linear infinite;
+        }
+
+        @keyframes tg-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* Список настроек */
         .tg-settings-list {
@@ -3159,7 +3197,9 @@
                 Заявки <span id="requestsBadge" class="tab-badge hidden">0</span>
             </div>
         </div>
-        <div id="friendsList" class="list-container"></div>
+        <div id="friendsList" class="list-container">
+            <div class="tg-spinner-container"><div class="tg-spinner"></div></div>
+        </div>
         <div id="requestsList" class="list-container hidden"></div>
     </div>
     <div id="mainChatArea" class="chat-area">
@@ -4252,6 +4292,11 @@
                 listenForFriendRequests();
             }
 
+            const list = document.getElementById('friendsList');
+            if (list.innerHTML === '' || list.innerText.includes('Список друзей пуст')) {
+                list.innerHTML = '<div class="tg-spinner-container"><div class="tg-spinner"></div></div>';
+            }
+
             const localFriends = localStorage.getItem('novogram_cached_friends');
             if (localFriends) {
                 const parsed = JSON.parse(localFriends);
@@ -4269,11 +4314,20 @@
                     // Но сохранение usersCache в память нам очень поможет для имен в заголовках!
                 }
             }
+            
             // 2. Слушаем список друзей (ОПТИМИЗИРОВАНО + ПРЕДЗАГРУЗКА КЛЮЧЕЙ)
             db.collection('friends')
                 .where('users', 'array-contains', currentUser.uid)
                 .onSnapshot(async snap => {
                     const list = document.getElementById('friendsList');
+
+                    // --- НОВОЕ: УДАЛЯЕМ КРУТИЛКУ, КАК ТОЛЬКО ПРИШЛИ ДАННЫЕ ---
+                    const spinner = list.querySelector('.tg-spinner-container');
+                    if (spinner) {
+                        spinner.remove();
+                    }
+                    // ---------------------------------------------------------
+
                     if (snap.empty) {
                         list.innerHTML = '<div style="padding:20px;text-align:center;color:#888">Список друзей пуст</div>';
                         return;
@@ -4394,6 +4448,13 @@
         }
         function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
         async function openChat(fid, name, nick) {
+            // --- НОВОЕ: Отменяем таймер закрытия, если юзер очень быстро кликнул обратно ---
+            if (typeof closeChatTimeout !== 'undefined' && closeChatTimeout) {
+                clearTimeout(closeChatTimeout);
+                closeChatTimeout = null;
+            }
+            // -------------------------------------------------------------------------------
+
             window.location.hash = "chat/" + fid;
             currentFriendId = fid;
             currentChatId = [currentUser.uid, fid].sort().join('_');
@@ -4693,21 +4754,15 @@
                     // <--- !!! ИЗМЕНЕНИЕ 2: ЛОГИКА СКРОЛЛА И ПОЯВЛЕНИЯ
 
                     // Если список сейчас скрыт (значит это ПЕРВАЯ загрузка при открытии)
+                    // Если список сейчас скрыт (значит это ПЕРВАЯ загрузка при открытии)
                     if (list.classList.contains('is-loading')) {
-                        // 1. Мгновенно крутим вниз (пока невидимо)
                         list.scrollTop = list.scrollHeight;
 
-                        // 2. Ждем отрисовку браузера и показываем
-                        window.requestAnimationFrame(() => {
-                            list.scrollTop = list.scrollHeight; // На всякий случай еще раз
-                            list.classList.remove('is-loading'); // <-- Убираем класс, чат появляется
-                        });
-                    }
-                    // Если чат уже открыт и пришло новое сообщение
-                    else if (isScrolledToBottom || snap.metadata.hasPendingWrites) {
+                        // В WebView надежнее использовать setTimeout вместо requestAnimationFrame
                         setTimeout(() => {
-                            list.scrollTop = list.scrollHeight + 500;
-                        }, 50);
+                            list.scrollTop = list.scrollHeight;
+                            list.classList.remove('is-loading'); // Чат появляется
+                        }, 150); // Даем движку 150 миллисекунд на рендеринг элементов
                     }
                 });
         }
@@ -4873,58 +4928,49 @@
                 }
             }
         }
+        let closeChatTimeout = null;
+
         function performCloseUI() {
-            // 1. Сброс UI (с задержкой для мобильной анимации)
-            if (window.innerWidth <= 768) {
-                document.getElementById('mainChatArea').classList.remove('active'); // Чат уезжает вправо
-                document.getElementById('mainSidebar').classList.remove('hidden-mobile'); // Список контактов плавно появляется
-
-                // Ждём 350мс пока завершится анимация, и только потом скрываем содержимое
-                setTimeout(() => {
-                    document.getElementById('activeChat').classList.add('hidden');
-                    document.getElementById('noChat').classList.remove('hidden');
-                }, 350);
-            } else {
-                // На ПК переключаем мгновенно
-                document.getElementById('mainSidebar').classList.remove('hidden-mobile');
-                document.getElementById('mainChatArea').classList.remove('active');
-                document.getElementById('activeChat').classList.add('hidden');
-                document.getElementById('noChat').classList.remove('hidden');
-            }
-
             if (window.msgUnsub) {
                 window.msgUnsub();
                 window.msgUnsub = null;
             }
-            document.getElementById('msgList').innerHTML = '';
 
-            // 2. Сброс моего статуса "печатает" в базе (ДЕЛАЕМ ЭТО ДО сброса ID)
+            // Очищаем предыдущий таймер, чтобы он не сработал случайно
+            if (closeChatTimeout) {
+                clearTimeout(closeChatTimeout);
+                closeChatTimeout = null;
+            }
+
+            // 1. Сброс UI 
+            if (window.innerWidth <= 768) {
+                document.getElementById('mainChatArea').classList.remove('active');
+                document.getElementById('mainSidebar').classList.remove('hidden-mobile');
+
+                // Записываем таймер в переменную
+                closeChatTimeout = setTimeout(() => {
+                    document.getElementById('activeChat').classList.add('hidden');
+                    document.getElementById('noChat').classList.remove('hidden');
+                    document.getElementById('msgList').innerHTML = '';
+                }, 350);
+            } else {
+                document.getElementById('mainSidebar').classList.remove('hidden-mobile');
+                document.getElementById('mainChatArea').classList.remove('active');
+                document.getElementById('activeChat').classList.add('hidden');
+                document.getElementById('noChat').classList.remove('hidden');
+                document.getElementById('msgList').innerHTML = '';
+            }
+
+            // 2. Сброс моего статуса "печатает" в базе
             if (currentChatId && currentUser) {
                 db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
                     isTyping: false
-                }).catch(() => { }); // Игнорируем ошибки (если инет пропал)
+                }).catch(() => { });
             }
 
-            // 3. Отписка от сообщений
-            if (msgUnsub) {
-                msgUnsub();
-                msgUnsub = null;
-            }
+            if (chatStatusUnsub) { chatStatusUnsub(); chatStatusUnsub = null; }
+            if (typeof typingUnsub !== 'undefined' && typingUnsub) { typingUnsub(); typingUnsub = null; }
 
-            // 4. Отписка от статуса "В сети"
-            if (chatStatusUnsub) {
-                chatStatusUnsub();
-                chatStatusUnsub = null;
-            }
-
-            // 5. --- НОВОЕ: Отписка от "Печатает..." ---
-            // Проверяем переменную typingUnsub (которую мы объявили в начале скрипта)
-            if (typeof typingUnsub !== 'undefined' && typingUnsub) {
-                typingUnsub();
-                typingUnsub = null;
-            }
-
-            // 6. Очистка переменных
             currentFriendId = null;
             currentChatId = null;
         }
@@ -7106,29 +7152,40 @@
                     chatDatePicker.addEventListener('change', handleCalendarChange);
                 }
 
+                let scrollThrottleTimer = null; // Таймер для ограничения вызовов
+
                 list.addEventListener('scroll', () => {
-                    const msgs = list.querySelectorAll('.msg');
-                    let topMsg = null;
-
-                    for (let i = 0; i < msgs.length; i++) {
-                        if (msgs[i].offsetTop + msgs[i].offsetHeight > list.scrollTop + 20) {
-                            topMsg = msgs[i];
-                            break;
-                        }
-                    }
-
-                    if (topMsg) {
-                        const dateStr = topMsg.getAttribute('data-datestr');
-                        if (dateStr && floatingDate.innerText !== dateStr) {
-                            floatingDate.innerText = dateStr;
-                        }
-                        floatingDate.classList.add('visible');
-                    }
-
+                    // Скрываем плавающую дату через секунду после остановки скролла
                     clearTimeout(scrollDateTimeout);
                     scrollDateTimeout = setTimeout(() => {
                         floatingDate.classList.remove('visible');
                     }, 1000);
+
+                    // Если таймер уже запущен, выходим (ограничиваем нагрузку)
+                    if (scrollThrottleTimer) return;
+
+                    // Запускаем проверку даты не чаще, чем раз в 150мс
+                    scrollThrottleTimer = setTimeout(() => {
+                        const msgs = list.querySelectorAll('.msg');
+                        let topMsg = null;
+
+                        for (let i = 0; i < msgs.length; i++) {
+                            if (msgs[i].offsetTop + msgs[i].offsetHeight > list.scrollTop + 20) {
+                                topMsg = msgs[i];
+                                break;
+                            }
+                        }
+
+                        if (topMsg) {
+                            const dateStr = topMsg.getAttribute('data-datestr');
+                            if (dateStr && floatingDate.innerText !== dateStr) {
+                                floatingDate.innerText = dateStr;
+                            }
+                            floatingDate.classList.add('visible');
+                        }
+
+                        scrollThrottleTimer = null; // Освобождаем таймер
+                    }, 150);
                 });
             }
         });
@@ -7755,16 +7812,21 @@
 
         // --- МГНОВЕННЫЙ ЗАПУСК ---
         // Если мы помним, что юзер был залогинен, пытаемся нарисовать интерфейс сразу
+        // --- МГНОВЕННЫЙ ЗАПУСК ---
         if (localStorage.getItem('isLoggedIn') === 'true' && localStorage.getItem('current_user_uid')) {
             console.log("🚀 Мгновенный старт из кэша");
 
-            // 1. Скрываем экран входа СРАЗУ
             document.getElementById('authScreen').classList.add('hidden');
-
-            // 2. Рисуем свою аватарку и имя из кэша СРАЗУ
             loadProfileFromCache();
 
-            // 3. Рисуем список чатов из кэша СРАЗУ
+            // --- ИСПРАВЛЕНИЕ: Даем скрипту ID пользователя ДО ответа от Firebase ---
+            if (!currentUser) {
+                currentUser = {
+                    uid: localStorage.getItem('current_user_uid')
+                };
+            }
+
+            // Теперь loadData() не упадет с ошибкой и данные начнут грузиться мгновенно
             loadData();
         }
 
@@ -7872,7 +7934,17 @@
                 }
             }
         });
-        
+
+        // Автоматически определяем, что мы внутри мобильного приложения (WebView)
+        document.addEventListener("DOMContentLoaded", () => {
+            // window.chrome.webview - это для MAUI Blazor, 'wv' - стандартная метка Android WebView
+            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv');
+
+            if (isApp) {
+                document.body.classList.add('is-app');
+                console.log("📱 Включен режим мобильного приложения (WebView оптимизации)");
+            }
+        });
 
     </script>
 
