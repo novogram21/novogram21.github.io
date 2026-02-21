@@ -5404,17 +5404,40 @@
 
         // Загрузка данных в поля при открытии профиля
 
-        function confirmDelete(mode) {
-            if (!selectedMsgId) return;
-            if (mode === 'all') { db.collection('chats').doc(currentChatId).collection('msgs').doc(selectedMsgId).delete(); }
-            else if (mode === 'me') {
-                const el = document.getElementById(`msg-${selectedMsgId}`);
-                if (el) el.style.display = 'none';
-                const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
-                deletedLocal.push(selectedMsgId);
-                localStorage.setItem('deletedMsgs', JSON.stringify(deletedLocal));
+        function closeAllSheets(fromPopState = false) {
+            document.getElementById('actionSheet')?.classList.remove('open');
+            document.getElementById('deleteSheet')?.classList.remove('open');
+            document.getElementById('profileSheet')?.classList.remove('open');
+            document.getElementById('editProfileSheet')?.classList.remove('open');
+            document.getElementById('generalSettingsSheet')?.classList.remove('open');
+
+            const menu = document.getElementById('contextMenu');
+            if (menu) {
+                menu.classList.remove('active');
+                setTimeout(() => menu.style.display = 'none', 200);
             }
-            closeAllSheets();
+
+            // --- ОТКЛЮЧАЕМ РАЗМЫТИЕ ФОНА И ВЫДЕЛЕНИЕ ---
+            document.body.classList.remove('chat-blur-active');
+            document.querySelectorAll('.msg-highlighted').forEach(el => {
+                el.classList.remove('msg-highlighted');
+            });
+
+            setTimeout(() => {
+                const overlay = document.getElementById('overlaySheet');
+                if (overlay) {
+                    overlay.style.display = 'none';
+                    overlay.style.background = 'rgba(0,0,0,0.5)'; // Возвращаем стандартный цвет
+                }
+            }, 300);
+
+            selectedMsgId = null;
+
+            // --- НОВОЕ: Убираем из истории браузера, если закрыли по кнопке (не свайпом) ---
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                sheetHistoryStack = 0; // Сбрасываем весь стек
+                history.back(); // Очищаем историю
+            }
         }
         function closeAllSheets() {
             document.getElementById('actionSheet')?.classList.remove('open');
@@ -6156,8 +6179,14 @@
                 toast.classList.remove('show');
             }, 2000);
         }
+        let sheetHistoryStack = 0; // Счетчик открытых окон для кнопки Назад
+
         // Загрузка данных в поля при открытии профиля
         function openProfileSheet() {
+            // --- НОВОЕ: Записываем открытие в историю браузера ---
+            sheetHistoryStack++;
+            history.pushState({ isSheet: true }, "", window.location.href);
+
             document.getElementById('overlaySheet').style.display = 'block';
             const sheet = document.getElementById('profileSheet');
             setTimeout(() => sheet.classList.add('open'), 10);
@@ -6232,24 +6261,38 @@
         // --- ЕДИНЫЙ ОБРАБОТЧИК ESC ---
         document.addEventListener('keydown', function (e) {
             if (e.key === "Escape") {
-                // Ссылки на элементы
                 const viewer = document.getElementById('imageViewer');
                 const searchRes = document.getElementById('searchResults');
                 const searchInp = document.getElementById('searchInput');
+
                 // 1. САМЫЙ ВЫСОКИЙ ПРИОРИТЕТ: Закрыть просмотр картинки
                 if (viewer.classList.contains('active')) {
                     closeImageViewer();
-                    return; // Прерываем, чтобы не закрыть что-то под низом
+                    return;
                 }
-                // 2. СРЕДНИЙ ПРИОРИТЕТ: Закрыть поиск
-                // Если открыто окно поиска ИЛИ есть текст в поле ИЛИ фокус в поле
+
+                // 2. ЗАКРЫТЬ ШТОРКИ ПРОФИЛЯ/НАСТРОЕК (По очереди сверху вниз)
+                if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
+                    closeEditProfile();
+                    return;
+                }
+                if (document.getElementById('generalSettingsSheet')?.classList.contains('open')) {
+                    closeGeneralSettings();
+                    return;
+                }
+                if (document.getElementById('profileSheet')?.classList.contains('open')) {
+                    closeAllSheets();
+                    return;
+                }
+
+                // 3. ЗАКРЫТЬ ПОИСК
                 if (searchRes.classList.contains('active') || searchInp.value.trim() !== '' || document.activeElement === searchInp) {
-                    e.preventDefault(); // Чтобы не потерять фокус случайно
+                    e.preventDefault();
                     closeSearch();
-                    return; // Прерываем, чтобы не закрыть чат сразу же
+                    return;
                 }
-                // 3. НИЗКИЙ ПРИОРИТЕТ: Закрыть чат
-                // Срабатывает только если поиск и картинки уже закрыты
+
+                // 4. НИЗКИЙ ПРИОРИТЕТ: Закрыть чат
                 if (currentChatId) {
                     closeChat();
                     return;
@@ -7084,6 +7127,10 @@
 
 
         function openEditProfile() {
+            // --- НОВОЕ ---
+            sheetHistoryStack++;
+            history.pushState({ isSheet: true }, "", window.location.href);
+
             const user = firebase.auth().currentUser;
             if (!user) return;
 
@@ -7095,40 +7142,29 @@
             db.collection('users').doc(user.uid).get().then(doc => {
                 if (doc.exists) {
                     const d = doc.data();
-
-                    // Имя и Фамилия
                     document.getElementById('editName').value = d.name || '';
                     document.getElementById('editSurname').value = d.surname || '';
-
-                    // Био
                     document.getElementById('editBio').value = d.bio || '';
                     updateBioCounter(document.getElementById('editBio'));
 
-                    // Дата рождения
                     if (d.birthdate) {
                         document.getElementById('editBirthdate').value = d.birthdate;
                         syncBirthdateView();
                     } else {
-                        document.getElementById('editBirthdate').value = ''; // Сброс, если нет даты
+                        document.getElementById('editBirthdate').value = '';
                     }
 
-                    // --- Юзернейм (ИЗМЕНЕНИЯ) ---
                     originalUsername = d.username || '';
                     document.getElementById('editUsername').value = originalUsername;
-                    document.getElementById('editUsernameStatus').style.display = 'none'; // Скрываем статус
-
-                    // Сбрасываем флаг валидности в true (так как текущий юзернейм валиден)
+                    document.getElementById('editUsernameStatus').style.display = 'none';
                     isUsernameValid = true;
 
-                    // Разблокируем кнопку сохранения
                     const saveBtn = document.querySelector('#editProfileSheet .tg-header-top button:last-child');
                     if (saveBtn) {
                         saveBtn.style.opacity = "1";
                         saveBtn.style.pointerEvents = "auto";
                     }
-                    // --------------------------
 
-                    // Аватар
                     const img = document.getElementById('editAvatarPreview');
                     const ph = document.getElementById('editAvatarPlaceholder');
 
@@ -7136,11 +7172,10 @@
                         img.src = d.avatar;
                         img.style.display = 'block';
                         ph.style.display = 'none';
-                        editAvatarBase64 = d.avatar; // Сохраняем текущий, чтобы не потерять при сохранении без изменений
+                        editAvatarBase64 = d.avatar;
                     } else {
                         img.style.display = 'none';
                         ph.style.display = 'flex';
-                        // Первая буква имени или "U"
                         const firstLetter = (d.name || 'U').charAt(0).toUpperCase();
                         ph.innerText = firstLetter;
                         editAvatarBase64 = null;
@@ -7149,9 +7184,14 @@
             });
         }
 
-
-        function closeEditProfile() {
+        function closeEditProfile(fromPopState = false) {
             document.getElementById('editProfileSheet').classList.remove('open');
+
+            // --- НОВОЕ ---
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                sheetHistoryStack--;
+                history.back();
+            }
         }
 
         function updateBioCounter(el) {
@@ -7527,20 +7567,26 @@
         }
 
         function openGeneralSettings() {
-            // Закрываем профиль, чтобы настройки открылись поверх (или вместо)
-            // document.getElementById('profileSheet').classList.remove('open'); // Раскомментируй, если хочешь закрывать профиль
+            // --- НОВОЕ ---
+            sheetHistoryStack++;
+            history.pushState({ isSheet: true }, "", window.location.href);
 
             const sheet = document.getElementById('generalSettingsSheet');
-            sheet.style.display = 'flex'; // Убеждаемся, что блок видим
+            sheet.style.display = 'flex';
             setTimeout(() => {
                 sheet.classList.add('open');
             }, 10);
         }
 
-        function closeGeneralSettings() {
+        function closeGeneralSettings(fromPopState = false) {
             const sheet = document.getElementById('generalSettingsSheet');
             sheet.classList.remove('open');
-            // Ждем анимацию перед скрытием (опционально)
+
+            // --- НОВОЕ ---
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                sheetHistoryStack--;
+                history.back();
+            }
         }
 
 
@@ -8448,6 +8494,23 @@
                 console.log("📱 Включен режим мобильного приложения (WebView оптимизации)");
             }
         });
+
+        // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
+        window.addEventListener('popstate', (e) => {
+            if (typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                sheetHistoryStack--;
+
+                // Проверяем, какая шторка открыта сейчас сверху, и закрываем именно её
+                if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
+                    closeEditProfile(true);
+                } else if (document.getElementById('generalSettingsSheet')?.classList.contains('open')) {
+                    closeGeneralSettings(true);
+                } else if (document.getElementById('profileSheet')?.classList.contains('open')) {
+                    closeAllSheets(true);
+                }
+            }
+        });
+
 
     </script>
 
