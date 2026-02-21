@@ -332,10 +332,76 @@
                 display: none;
             }
 
+
+        /* ==========================================
+           АНИМАЦИИ ДЛЯ ПАПОК (TELEGRAM STYLE)
+           ========================================== */
+
+        /* 1. Эффект "всплеска" (Ripple) при нажатии на вкладку */
+        .tab {
+            position: relative;
+            overflow: hidden; /* Чтобы круг не вылезал за границы */
+        }
+
+            .tab::before {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 100%;
+                height: 100%;
+                background: rgba(115, 106, 240, 0.2);
+                border-radius: 50px;
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+                transition: transform 0.4s ease, opacity 0.4s ease;
+                z-index: -1;
+            }
+
+            .tab:active::before {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 1;
+                transition: 0s; /* Моментально появляется при касании */
+            }
+
+        /* 2. Анимации выезда списков (справа налево и слева направо) */
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(25px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-25px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Классы, которые мы будем вешать через JS */
+        .slide-right {
+            animation: slideInRight 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+
+        .slide-left {
+            animation: slideInLeft 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+
         /* Сама вкладка: невысокая, но длинная */
         .tab {
-            padding: 0 20px; /* Делает их длинными по горизонтали */
-            height: 46px; /* Аккуратная фиксированная высота */
+            padding: 0 20px;
+            height: 46px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -344,17 +410,27 @@
             font-weight: 500;
             cursor: pointer;
             white-space: nowrap;
-            /* Убиваем старые "квадратные" стили */
             background: transparent !important;
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-            /* Полоска снизу */
             border-bottom: 3px solid transparent !important;
-            transition: color 0.2s;
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            /* --- ЖЕСТКОЕ УДАЛЕНИЕ СИСТЕМНЫХ ОБВОДОК НА ТЕЛЕФОНЕ --- */
+            -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+            -webkit-tap-highlight-color: transparent !important;
+            outline: none !important;
         }
+
+            .tab:focus, .tab:active {
+                outline: none !important;
+                background: transparent !important;
+            }
+
+            .tab::before {
+                display: none !important;
+            }
 
             .tab:hover {
                 color: #b0b0b5;
@@ -4432,44 +4508,130 @@
         }
         window.addEventListener('beforeunload', updateLastSeen);
         // --- LOGIC ---
+        var tabOrder = ['friends', 'groups', 'channels', 'bots'];
+        var currentTabIndex = 0;
+
+        // Логика переключения вкладок с анимацией
         function switchTab(t) {
-            const friendsList = document.getElementById('friendsList');
+            // 1. ЖЕЛЕЗОБЕТОННАЯ ЗАЩИТА ОТ СПАМ-КЛИКОВ
+            const newIndex = tabOrder.indexOf(t);
+            if (t !== 'requests' && newIndex === currentTabIndex) return; // Если папка уже открыта - ничего не делаем
+
             const requestsList = document.getElementById('requestsList');
+            if (t === 'requests' && !requestsList.classList.contains('hidden')) return; // Если заявки открыты - игнорируем
+
+            const friendsList = document.getElementById('friendsList');
             const noDataList = document.getElementById('noDataList');
 
-            // 1. Скрываем все списки
-            friendsList.classList.add('hidden');
-            requestsList.classList.add('hidden');
-            if (noDataList) noDataList.classList.add('hidden');
+            // 2. Вычисляем направление анимации
+            let directionClass = 'slide-right';
+            if (newIndex !== -1 && currentTabIndex !== -1) {
+                if (newIndex < currentTabIndex) {
+                    directionClass = 'slide-left';
+                }
+            }
 
-            // 2. Если нажали кнопку "Заявки" сверху
+            if (t !== 'requests') {
+                currentTabIndex = newIndex;
+            }
+
+            // 3. Скрываем все списки и сбрасываем анимации
+            [friendsList, requestsList, noDataList].forEach(el => {
+                if (el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('slide-right', 'slide-left');
+                }
+            });
+
+            // 4. Логика для кнопки Заявок (сверху)
             if (t === 'requests') {
-                document.querySelectorAll('.tab').forEach(el => el.classList.remove('active')); // Снимаем выделение с папок
+                document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+                void requestsList.offsetWidth;
                 requestsList.classList.remove('hidden');
+                requestsList.classList.add('slide-right');
                 return;
             }
 
-            // 3. Обработка клика по папкам
+            // 5. Подсветка активной папки
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
             const clickedTab = document.querySelector(`.tab[onclick="switchTab('${t}')"]`);
 
             if (clickedTab) {
                 clickedTab.classList.add('active');
-                // Плавно прокручиваем строку с табами, чтобы выбранный оказался по центру
                 clickedTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
 
-            // Показываем нужный контент
+            // 6. Показываем нужный контент
+            let activeList;
             if (t === 'friends') {
-                friendsList.classList.remove('hidden');
+                activeList = friendsList;
             } else {
-                // Для Групп, Каналов и Ботов показываем заглушку
                 if (!noDataList) return;
                 const tabNames = { 'groups': 'Группы', 'channels': 'Каналы', 'bots': 'Боты' };
                 noDataList.innerHTML = `<div style="color:#8e8e93; font-size:15px; margin-top:40px; text-align:center;">Папка «${tabNames[t]}» пока пуста</div>`;
-                noDataList.classList.remove('hidden');
+                activeList = noDataList;
             }
+
+            // Фокус с анимацией
+            void activeList.offsetWidth;
+            activeList.classList.remove('hidden');
+            activeList.classList.add(directionClass);
         }
+
+        // ==========================================
+        // НОВОЕ: СВАЙПЫ ДЛЯ ПЕРЕЛИСТЫВАНИЯ НА ТЕЛЕФОНЕ
+        // ==========================================
+        let tabSwipeStartX = 0;
+        let tabSwipeStartY = 0;
+        let tabIsSwiping = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('mainSidebar');
+            if (!sidebar) return;
+
+            // Касание
+            sidebar.addEventListener('touchstart', (e) => {
+                if (window.innerWidth > 768) return; // Работает только на телефонах
+                // Запрещаем свайп, если мы нажимаем на шапку или на саму полоску папок (там свой скролл)
+                if (e.target.closest('.tabs-container, .profile-bar')) return;
+
+                tabSwipeStartX = e.touches[0].clientX;
+                tabSwipeStartY = e.touches[0].clientY;
+                tabIsSwiping = true;
+            }, { passive: true });
+
+            // Движение пальца
+            sidebar.addEventListener('touchmove', (e) => {
+                if (!tabIsSwiping) return;
+
+                const diffX = e.touches[0].clientX - tabSwipeStartX;
+                const diffY = e.touches[0].clientY - tabSwipeStartY;
+
+                // Если юзер листает список друзей вверх-вниз — отменяем переключение папок!
+                if (Math.abs(diffY) > Math.abs(diffX)) {
+                    tabIsSwiping = false;
+                }
+            }, { passive: true });
+
+            // Отпускание пальца
+            sidebar.addEventListener('touchend', (e) => {
+                if (!tabIsSwiping) return;
+                const diffX = e.changedTouches[0].clientX - tabSwipeStartX;
+
+                // Свайп влево (открываем следующую папку)
+                if (diffX < -60) {
+                    const nextIdx = currentTabIndex + 1;
+                    if (nextIdx < tabOrder.length) switchTab(tabOrder[nextIdx]);
+                }
+                // Свайп вправо (открываем предыдущую папку)
+                else if (diffX > 60) {
+                    const prevIdx = currentTabIndex - 1;
+                    if (prevIdx >= 0) switchTab(tabOrder[prevIdx]);
+                }
+
+                tabIsSwiping = false;
+            });
+        });
 
         // --- НОВОЕ: Горизонтальный скролл папок с помощью КОЛЕСИКА МЫШИ (для ПК) ---
         // --- НОВОЕ: Скролл папок колесиком И перетаскивание мышкой (как в ТГ) ---
