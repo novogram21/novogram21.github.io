@@ -3654,7 +3654,7 @@
     <!-- MAIN -->
     <div id="mainSidebar" class="sidebar">
         <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
-        <div class="profile-bar" style="padding: 16px 15px 10px 15px !important; display: flex; align-items: center; gap: 12px; position: relative;">
+        <div class="profile-bar" style="padding: calc(env(safe-area-inset-top) + 16px) 15px 10px 15px !important; display: flex; align-items: center; gap: 12px; position: relative;">
             <button id="searchBackBtn" onclick="closeSearch()" style="display: none; background: none; border: none; color: #007bff; font-size: 20px; cursor: pointer; flex-shrink: 0;">←</button>
             <button id="profileBtn" onclick="openProfileSheet()"><span id="myAvatarSmall">👤</span></button>
 
