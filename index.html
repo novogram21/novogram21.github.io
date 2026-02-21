@@ -5405,6 +5405,14 @@
         // Загрузка данных в поля при открытии профиля
 
         function closeAllSheets(fromPopState = false) {
+            // Если кликнули по фону, а открыто сразу 2 или 3 окна (например, профиль -> настройки), 
+            // откатываем историю сразу на нужное количество шагов назад.
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                const steps = -sheetHistoryStack;
+                sheetHistoryStack = 0;
+                history.go(steps);
+            }
+
             document.getElementById('actionSheet')?.classList.remove('open');
             document.getElementById('deleteSheet')?.classList.remove('open');
             document.getElementById('profileSheet')?.classList.remove('open');
@@ -5432,12 +5440,6 @@
             }, 300);
 
             selectedMsgId = null;
-
-            // --- НОВОЕ: Убираем из истории браузера, если закрыли по кнопке (не свайпом) ---
-            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
-                sheetHistoryStack = 0; // Сбрасываем весь стек
-                history.back(); // Очищаем историю
-            }
         }
         function closeAllSheets() {
             document.getElementById('actionSheet')?.classList.remove('open');
@@ -7186,13 +7188,14 @@
         }
 
         function closeEditProfile(fromPopState = false) {
-            document.getElementById('editProfileSheet').classList.remove('open');
-
-            // --- НОВОЕ ---
+            // Если нажали ESC или кнопку в интерфейсе — просто даем браузеру команду "Назад"
             if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
-                sheetHistoryStack--;
                 history.back();
+                return; // ВАЖНО: Прерываем функцию. Окно закроется само через системный popstate!
             }
+
+            // Физически скрываем окно (сработает только при реальном свайпе или после history.back)
+            document.getElementById('editProfileSheet').classList.remove('open');
         }
 
         function updateBioCounter(el) {
@@ -7580,14 +7583,13 @@
         }
 
         function closeGeneralSettings(fromPopState = false) {
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                history.back();
+                return;
+            }
+
             const sheet = document.getElementById('generalSettingsSheet');
             sheet.classList.remove('open');
-
-            // --- НОВОЕ ---
-            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
-                sheetHistoryStack--;
-                history.back();
-            }
         }
 
 
