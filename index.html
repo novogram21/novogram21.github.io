@@ -8037,6 +8037,8 @@
                 list.addEventListener('touchmove', handleChatTouchMove, { passive: false });
                 list.addEventListener('touchend', handleChatTouchEnd);
                 list.addEventListener('touchcancel', handleChatTouchEnd);
+                list.addEventListener('contextmenu', handleDesktopSideRightClick);
+                list.addEventListener('click', handleDesktopSideLeftClick);
 
                 container.appendChild(list);
                 isNew = true;
@@ -8188,6 +8190,59 @@
             const name = isMine ? "Вы" : friendName;
             startReplyUI(msgId, name, text);
         }
+
+        // ==========================================
+        // ЛОГИКА КЛИКОВ РЯДОМ С СООБЩЕНИЕМ (ПК)
+        // ==========================================
+
+        // Умная функция: вычисляет сообщение, находящееся на той же высоте, что и мышка
+        function getMsgByYCoordinate(y) {
+            if (!currentMsgList) return null;
+            // Ищем все пузыри сообщений, игнорируя плашки дат и системные уведомления
+            const msgs = currentMsgList.querySelectorAll('.msg:not(.msg-sys)');
+            for (let i = 0; i < msgs.length; i++) {
+                const rect = msgs[i].getBoundingClientRect();
+                // Проверяем, находится ли мышка по высоте на уровне этого сообщения (с зазором 6px)
+                if (y >= rect.top - 6 && y <= rect.bottom + 6) {
+                    return msgs[i];
+                }
+            }
+            return null;
+        }
+
+        // Правый клик (Вызов меню)
+        function handleDesktopSideRightClick(e) {
+            if (window.innerWidth <= 768) return; // Работает только на компьютерах/планшетах
+
+            // Если кликнули именно по пустому фону контейнера, а не внутри самого пузыря
+            if (e.target.classList.contains('messages')) {
+                const msgEl = getMsgByYCoordinate(e.clientY);
+                if (msgEl) {
+                    e.preventDefault(); // Отключаем стандартное браузерное меню
+                    const msgId = msgEl.id.replace('msg-', '');
+                    const isMine = msgEl.classList.contains('msg-me');
+
+                    // Открываем наше красивое контекстное меню прямо под мышкой
+                    openContextMenu(e, msgId, isMine);
+                }
+            }
+        }
+
+        // Левый клик (Быстрый ответ)
+        function handleDesktopSideLeftClick(e) {
+            if (window.innerWidth <= 768) return;
+
+            if (e.target.classList.contains('messages')) {
+                const msgEl = getMsgByYCoordinate(e.clientY);
+                if (msgEl) {
+                    // Используем вашу готовую функцию ответа (которая срабатывает при свайпе на телефоне)
+                    triggerSwipeReply(msgEl);
+                }
+            }
+        }
+
+
+
         let scrollDateTimeout = null;
 
         function handleChatScroll(e) {
