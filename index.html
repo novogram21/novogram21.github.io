@@ -1938,7 +1938,7 @@
             right: max(8px, calc(50% - 442px));
             width: 48px; /* НОВОЕ: Размер точно как у микрофона (было 44) */
             height: 48px; /* НОВОЕ: Размер точно как у микрофона (было 44) */
-            background: #212121;
+            background: #17181c;
             border-radius: 50%;
             border: 1px solid #333;
             display: flex;
@@ -2078,7 +2078,7 @@
 
         /* --- ПОИСК ВНУТРИ ЧАТА (ТЕЛЕГРАМ СТИЛЬ) --- */
         .chat-search-bar {
-            background: #212121; /* Цвет шапки */
+            background: #17181c; /* Цвет шапки */
             display: flex;
             align-items: center;
             position: absolute;
@@ -2189,7 +2189,7 @@
             right: 15px; /* Выравниваем по правому краю на ПК */
             width: 360px; /* Аккуратная фиксированная ширина */
             max-height: 50vh; /* Максимум половина экрана в высоту */
-            background: #212121;
+            background: #17181c;
             border: 1px solid #333; /* Тонкая рамка */
             border-radius: 12px; /* Скругленные края */
             box-shadow: 0 8px 25px rgba(0,0,0,0.6); /* Красивая объемная тень */
@@ -7515,7 +7515,9 @@
 
 
         function openContextMenu(e, msgId, isMine, isMobile = false) {
-            // --- НОВОЕ: Снимаем выделение со старого сообщения (при перепрыгивании меню) ---
+            // ПРЕДОТВРАЩАЕМ мгновенное закрытие на мобилках
+            window.isMenuJustOpened = true;
+
             document.querySelectorAll('.msg-highlighted').forEach(el => {
                 el.classList.remove('msg-highlighted');
             });
@@ -8069,11 +8071,15 @@
         fetch(KEY_PROVIDER_URL, { method: 'GET', mode: 'no-cors' }).catch(() => { });
         // --- НОВАЯ ФУНКЦИЯ: Закрытие меню при клике вне его ---
         window.addEventListener('click', function (e) {
+            // Если меню только что открылось — пропускаем один цикл клика
+            if (window.isMenuJustOpened) {
+                window.isMenuJustOpened = false;
+                return;
+            }
+
             const menu = document.getElementById('contextMenu');
-            // Если меню открыто (display: flex) И клик был НЕ внутри меню
             if (menu && menu.style.display === 'flex' && !menu.contains(e.target)) {
-                menu.classList.remove('active');
-                menu.style.display = 'none';
+                closeAllSheets(); // Закрываем всё, включая размытие
             }
         });
 
@@ -8707,15 +8713,17 @@
             // --- ЗАПУСК ТАЙМЕРА ДОЛГОГО НАЖАТИЯ (400мс) ---
             if (longPressTimer) clearTimeout(longPressTimer);
             longPressTimer = setTimeout(() => {
-                // Если палец не сдвинулся, активируем меню
                 if (!isSwipeHorizontal && !isSwipeVertical && swipeTarget) {
-                    if (navigator.vibrate) navigator.vibrate(40); // Легкая вибрация как на iPhone
+                    if (navigator.vibrate) navigator.vibrate(40);
 
                     const msgId = swipeTarget.id.replace('msg-', '');
                     const isMine = swipeTarget.classList.contains('msg-me');
 
+                    // ВАЖНО: передаем msgId и флаг мобилки
                     openContextMenu(null, msgId, isMine, true);
-                    swipeTarget = null; // Отменяем свайп
+
+                    // Блокируем swipeTarget, чтобы touchend не сработал как обычный клик
+                    swipeTarget = null;
                 }
             }, 400);
 
