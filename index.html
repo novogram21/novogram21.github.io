@@ -4362,7 +4362,8 @@
 
         // --- ЛОГИКА УДАЛЕНИЯ (ОБНОВЛЕННАЯ) ---
 
-        // 1. Открытие окна подтверждения
+        
+        // 1. Открытие окна подтверждения удаления
         function openDeleteSheet() {
             // 1. Закрываем контекстное меню
             const menu = document.getElementById('contextMenu');
@@ -4371,10 +4372,9 @@
                 setTimeout(() => { menu.style.display = 'none'; }, 200);
             }
 
-            // 2. Получаем имя собеседника из заголовка чата
+            // 2. Безопасное получение имени собеседника
             const chatTitleEl = document.getElementById('chatTitle');
-            // Извлекаем текст первого div-а (там имя)
-            const friendName = chatTitleEl ? chatTitleEl.querySelector('div').innerText : "собеседника";
+            let friendName = chatTitleEl ? (chatTitleEl.firstElementChild ? chatTitleEl.firstElementChild.innerText : chatTitleEl.innerText) : "собеседника";
 
             // 3. Подготавливаем модалку
             const friendNameSpan = document.getElementById('deleteFriendName');
@@ -5174,15 +5174,17 @@
             closeAllSheets();
         }
 
+        
         // --- ОТВЕТИТЬ ---
         function handleReply() {
             const msgEl = document.getElementById('msg-' + selectedMsgId);
             if (!msgEl) return closeAllSheets();
 
-            // Получаем имя того, кому отвечаем
-            // В твоем коде имя не хранится в сообщении, берем из контекста или заглушку
-            // Для простоты: если isMine - "Вы", если нет - имя собеседника из заголовка
-            const name = selectedMsgIsMine ? "Вы" : document.getElementById('chatTitle').firstElementChild.innerText;
+            // Безопасное получение имени собеседника
+            const chatTitleEl = document.getElementById('chatTitle');
+            let friendName = chatTitleEl ? (chatTitleEl.firstElementChild ? chatTitleEl.firstElementChild.innerText : chatTitleEl.innerText) : "Собеседник";
+
+            const name = selectedMsgIsMine ? "Вы" : friendName;
 
             // Получаем текст
             let text = "Вложение";
@@ -8143,7 +8145,11 @@
             if (textSpan) text = textSpan.innerText;
             else if (msgEl.querySelector('.chat-media-img')) text = "Фотография";
             else if (msgEl.querySelector('.chat-file-card')) text = "Файл";
-            const name = isMine ? "Вы" : document.getElementById('chatTitle').firstElementChild.innerText;
+
+            const chatTitleEl = document.getElementById('chatTitle');
+            let friendName = chatTitleEl ? (chatTitleEl.firstElementChild ? chatTitleEl.firstElementChild.innerText : chatTitleEl.innerText) : "Собеседник";
+
+            const name = isMine ? "Вы" : friendName;
             startReplyUI(msgId, name, text);
         }
         let scrollDateTimeout = null;
