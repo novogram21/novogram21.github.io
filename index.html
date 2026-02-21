@@ -2764,11 +2764,22 @@
             padding: 8px 15px;
             display: flex;
             align-items: center;
-            border-left: 3px solid #736AF0; /* Фиолетовая полоска слева */
+            border-left: 3px solid #736AF0;
+            /* НОВОЕ: Плавный выезд и прозрачность */
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.2, 0.85, 0.3, 1);
+            z-index: -1; /* Панель прячется ПОД основным полем ввода */
         }
 
             .reply-bar.editing {
-                border-left: 3px solid #007bff; /* Синяя для редактирования */
+                border-left: 3px solid #007bff;
+            }
+
+            /* НОВОЕ: Переопределяем скрытие, чтобы работала анимация выезда */
+            .reply-bar.hidden {
+                display: flex !important;
+                opacity: 0;
+                transform: translateY(100%); /* Прячем её вниз на всю высоту */
+                pointer-events: none; /* Запрещаем случайные нажатия */
             }
 
         .reply-content {
@@ -4807,6 +4818,16 @@
                             // На ПК оставляем клик правой кнопкой мыши
                             div.oncontextmenu = (e) => {
                                 e.preventDefault(); e.stopPropagation();
+
+                                // --- НОВОЕ: Закрытие при повторном клике ---
+                                const menu = document.getElementById('contextMenu');
+                                if (menu && menu.classList.contains('active')) {
+                                    if (selectedMsgId === msgId) {
+                                        closeAllSheets(); // Закрываем
+                                        return;
+                                    }
+                                }
+
                                 openContextMenu(e, msgId, m.from === currentUser.uid);
                             };
                             // Одиночный клик для мобилок удален, теперь работает только долгое зажатие!
@@ -6902,6 +6923,11 @@
 
 
         function openContextMenu(e, msgId, isMine, isMobile = false) {
+            // --- НОВОЕ: Снимаем выделение со старого сообщения (при перепрыгивании меню) ---
+            document.querySelectorAll('.msg-highlighted').forEach(el => {
+                el.classList.remove('msg-highlighted');
+            });
+
             selectedMsgId = msgId;
             selectedMsgIsMine = isMine;
 
@@ -8217,8 +8243,6 @@
         // Правый клик (Вызов меню)
         function handleDesktopSideRightClick(e) {
             if (window.innerWidth <= 768) return;
-
-            // Игнорируем, если кликнули прямо по самому сообщению (у него есть свой обработчик)
             if (e.target.closest('.msg')) return;
 
             const msgEl = getMsgByYCoordinate(e.clientY);
@@ -8226,6 +8250,15 @@
                 e.preventDefault();
                 const msgId = msgEl.id.replace('msg-', '');
                 const isMine = msgEl.classList.contains('msg-me');
+
+                // --- НОВОЕ: Закрытие при повторном клике ---
+                const menu = document.getElementById('contextMenu');
+                if (menu && menu.classList.contains('active')) {
+                    if (selectedMsgId === msgId) {
+                        closeAllSheets(); // Если кликнули по тому же сообщению - закрываем
+                        return;
+                    }
+                }
 
                 openContextMenu(e, msgId, isMine);
             }
