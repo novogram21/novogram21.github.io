@@ -1728,8 +1728,10 @@
         /* --- ПЛАВАЮЩАЯ КНОПКА "ВНИЗ" --- */
         .scroll-bottom-btn {
             position: absolute;
-            bottom: 70px; /* Отступ от поля ввода */
-            right: 15px;
+            bottom: 85px; /* Поднимаем чуть выше, чтобы не перекрывать поле ввода */
+            /* НОВОЕ: Умное позиционирование. 
+               На телефоне отступ 10px, на ПК кнопка не улетает, а держится внутри 900px чата ровно над микрофоном */
+            right: max(10px, calc(50% - 440px));
             width: 44px;
             height: 44px;
             background: #212121;
@@ -1741,7 +1743,6 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
             z-index: 100;
-            /* Изначально скрыта и уменьшена */
             opacity: 0;
             transform: scale(0.5) translateY(20px);
             pointer-events: none;
@@ -1750,7 +1751,7 @@
 
             .scroll-bottom-btn.visible {
                 opacity: 1;
-                transform: scale(1) translateY(0); /* Плавно выпрыгивает */
+                transform: scale(1) translateY(0);
                 pointer-events: auto;
             }
 
