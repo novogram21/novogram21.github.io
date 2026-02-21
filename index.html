@@ -157,38 +157,49 @@
 
         /* Сайдбар */
         .sidebar {
-            width: 320px;
-            background: #1f1f1f;
-            border-right: 1px solid #333;
+            width: 340px; /* Чуть шире для "воздуха" */
+            background: #0a0c10; /* Очень глубокий темный цвет, OLED-black */
+            border-right: 1px solid rgba(255, 255, 255, 0.03); /* Еле заметная, стильная линия */
             display: flex;
             flex-direction: column;
             z-index: 10;
         }
 
         .profile-bar {
-            padding: 12px 15px;
+            padding: 16px 15px 10px 15px !important;
+            background: transparent !important;
             display: flex;
             align-items: center;
             gap: 12px;
-            background: #252525; /* Или ваш цвет фона */
         }
 
 
         /* Кнопка в сайдбаре */
         #profileBtn {
-            width: 44px;
-            height: 44px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
-            background: #2d2d2d;
-            border: 1px solid #444;
+            background: #1c1c1e !important;
+            border: 1px solid rgba(255,255,255,0.05) !important;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            overflow: hidden; /* Это обрежет всё, что выходит за границы круга */
-            padding: 0; /* Убираем внутренние отступы кнопки */
+            overflow: hidden;
+            padding: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); /* Объемная тень */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+
+            #profileBtn:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+            }
+
+            #profileBtn:active {
+                transform: scale(0.92);
+            }
 
 
         /* Контейнер внутри кнопки */
@@ -212,56 +223,59 @@
 
         #searchInput {
             width: 100%;
-            height: 44px;
-            padding: 0 15px;
-            border-radius: 22px; /* Вот это делает его круглым */
-            border: 1px solid #333;
-            background: #181818;
-            color: white;
-            font-size: 14px;
+            height: 46px !important;
+            padding: 0 20px !important;
+            border-radius: 23px !important;
+            border: 1px solid rgba(255,255,255,0.04) !important;
+            background: #15171b !important;
+            color: white !important;
+            font-size: 14px !important;
             outline: none;
-            transition: 0.2s;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
         }
 
             #searchInput:focus {
-                border-color: #007bff; /* Синяя обводка при нажатии */
+                background: #1c1f26 !important;
+                border-color: rgba(115, 106, 240, 0.4) !important;
+                box-shadow: 0 0 0 3px rgba(115, 106, 240, 0.15), inset 0 2px 5px rgba(0,0,0,0.1) !important;
             }
 
         .tabs {
             display: flex;
-            background: #252525;
+            background: transparent !important;
+            padding: 5px 15px 12px 15px;
+            gap: 10px;
         }
 
         .tab {
             flex: 1;
-            padding: 12px;
+            padding: 9px 0;
             text-align: center;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            color: #888;
-            font-size: 14px;
+            border-bottom: none !important; /* Убираем старое подчеркивание */
+            border-radius: 12px; /* Скругляем */
+            background: #15171b; /* Цвет неактивной кнопки */
+            color: #8e8e93;
+            font-size: 13px;
+            font-weight: 600;
             position: relative;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid rgba(255,255,255,0.02);
         }
 
             .tab.active {
-                border-bottom: 2px solid #007bff;
-                color: white;
+                background: rgba(115, 106, 240, 0.12); /* Мягкий фиолетовый фон */
+                color: #736AF0 !important;
+                border-color: rgba(115, 106, 240, 0.2); /* Тонкая фиолетовая окантовка */
+                box-shadow: 0 4px 10px rgba(115, 106, 240, 0.1);
             }
 
         .tab-badge {
-            background: #ff4444;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 10px;
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            /* Плавность */
-            display: block !important;
-            opacity: 1;
-            transform: scale(1);
-            transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            top: -4px !important;
+            right: -2px !important;
+            box-shadow: 0 2px 6px rgba(255, 68, 68, 0.4);
+            border: 2px solid #0a0c10; /* Эффект прорези */
         }
 
             .tab-badge.hidden {
@@ -273,8 +287,17 @@
         .list-container {
             flex: 1;
             overflow-y: auto;
+            padding: 0 10px 10px 10px; /* Отступы, чтобы карточки не прилипали к краям */
         }
 
+            .list-container::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .list-container::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,0.1);
+                border-radius: 10px;
+            }
 
 
 
@@ -282,42 +305,54 @@
 
         /* Элемент списка чатов */
         .user-item {
-            padding: 10px 15px;
-            border-bottom: 1px solid #333;
+            padding: 10px 12px;
+            border-bottom: none !important; /* Убираем уродливые полосы */
             display: grid;
-            grid-template-columns: 55px 1fr auto; /* Аватар | Имя+Текст | Мета (время, галочки, счетчик) */
+            grid-template-columns: 52px 1fr auto;
             grid-template-rows: auto auto;
-            column-gap: 10px;
+            column-gap: 12px;
             align-items: center;
             cursor: pointer;
-            transition: 0.2s;
             min-height: 72px;
+            border-radius: 16px; /* Современное сильное скругление */
+            margin-bottom: 2px; /* Воздух между диалогами */
+            background: transparent;
+            transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s;
         }
 
             .user-item:hover {
-                background: #2a2a2a;
+                background: rgba(255, 255, 255, 0.04); /* Мягкое осветление при наведении */
+                transform: scale(0.99); /* Легкое вдавливание как в iOS */
+            }
+
+            .user-item:active {
+                background: rgba(255, 255, 255, 0.07);
+                transform: scale(0.97);
             }
 
         .user-item-avatar {
             grid-column: 1;
             grid-row: 1 / span 2;
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             object-fit: cover;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3); /* Тень для объема аватарок */
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .user-name {
             grid-column: 2;
             grid-row: 1;
             font-weight: 600;
-            font-size: 16px;
-            color: white;
-            margin-bottom: 2px;
+            font-size: 15.5px;
+            color: #ffffff;
+            margin-bottom: 3px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             align-self: end;
+            letter-spacing: -0.2px; /* Делает шрифт более собранным и дорогим */
         }
 
         .last-msg-row {
@@ -330,8 +365,9 @@
         }
 
         .last-msg {
-            font-size: 14px;
-            color: #888;
+            font-size: 13.5px;
+            color: #8e8e93; /* Классический серый текст из Apple-дизайна */
+            font-weight: 400;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -339,23 +375,21 @@
         }
 
 
-
-
-        /* Правая колонка: Время (сверху) и Галочки/Счетчик (снизу) */
         .meta-column {
             grid-column: 3;
             grid-row: 1 / span 2;
             display: flex;
             flex-direction: column;
-            align-items: flex-end; /* Все прижато вправо */
+            align-items: flex-end;
             justify-content: center;
-            gap: 5px;
-            min-width: 65px;
+            gap: 6px;
+            min-width: 55px;
         }
 
         .last-msg-date {
-            font-size: 13px;
-            color: #888;
+            font-size: 12px;
+            color: #8e8e93;
+            font-weight: 500;
         }
 
 
@@ -6372,18 +6406,32 @@
         const sendBtn = document.getElementById('sendBtn');
         const voiceBtn = document.querySelector('.voice-btn');
 
-        msgInput.addEventListener('input', function () {
-            handleTyping();
-            if (this.value.trim().length > 0) {
-                sendBtn.classList.remove('hidden'); // <-- ИСПРАВЛЕНО (было hidden-btn)
-                sendBtn.style.display = 'flex';     // Теперь это сработает
-                voiceBtn.style.display = 'none';
-            } else {
-                sendBtn.classList.add('hidden');    // <-- ИСПРАВЛЕНО
-                sendBtn.style.display = 'none';
-                voiceBtn.style.display = 'flex';
+        msgInput.addEventListener('focus', () => {
+            if (currentMsgList) {
+                // Задержка 300мс нужна, чтобы iOS/Android физически успели выдвинуть клавиатуру
+                setTimeout(() => {
+                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                }, 300);
             }
         });
+
+        // 2. Самый надежный современный метод: отслеживаем изменение видимой области (VisualViewport API)
+        // Срабатывает в ту же миллисекунду, когда клавиатура меняет размер экрана
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                // Скроллим только если мы в чате и поле ввода активно
+                if (currentMsgList && document.activeElement === msgInput) {
+                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                }
+            });
+        } else {
+            // Запасной вариант для старых браузеров
+            window.addEventListener('resize', () => {
+                if (currentMsgList && document.activeElement === msgInput) {
+                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                }
+            });
+        }
 
 
        
