@@ -3256,7 +3256,7 @@
                 </div>
             </div>
             <div id="chatSearchDropdown" class="chat-search-dropdown hidden"></div>
-            <div id="msgList" class="messages"></div>
+            <div id="chatViewsContainer" style="flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden;"></div>
             <div class="input-bar">
 
                 <div id="replyBar" class="reply-bar hidden" style="position: absolute; bottom: 100%; left:0; right:0; border-top-left-radius: 12px; border-top-right-radius: 12px;">
@@ -4472,9 +4472,7 @@
             activeChatElement.classList.remove('chat-slide-animate');
             void activeChatElement.offsetWidth; // Сбрасываем браузерный кэш стилей (Reflow), чтобы анимация сработала заново
             activeChatElement.classList.add('chat-slide-animate');
-            if (currentFriendId !== fid) {
-                document.getElementById('msgList').innerHTML = '';
-            }
+            
             // --- Умная загрузка ключей ---
             const titleEl = document.getElementById('chatTitle');
 
@@ -4643,24 +4641,32 @@
         // --- ИСПРАВЛЕНИЕ 2: Умная загрузка без скачков ---
         // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ (ТЕПЕРЬ УДАЛЯЕТ СООБЩЕНИЯ) ---
         function loadMessages() {
-            // 1. Отключаем старый слушатель
             if (window.msgUnsub) {
                 window.msgUnsub();
                 window.msgUnsub = null;
             }
 
-            const list = document.getElementById('msgList');
-            list.innerHTML = '';
+            // Мгновенно достаем или создаем слой чата
+            const { list, isNew } = getOrCreateMsgList(currentChatId);
 
-            // <--- !!! ИЗМЕНЕНИЕ 1: Скрываем список перед загрузкой (добавляем класс)
-            list.classList.add('is-loading');
-            // ----------------------------------------------------------------------
+            if (isNew) {
+                list.classList.add('is-loading'); // Первый заход
+                // --- ИСПРАВЛЕНО: Жесткое центрирование, игнорируя отступы списка ---
+                // Мы используем absolute позиционирование и transform для точного центра.
+                list.innerHTML = '<div class="tg-spinner-container" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;"><div class="tg-spinner"></div></div>';
+            } else {
+                list.scrollTop = list.scrollHeight; // Повторный заход - чат появляется МГНОВЕННО
+            }
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
             window.msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
                 .orderBy('ts', 'asc')
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
+
+                    // --- НОВОЕ: Удаляем крутилку, как только Firebase прислал ответ ---
+                    const spinner = list.querySelector('.tg-spinner-container');
+                    if (spinner) spinner.remove();
 
                     const batch = db.batch();
                     let needCommit = false;
@@ -4795,7 +4801,7 @@
                 return;
             }
 
-            const list = document.getElementById('msgList');
+            const list = currentMsgList;
             // Запоминаем позицию скролла перед вставкой
             const wasAtBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 400;
 
@@ -4895,7 +4901,7 @@
             // Если ВНУТРИ этого сообщения УЖЕ есть блок перевода - стоп!
             if (msgElement.querySelector('.translated-block')) return;
 
-            const list = document.getElementById('msgList');
+            const list = currentMsgList;
             // Проверяем, был ли юзер внизу ПЕРЕД тем как начать перевод
             const isNearBottom = list.scrollHeight - list.scrollTop - list.clientHeight <= 300;
 
@@ -4936,32 +4942,26 @@
                 window.msgUnsub = null;
             }
 
-            // Очищаем предыдущий таймер, чтобы он не сработал случайно
             if (closeChatTimeout) {
                 clearTimeout(closeChatTimeout);
                 closeChatTimeout = null;
             }
 
-            // 1. Сброс UI 
             if (window.innerWidth <= 768) {
                 document.getElementById('mainChatArea').classList.remove('active');
                 document.getElementById('mainSidebar').classList.remove('hidden-mobile');
 
-                // Записываем таймер в переменную
                 closeChatTimeout = setTimeout(() => {
                     document.getElementById('activeChat').classList.add('hidden');
                     document.getElementById('noChat').classList.remove('hidden');
-                    document.getElementById('msgList').innerHTML = '';
                 }, 350);
             } else {
                 document.getElementById('mainSidebar').classList.remove('hidden-mobile');
                 document.getElementById('mainChatArea').classList.remove('active');
                 document.getElementById('activeChat').classList.add('hidden');
                 document.getElementById('noChat').classList.remove('hidden');
-                document.getElementById('msgList').innerHTML = '';
             }
 
-            // 2. Сброс моего статуса "печатает" в базе
             if (currentChatId && currentUser) {
                 db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
                     isTyping: false
@@ -6573,7 +6573,7 @@
         
         // --- 1. Функция для показа "временного" сообщения (превью) ---
         function showTempMessage(file) {
-            const list = document.getElementById('msgList');
+            const list = currentMsgList;
             const tempId = 'temp-' + Date.now();
             const div = document.createElement('div');
             div.id = tempId;
@@ -7113,7 +7113,7 @@
 
         // 2. Функция, которая расставляет плашки-разделители между сообщениями
         function updateDateSeparators() {
-            const list = document.getElementById('msgList');
+            const list = currentMsgList;
             const oldSeparators = list.querySelectorAll('.chat-date-separator');
             oldSeparators.forEach(el => el.remove());
 
@@ -7136,57 +7136,18 @@
             });
         }
 
-        // 3. Логика плавающей даты при скролле
-        let scrollDateTimeout;
+        
+        // 3. Логика плавающей даты (Скролл теперь обрабатывается в handleChatScroll)
         document.addEventListener('DOMContentLoaded', () => {
-            const list = document.getElementById('msgList');
             const floatingDate = document.getElementById('floatingDate');
             const chatDatePicker = document.getElementById('chatDatePicker');
 
-            if (list && floatingDate) {
-                // ВЕШАЕМ КЛИК НА ПЛАВАЮЩУЮ ДАТУ
+            if (floatingDate) {
                 floatingDate.onclick = () => handleDateClick(floatingDate.innerText);
+            }
 
-                // ВЕШАЕМ ОБРАБОТЧИК НА КАЛЕНДАРЬ
-                if (chatDatePicker) {
-                    chatDatePicker.addEventListener('change', handleCalendarChange);
-                }
-
-                let scrollThrottleTimer = null; // Таймер для ограничения вызовов
-
-                list.addEventListener('scroll', () => {
-                    // Скрываем плавающую дату через секунду после остановки скролла
-                    clearTimeout(scrollDateTimeout);
-                    scrollDateTimeout = setTimeout(() => {
-                        floatingDate.classList.remove('visible');
-                    }, 1000);
-
-                    // Если таймер уже запущен, выходим (ограничиваем нагрузку)
-                    if (scrollThrottleTimer) return;
-
-                    // Запускаем проверку даты не чаще, чем раз в 150мс
-                    scrollThrottleTimer = setTimeout(() => {
-                        const msgs = list.querySelectorAll('.msg');
-                        let topMsg = null;
-
-                        for (let i = 0; i < msgs.length; i++) {
-                            if (msgs[i].offsetTop + msgs[i].offsetHeight > list.scrollTop + 20) {
-                                topMsg = msgs[i];
-                                break;
-                            }
-                        }
-
-                        if (topMsg) {
-                            const dateStr = topMsg.getAttribute('data-datestr');
-                            if (dateStr && floatingDate.innerText !== dateStr) {
-                                floatingDate.innerText = dateStr;
-                            }
-                            floatingDate.classList.add('visible');
-                        }
-
-                        scrollThrottleTimer = null; // Освобождаем таймер
-                    }, 150);
-                });
+            if (chatDatePicker) {
+                chatDatePicker.addEventListener('change', handleCalendarChange);
             }
         });
 
@@ -7546,7 +7507,7 @@
             if (!query.trim()) { dropdown.classList.add('hidden'); return; }
 
             const lowerQuery = query.toLowerCase();
-            const msgs = document.querySelectorAll('#msgList .msg');
+            const msgs = currentMsgList.querySelectorAll('.msg');
 
             // Данные для отображения
             const myData = JSON.parse(localStorage.getItem('user_profile_cache') || '{}');
@@ -7887,6 +7848,70 @@
             return msgDate.getDate().toString().padStart(2, '0') + '.' +
                 (msgDate.getMonth() + 1).toString().padStart(2, '0') + '.' +
                 msgDate.getFullYear().toString().slice(-2);
+        }
+
+
+        let currentMsgList = null;
+
+        function getOrCreateMsgList(chatId) {
+            const container = document.getElementById('chatViewsContainer');
+
+            // Скрываем все открытые чаты
+            const allLists = container.querySelectorAll('.messages');
+            allLists.forEach(el => el.style.display = 'none');
+
+            // Ищем контейнер именно для этого диалога
+            let list = document.getElementById('msgList_' + chatId);
+            let isNew = false;
+
+            if (!list) {
+                // Если зашли в первый раз - создаем слой
+                list = document.createElement('div');
+                list.id = 'msgList_' + chatId;
+                list.className = 'messages';
+                list.addEventListener('scroll', handleChatScroll); // Вешаем скролл сразу
+                container.appendChild(list);
+                isNew = true;
+            }
+
+            // Показываем текущий
+            list.style.display = 'flex';
+            currentMsgList = list;
+
+            return { list, isNew };
+        }
+
+        let scrollThrottleTimer = null;
+        let scrollDateTimeout = null;
+
+        function handleChatScroll(e) {
+            const list = e.target;
+            const floatingDate = document.getElementById('floatingDate');
+            if (!floatingDate) return;
+
+            clearTimeout(scrollDateTimeout);
+            scrollDateTimeout = setTimeout(() => {
+                floatingDate.classList.remove('visible');
+            }, 1000);
+
+            if (scrollThrottleTimer) return;
+
+            scrollThrottleTimer = setTimeout(() => {
+                const listRect = list.getBoundingClientRect();
+                const topEl = document.elementFromPoint(listRect.left + listRect.width / 2, listRect.top + 30);
+
+                if (topEl) {
+                    const target = topEl.closest('.msg, .chat-date-separator');
+                    if (target) {
+                        const dateStr = target.getAttribute('data-datestr') || target.innerText;
+                        if (dateStr && floatingDate.innerText !== dateStr) {
+                            floatingDate.innerText = dateStr;
+                        }
+                        floatingDate.classList.add('visible');
+                    }
+                }
+                scrollThrottleTimer = null;
+            }, 100);
         }
 
         // --- УМНАЯ ФУНКЦИЯ ДЛЯ ВВОДА (С РАЗДЕЛЕНИЕМ ПК / ТЕЛЕФОН) ---
