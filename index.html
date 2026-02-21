@@ -3129,9 +3129,9 @@
 
 
     <!-- ШТО� К�? -->
-    <div id="overlaySheet" class="overlay-sheet" onclick="closeAllSheets()"></div>
+    <div id="overlaySheet" class="overlay-sheet" onclick="closeAllSheets()" oncontextmenu="event.preventDefault(); closeAllSheets();"></div>
     <!-- Шторка сообщения -->
-    <div id="contextMenu" class="context-menu">
+    <div id="contextMenu" class="context-menu" oncontextmenu="event.preventDefault();">
         <div class="reactions-bar">
             <span>🔥</span><span>👍</span><span>❤️</span><span>🥰</span><span>👏</span><span>💩</span>
         </div>
