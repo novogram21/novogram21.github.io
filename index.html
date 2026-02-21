@@ -1080,34 +1080,83 @@
             .sidebar {
                 width: 100%;
                 border-right: none;
+                transition: transform 0.35s ease;
             }
 
+                /* Сайдбар плавно отъезжает влево при открытии чата */
+                .sidebar.hidden-mobile {
+                    transform: translateX(-30%);
+                    pointer-events: none;
+                }
+
             .chat-area {
-                display: flex !important; /* Всегда flex, чтобы работала анимация */
+                display: flex !important;
                 width: 100%;
-                position: fixed; /* fixed лучше для выезжающих панелей */
+                position: fixed;
                 top: 0;
                 left: 0;
                 height: 100%;
-                z-index: 20;
-                background: #0a0c10; /* Плотный фон, чтобы перекрыть список контактов под ним */
-                /* Анимация сдвига */
+                z-index: 100; /* Поднимаем выше сайдбара */
+                /* --- САМОЕ ГЛАВНОЕ: ДЕЛАЕМ ФОН 100% НЕПРОЗРАЧНЫМ --- */
+                background-color: #0a0c10 !important;
                 transform: translateX(100%);
                 visibility: hidden;
                 transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.35s;
             }
 
-                .chat-area.active {
-                    transform: translateX(0); /* Выезжает на экран */
-                    visibility: visible;
+                /* Копируем ваши красивые эмодзи-обои прямо на непрозрачный фон чата */
+                .chat-area::before {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    opacity: 0.7;
+                    pointer-events: none;
+                    z-index: -1;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
+                    background-size: 400px 400px;
                 }
 
-            /* УБИРАЕМ .sidebar.hidden-mobile { display: none; } 
-       Мы больше не прячем сайдбар резко, чат просто выезжает поверх него! */
+                /* Легкое затемнение, чтобы текст читался лучше */
+                .chat-area::after {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: radial-gradient(circle at 50% 50%, rgba(10, 12, 16, 0.3) 0%, rgba(10, 12, 16, 0.7) 100%);
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+                .chat-area.active {
+                    transform: translateX(0);
+                    visibility: visible;
+                }
 
             .back-btn {
                 display: block;
             }
+        }
+
+        /* Анимация плавного появления чата на ПК */
+        @keyframes chatContentSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .chat-slide-animate {
+            animation: chatContentSlide 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
         /* --- Добавьте это ВНЕ медиа-запроса (для красивой анимации на ПК) --- */
@@ -4825,19 +4874,20 @@
             }
         }
         function performCloseUI() {
-            // 1. Сброс UI
-            // 1. Сброс UI
+            // 1. Сброс UI (с задержкой для мобильной анимации)
             if (window.innerWidth <= 768) {
-                // Убираем класс, чтобы чат плавно уехал вправо
-                document.getElementById('mainChatArea').classList.remove('active');
+                document.getElementById('mainChatArea').classList.remove('active'); // Чат уезжает вправо
+                document.getElementById('mainSidebar').classList.remove('hidden-mobile'); // Список контактов плавно появляется
 
-                // Ждём 350мс (пока закончится анимация CSS), и только потом скрываем внутренности
+                // Ждём 350мс пока завершится анимация, и только потом скрываем содержимое
                 setTimeout(() => {
                     document.getElementById('activeChat').classList.add('hidden');
                     document.getElementById('noChat').classList.remove('hidden');
                 }, 350);
             } else {
                 // На ПК переключаем мгновенно
+                document.getElementById('mainSidebar').classList.remove('hidden-mobile');
+                document.getElementById('mainChatArea').classList.remove('active');
                 document.getElementById('activeChat').classList.add('hidden');
                 document.getElementById('noChat').classList.remove('hidden');
             }
@@ -6297,12 +6347,22 @@
                     // -----------------------------------------------------------------
 
                     if (window.innerWidth <= 768) {
+                        // Плавно прячем список контактов
                         document.getElementById('mainSidebar').classList.add('hidden-mobile');
+                        // Плавно выдвигаем чат
                         document.getElementById('mainChatArea').classList.add('active');
                     }
 
                     document.getElementById('noChat').classList.add('hidden');
-                    document.getElementById('activeChat').classList.remove('hidden');
+                    const activeChatElement = document.getElementById('activeChat');
+                    activeChatElement.classList.remove('hidden');
+
+                    // Красивая анимация для ПК
+                    if (window.innerWidth > 768) {
+                        activeChatElement.classList.remove('chat-slide-animate');
+                        void activeChatElement.offsetWidth; // Сброс кэша анимации
+                        activeChatElement.classList.add('chat-slide-animate');
+                    }
 
                     // Устанавливаем только имя (Ник в ТГ не пишется в шапке)
                     document.getElementById('chatTitle').innerText = name;
