@@ -4658,13 +4658,55 @@
         }
         function sortFriendsList() {
             const list = document.getElementById('friendsList');
-            const items = Array.from(list.children);
+            // Берем только элементы чатов (игнорируем крутилку загрузки, если она там есть)
+            const items = Array.from(list.querySelectorAll('.user-item'));
+
+            // 1. ЗАПОМИНАЕМ старые позиции элементов (до сортировки)
+            const oldPositions = new Map();
+            items.forEach(item => {
+                oldPositions.set(item.id, item.getBoundingClientRect().top);
+            });
+
+            // 2. СОРТИРУЕМ элементы по времени
             items.sort((a, b) => {
                 const timeA = parseInt(a.getAttribute('data-time') || 0);
                 const timeB = parseInt(b.getAttribute('data-time') || 0);
                 return timeB - timeA;
             });
+
+            // Мгновенно перемещаем их в HTML (глаз это не заметит)
             items.forEach(item => list.appendChild(item));
+
+            // 3. АНИМИРУЕМ переход (FLIP техника)
+            items.forEach(item => {
+                const oldTop = oldPositions.get(item.id);
+                // Если элемент уже был в списке (не новый)
+                if (oldTop !== undefined) {
+                    const newTop = item.getBoundingClientRect().top;
+                    const delta = oldTop - newTop;
+
+                    // Если позиция изменилась
+                    if (delta !== 0) {
+                        // "Телепортируем" элемент визуально обратно на его старое место
+                        item.style.transform = `translateY(${delta}px)`;
+                        item.style.transition = 'none';
+
+                        // Ждем один кадр браузера и запускаем плавный спуск на новое место
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                item.style.transform = '';
+                                // Плавная кривая движения (как в iOS/Telegram)
+                                item.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+
+                                // Убираем анимацию после ее завершения, чтобы не мешала hover-эффектам
+                                setTimeout(() => {
+                                    item.style.transition = '';
+                                }, 400);
+                            });
+                        });
+                    }
+                }
+            });
         }
         function updateTotalFriendsBadge() {
             const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
@@ -8264,16 +8306,22 @@
             }
         }
 
-        // ДВОЙНОЙ левый клик по пустому месту (Быстрый ответ как в Telegram)
+        
+        // ДВОЙНОЙ левый клик (Быстрый ответ: работает и по фону, и по самому сообщению)
         function handleDesktopSideDoubleClick(e) {
             if (window.innerWidth <= 768) return;
 
-            // Игнорируем двойной клик по самому тексту (чтобы вы могли спокойно выделять текст мышкой)
-            if (e.target.closest('.msg')) return;
+            // Ищем сообщение: либо мы кликнули прямо по нему, либо по фону рядом
+            const msgEl = e.target.closest('.msg') || getMsgByYCoordinate(e.clientY);
 
-            const msgEl = getMsgByYCoordinate(e.clientY);
             if (msgEl) {
                 e.preventDefault();
+
+                // Очищаем синее выделение текста, которое браузер делает автоматически при двойном клике
+                if (window.getSelection) {
+                    window.getSelection().removeAllRanges();
+                }
+
                 triggerSwipeReply(msgEl);
             }
         }
