@@ -5022,6 +5022,8 @@
         let closeChatTimeout = null;
 
         function performCloseUI() {
+            closeAllSheets(); // <--- НОВОЕ: Принудительно закрываем все меню, блюр и шторки при выходе!
+
             if (window.msgUnsub) {
                 window.msgUnsub();
                 window.msgUnsub = null;
