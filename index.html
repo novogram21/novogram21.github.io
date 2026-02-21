@@ -1725,6 +1725,49 @@
         }
 
 
+        /* --- ПЛАВАЮЩАЯ КНОПКА "ВНИЗ" --- */
+        .scroll-bottom-btn {
+            position: absolute;
+            bottom: 70px; /* Отступ от поля ввода */
+            right: 15px;
+            width: 44px;
+            height: 44px;
+            background: #212121;
+            border-radius: 50%;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            z-index: 100;
+            /* Изначально скрыта и уменьшена */
+            opacity: 0;
+            transform: scale(0.5) translateY(20px);
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+            .scroll-bottom-btn.visible {
+                opacity: 1;
+                transform: scale(1) translateY(0); /* Плавно выпрыгивает */
+                pointer-events: auto;
+            }
+
+            .scroll-bottom-btn:hover {
+                background: #2a2a2a;
+            }
+
+            .scroll-bottom-btn:active {
+                transform: scale(0.9) !important;
+            }
+
+            .scroll-bottom-btn svg {
+                fill: #aaa;
+                width: 26px;
+                height: 26px;
+            }
+
 
 
         /* Крутилка загрузки */
@@ -3496,6 +3539,11 @@
             </div>
             <div id="chatSearchDropdown" class="chat-search-dropdown hidden"></div>
             <div id="chatViewsContainer" style="flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden;"></div>
+            <div id="scrollToBottomBtn" class="scroll-bottom-btn" onclick="scrollToBottom()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                </svg>
+            </div>
             <div class="input-bar">
 
                 <div id="replyBar" class="reply-bar hidden" style="position: absolute; bottom: 100%; left:0; right:0; border-top-left-radius: 12px; border-top-right-radius: 12px;">
@@ -5159,6 +5207,7 @@
 
         function performCloseUI() {
             closeAllSheets(); // <--- НОВОЕ: Принудительно закрываем все меню, блюр и шторки при выходе!
+            document.getElementById('scrollToBottomBtn')?.classList.remove('visible');
 
             if (window.msgUnsub) {
                 window.msgUnsub();
@@ -8432,9 +8481,23 @@
 
 
         let scrollDateTimeout = null;
+        let scrollThrottleTimer = null; // Убедитесь, что эта переменная есть
 
         function handleChatScroll(e) {
             const list = e.target;
+
+            // --- НОВОЕ: Логика кнопки "Вниз" ---
+            const scrollBtn = document.getElementById('scrollToBottomBtn');
+            if (scrollBtn) {
+                // Если мы поднялись выше чем на 200px от конца - показываем кнопку
+                if (list.scrollHeight - list.scrollTop - list.clientHeight > 200) {
+                    scrollBtn.classList.add('visible');
+                } else {
+                    scrollBtn.classList.remove('visible');
+                }
+            }
+            // -----------------------------------
+
             const floatingDate = document.getElementById('floatingDate');
             if (!floatingDate) return;
 
@@ -8461,6 +8524,17 @@
                 }
                 scrollThrottleTimer = null;
             }, 100);
+        }
+
+
+        function scrollToBottom() {
+            if (currentMsgList) {
+                // Мягко скроллим с запасом в самый низ
+                currentMsgList.scrollTo({
+                    top: currentMsgList.scrollHeight + 1000,
+                    behavior: 'smooth'
+                });
+            }
         }
 
         // --- УМНАЯ ФУНКЦИЯ ДЛЯ ВВОДА (С РАЗДЕЛЕНИЕМ ПК / ТЕЛЕФОН) ---
