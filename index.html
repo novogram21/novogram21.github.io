@@ -4390,7 +4390,10 @@
         // 2. Закрытие окна (кнопка Отмена)
         function closeDeleteModal() {
             const modal = document.getElementById('deleteModalOverlay');
-            modal.style.display = 'none';
+            if (modal) modal.style.display = 'none';
+
+            // --- НОВОЕ: Принудительно снимаем размытие фона и выделение ---
+            closeAllSheets();
         }
 
         // 3. Выполнение удаления (кнопка Удалить)
