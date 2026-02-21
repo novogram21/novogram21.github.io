@@ -68,7 +68,7 @@
             user-select: text !important;
         }
 
-        
+
 
 
         body {
@@ -82,8 +82,7 @@
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0; /* Растягиваем до низа. Когда клава выйдет, bottom поднимется */
-            
+            height: 100dvh;
             width: 100%;
             /* ----------------------- */
 
@@ -158,16 +157,16 @@
 
 
 
-        /* Сайдбар */
         .sidebar {
-            
             width: 340px;
-            background: #17181c; /* Мягкий матовый темно-серый вместо глухого черного */
+            background: #17181c;
             border-right: 1px solid rgba(255, 255, 255, 0.04);
             display: flex;
             flex-direction: column;
             z-index: 10;
+            height: 100%; /* Фон сайдбара физически уйдет в самый низ */
         }
+
 
         .profile-bar {
             padding: calc(env(safe-area-inset-top) + 16px) 15px 10px 15px !important;
@@ -293,6 +292,7 @@
         .list-container {
             flex: 1;
             overflow-y: auto;
+            /* Внутренний отступ, чтобы список чатов не залезал за home indicator */
             padding: 0 10px calc(10px + env(safe-area-inset-bottom)) 10px;
         }
 
