@@ -545,9 +545,18 @@
             overflow-x: hidden !important; /* Важно, чтобы при свайпе не появлялся ползунок */
         }
 
+        .msg-deleting {
+            opacity: 0 !important;
+            transform: scale(0.8) !important;
+            /* Переопределяем анимацию, чтобы схлопывалась высота и отступы */
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+
         .msg {
             transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
+
+        
 
             .msg.swiping {
                 transition: none !important; /* Отключаем плавность, пока палец двигает сообщение */
@@ -4397,36 +4406,60 @@
         }
 
         // 3. Выполнение удаления (кнопка Удалить)
+        function animateMessageRemoval(el) {
+            if (!el || el.classList.contains('msg-deleting')) return;
+
+            el.classList.remove('msg-highlighted'); // Убираем эффект долгого нажатия
+
+            // Фиксируем текущие размеры в пикселях для плавной анимации
+            el.style.height = el.offsetHeight + 'px';
+            el.style.overflow = 'hidden';
+
+            // Форсируем перерисовку, чтобы браузер запомнил высоту
+            void el.offsetHeight;
+
+            // Плавно сворачиваем в 0
+            el.classList.add('msg-deleting');
+            el.style.height = '0px';
+            el.style.paddingTop = '0px';
+            el.style.paddingBottom = '0px';
+            el.style.marginTop = '0px';
+            el.style.marginBottom = '0px';
+            el.style.border = 'none';
+
+            // Через 300мс (когда анимация закончится) окончательно стираем элемент
+            setTimeout(() => {
+                if (el && el.parentNode) {
+                    el.remove();
+                    updateDateSeparators(); // Пересчитываем плашки дат
+                }
+            }, 300);
+        }
+
+        // 3. Выполнение удаления (кнопка Удалить)
         function executeDelete() {
             if (!selectedMsgId) return;
 
-            // Проверяем, стоит ли галочка "Удалить для всех"
             const isDeleteForEveryone = document.getElementById('deleteForEveryone').checked;
+            const el = document.getElementById(`msg-${selectedMsgId}`);
+
+            // Запускаем красивую анимацию прямо сейчас
+            if (el) animateMessageRemoval(el);
 
             if (isDeleteForEveryone) {
-                // ВАРИАНТ А: Удаляем из Базы Данных (Firebase)
-                // Сообщение исчезнет и у меня, и у собеседника навсегда.
+                // Удаляем из базы
                 db.collection('chats').doc(currentChatId).collection('msgs').doc(selectedMsgId).delete()
-                    .then(() => {
-                        console.log('Удалено у всех (из базы)');
-                    })
                     .catch(err => {
                         console.error("Ошибка удаления:", err);
-                        alert("Не удалось удалить: " + err.message);
+                        showToast("Не удалось удалить: " + err.message);
                     });
             } else {
-                // ВАРИАНТ Б: Удаляем только у себя (Локально)
-                // 1. Скрываем визуально прямо сейчас
-                const el = document.getElementById(`msg-${selectedMsgId}`);
-                if (el) el.style.display = 'none';
-
-                // 2. Запоминаем ID в localStorage, чтобы при обновлении страницы оно не загружалось
+                // Прячем локально
                 const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
                 deletedLocal.push(selectedMsgId);
                 localStorage.setItem('deletedMsgs', JSON.stringify(deletedLocal));
             }
 
-            // Закрываем окно
             closeDeleteModal();
         }
 
@@ -4723,7 +4756,7 @@
                     snap.docChanges().forEach(change => {
                         if (change.type === 'removed') {
                             const el = document.getElementById('msg-' + change.doc.id);
-                            if (el) el.remove();
+                            if (el) animateMessageRemoval(el); // Используем плавное удаление!
                         }
                     });
 
