@@ -505,6 +505,44 @@
                 background: rgba(255, 255, 255, 0.15);
             }
 
+        /* --- СВАЙП ВЛЕВО ДЛЯ ОТВЕТА (TELEGRAM STYLE) --- */
+        .messages {
+            overflow-x: hidden !important; /* Важно, чтобы при свайпе не появлялся ползунок */
+        }
+
+        .msg {
+            transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+            .msg.swiping {
+                transition: none !important; /* Отключаем плавность, пока палец двигает сообщение */
+            }
+
+        .swipe-reply-icon {
+            position: absolute;
+            right: -45px; /* Прячем за правым краем сообщения */
+            top: 50%;
+            margin-top: -15px; /* Центрируем */
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transform: scale(0.5);
+            opacity: 0;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s, background 0.2s;
+            z-index: -1;
+        }
+
+            .swipe-reply-icon.active {
+                transform: scale(1);
+                opacity: 1;
+                background: #736AF0; /* Окрашиваем в фирменный цвет при активации */
+            }
+
         .messages {
             flex: 1;
             padding: 20px;
@@ -7869,7 +7907,14 @@
                 list = document.createElement('div');
                 list.id = 'msgList_' + chatId;
                 list.className = 'messages';
-                list.addEventListener('scroll', handleChatScroll); // Вешаем скролл сразу
+                list.addEventListener('scroll', handleChatScroll); // Вешаем скролл
+
+                // СЛУШАТЕЛИ ДЛЯ СВАЙПА
+                list.addEventListener('touchstart', handleChatTouchStart, { passive: true });
+                list.addEventListener('touchmove', handleChatTouchMove, { passive: false });
+                list.addEventListener('touchend', handleChatTouchEnd);
+                list.addEventListener('touchcancel', handleChatTouchEnd);
+
                 container.appendChild(list);
                 isNew = true;
             }
@@ -7881,7 +7926,128 @@
             return { list, isNew };
         }
 
-        let scrollThrottleTimer = null;
+        // ==========================================
+        // ЛОГИКА СВАЙПА ВЛЕВО (ОТВЕТ НА СООБЩЕНИЕ)
+        // Вынесена ИЗ функции, чтобы не сбрасывалась!
+        // ==========================================
+        let swipeTarget = null;
+        let swipeStartX = 0;
+        let swipeStartY = 0;
+        let swipeCurrentX = 0;
+        let isSwipeHorizontal = false;
+        let isSwipeVertical = false;
+        let swipeHapticTriggered = false;
+
+        function handleChatTouchStart(e) {
+            // ОГРАНИЧЕНИЕ: Работает только на экранах телефонов
+            if (window.innerWidth > 768) return;
+
+            const touch = e.touches[0];
+            swipeStartX = touch.clientX;
+            swipeStartY = touch.clientY;
+
+            const msgEl = e.target.closest('.msg');
+            if (!msgEl) return;
+
+            swipeTarget = msgEl;
+            swipeCurrentX = 0;
+            isSwipeHorizontal = false;
+            isSwipeVertical = false;
+            swipeHapticTriggered = false;
+
+            // Добавляем иконку ответа сзади, если её еще нет
+            let icon = swipeTarget.querySelector('.swipe-reply-icon');
+            if (!icon) {
+                icon = document.createElement('div');
+                icon.className = 'swipe-reply-icon';
+                icon.innerHTML = '↩️'; // Иконка ответа
+                swipeTarget.appendChild(icon);
+            }
+        }
+
+        function handleChatTouchMove(e) {
+            if (!swipeTarget) return;
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - swipeStartX;
+            const deltaY = touch.clientY - swipeStartY;
+
+            // Определяем направление в начале свайпа
+            if (!isSwipeHorizontal && !isSwipeVertical) {
+                if (Math.abs(deltaY) > Math.abs(deltaX)) {
+                    isSwipeVertical = true; // Скроллим вверх-вниз
+                } else if (deltaX < -5) {
+                    isSwipeHorizontal = true; // Свайпаем влево
+                } else {
+                    swipeTarget = null; // Свайп вправо - игнорируем
+                    return;
+                }
+            }
+
+            if (isSwipeVertical) {
+                swipeTarget = null;
+                return;
+            }
+
+            if (isSwipeHorizontal) {
+                if (e.cancelable) e.preventDefault(); // Блокируем скролл при горизонтальном свайпе
+
+                swipeCurrentX = Math.max(deltaX, -65); // Ограничиваем свайп до -65px
+
+                swipeTarget.classList.add('swiping');
+                swipeTarget.style.transform = `translateX(${swipeCurrentX}px)`;
+
+                const icon = swipeTarget.querySelector('.swipe-reply-icon');
+                if (icon) {
+                    if (swipeCurrentX <= -50) {
+                        icon.classList.add('active');
+                        if (!swipeHapticTriggered) {
+                            if (navigator.vibrate) navigator.vibrate(30);
+                            swipeHapticTriggered = true;
+                        }
+                    } else {
+                        icon.classList.remove('active');
+                        swipeHapticTriggered = false;
+                    }
+                }
+            }
+        }
+
+        function handleChatTouchEnd(e) {
+            if (!swipeTarget) return;
+
+            const icon = swipeTarget.querySelector('.swipe-reply-icon');
+
+            // Если дотянули до нужного момента - активируем UI ответа
+            if (swipeCurrentX <= -50) {
+                triggerSwipeReply(swipeTarget);
+            }
+
+            // Плавный возврат сообщения на место
+            swipeTarget.classList.remove('swiping');
+            swipeTarget.style.transform = '';
+            if (icon) {
+                icon.classList.remove('active');
+            }
+
+            swipeTarget = null;
+            isSwipeHorizontal = false;
+            isSwipeVertical = false;
+        }
+
+        function triggerSwipeReply(msgEl) {
+            const msgId = msgEl.id.replace('msg-', '');
+            const isMine = msgEl.classList.contains('msg-me');
+
+            let text = "Вложение";
+            const textSpan = msgEl.querySelector('.msg-text');
+            if (textSpan) text = textSpan.innerText;
+            else if (msgEl.querySelector('.chat-media-img')) text = "Фотография";
+            else if (msgEl.querySelector('.chat-file-card')) text = "Файл";
+
+            const name = isMine ? "Вы" : document.getElementById('chatTitle').firstElementChild.innerText;
+
+            startReplyUI(msgId, name, text);
+        }
         let scrollDateTimeout = null;
 
         function handleChatScroll(e) {
