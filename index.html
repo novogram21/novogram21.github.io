@@ -4638,8 +4638,12 @@
                             }
                         }
 
-                        const fName = friendData ? (friendData.name || friendData.username) : 'Загрузка...';
-                        const fNick = friendData ? ('@' + friendData.username) : '';
+                        let fName = 'Загрузка...';
+                        if (friendData) {
+                            // Склеиваем имя и фамилию. Если фамилии нет, trim() уберет лишний пробел.
+                            fName = `${friendData.name || ''} ${friendData.surname || ''}`.trim() || friendData.username || 'User';
+                        }
+                        const fNick = friendData && friendData.username ? ('@' + friendData.username) : '';
                         const fAvatar = friendData ? friendData.avatar : null;
                         const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
                         const chatId = preChatId; // Используем уже вычисленный ID
@@ -6607,8 +6611,8 @@
                 }
 
                 if (userData) {
-                    const name = userData.name || userData.username || 'User';
-                    const nick = userData.username ? '@' + userData.username : '';
+                    // Склеиваем имя и фамилию для шапки чата
+                    const name = `${userData.name || ''} ${userData.surname || ''}`.trim() || userData.username || 'User';
 
                     currentFriendId = userId;
                     currentChatId = [currentUser.uid, userId].sort().join('_');
