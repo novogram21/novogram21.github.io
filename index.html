@@ -4940,6 +4940,11 @@
                             list.scrollTop = list.scrollHeight;
                             list.classList.remove('is-loading'); // Чат появляется
                         }, 150); // Даем движку 150 миллисекунд на рендеринг элементов
+                    } else if (isScrolledToBottom) {
+                        // --- НОВОЕ: Плавный автоскролл, если мы уже были внизу и пришло новое сообщение ---
+                        setTimeout(() => {
+                            list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
+                        }, 50);
                     }
                 });
         }
@@ -5250,13 +5255,25 @@
                 cancelReplyOrEdit(); // Сбрасываем ответ после отправки
             }
 
-            db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
+            db.collection('chats').doc(currentChatId).collection('msgs').add(msgData).then(() => {
+                // Подстраховочный скролл после того, как сообщение появилось в базе
+                if (currentMsgList) {
+                    setTimeout(() => {
+                        currentMsgList.scrollTo({ top: currentMsgList.scrollHeight + 500, behavior: 'smooth' });
+                    }, 50);
+                }
+            });
 
             if (!txt) {
                 inputEl.value = '';
                 inputEl.style.height = '40px'; // Сброс высоты
                 checkInputState(); // Обновление кнопок
                 inputEl.focus();
+
+                // --- НОВОЕ: Мгновенная плавная прокрутка вниз при отправке ---
+                if (currentMsgList) {
+                    currentMsgList.scrollTo({ top: currentMsgList.scrollHeight + 500, behavior: 'smooth' });
+                }
             }
             // УВЕДОМЛЕНИЯ (БЕЗОПАСНО ЧЕРЕЗ СЕРВЕР)
             if (!isSys && currentFriendId) {
@@ -6879,10 +6896,15 @@
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
-            // Скролл вниз
-            setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+
+            // --- НОВОЕ: Плавный скролл при прикреплении файла ---
+            setTimeout(() => {
+                list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
+            }, 50);
+
             return tempId; // Возвращаем ID, чтобы потом удалить это сообщение
         }
+        
         // --- 2. Основная функция загрузки ---
         // !!! Убедись, что переменная GOOGLE_SCRIPT_URL объявлена выше !!!
         async function uploadFile(input) {
