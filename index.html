@@ -18,30 +18,34 @@
              }
 
         html {
+            /* Тот самый цвет, чтобы системная зона слилась с приложением */
             background-color: #121316 !important;
-            height: -webkit-fill-available;
         }
 
-        /* 2. Жестко растягиваем body */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #121316;
-            color: #eee;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            /* Прибиваем гвоздями ко всем 4 краям */
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            /* Заставляем iOS отдать всю высоту */
-            min-height: 100vh;
-            min-height: -webkit-fill-available;
-            overflow: hidden;
-            overscroll-behavior-y: none;
-        }
+             /* --- ЗАПРЕТ КОПИРОВАНИЯ И ВЫДЕЛЕНИЯ --- */
+             body {
+                 -webkit-user-select: none; /* Safari */
+                 -moz-user-select: none; /* Firefox */
+                 -ms-user-select: none; /* IE10+/Edge */
+                 user-select: none; /* Standard */
+                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                 background: #121212;
+                 color: #eee;
+                 margin: 0;
+                 display: flex;
+                 /* --- ПРАВИЛЬНАЯ ФИКСАЦИЯ ДЛЯ iOS PWA --- */
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 right: 0;
+                 bottom: 0; /* Вместо height привязываемся к нижнему краю */
+                 width: 100%;
+                 /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
+                 /* Подстраховка для Safari */
+                 min-height: -webkit-fill-available;
+                 overflow: hidden;
+                 overscroll-behavior-y: none;
+             }
 
 
                  /* --- ЭФФЕКТ ДОЛГОГО НАЖАТИЯ (iOS СТИЛЬ) --- */
@@ -1649,16 +1653,15 @@
 
 
              /* 1. Общий фон для всего приложения */
-        #app-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            /* УБРАТЬ height: 100% и width: 100% если они там есть */
-            z-index: -1;
-            background-color: #121316;
-        }
+             #app-background {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 width: 100%;
+                 height: 100%;
+                 z-index: -1;
+                 background-color: #121316; /* Мягкий базовый цвет */
+             }
 
                  #app-background::before {
                      content: "";
