@@ -157,9 +157,9 @@
 
         /* Сайдбар */
         .sidebar {
-            width: 340px; /* Чуть шире для "воздуха" */
-            background: #0a0c10; /* Очень глубокий темный цвет, OLED-black */
-            border-right: 1px solid rgba(255, 255, 255, 0.03); /* Еле заметная, стильная линия */
+            width: 340px;
+            background: #17181c; /* Мягкий матовый темно-серый вместо глухого черного */
+            border-right: 1px solid rgba(255, 255, 255, 0.04);
             display: flex;
             flex-direction: column;
             z-index: 10;
@@ -243,18 +243,18 @@
 
         .tabs {
             display: flex;
+            justify-content: flex-start; /* НОВОЕ: Выравниваем аккуратно по левому краю */
             background: transparent !important;
             padding: 5px 15px 12px 15px;
             gap: 10px;
         }
 
         .tab {
-            flex: 1;
-            padding: 9px 0;
+            /* НОВОЕ: Убрали flex: 1, чтобы они не растягивались на всю ширину */
+            padding: 8px 20px; /* Отступы по бокам от текста */
             text-align: center;
-            border-bottom: none !important; /* Убираем старое подчеркивание */
-            border-radius: 12px; /* Скругляем */
-            background: #15171b; /* Цвет неактивной кнопки */
+            border-radius: 20px; /* Делаем их круглыми "таблетками" */
+            background: #15171b;
             color: #8e8e93;
             font-size: 13px;
             font-weight: 600;
@@ -262,13 +262,15 @@
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             border: 1px solid rgba(255,255,255,0.02);
+            white-space: nowrap; /* Чтобы текст всегда был в одну строку */
         }
 
             .tab.active {
-                background: rgba(115, 106, 240, 0.12); /* Мягкий фиолетовый фон */
+                background: rgba(115, 106, 240, 0.12);
                 color: #736AF0 !important;
-                border-color: rgba(115, 106, 240, 0.2); /* Тонкая фиолетовая окантовка */
+                border-color: rgba(115, 106, 240, 0.2);
                 box-shadow: 0 4px 10px rgba(115, 106, 240, 0.1);
+            } box-shadow: 0 4px 10px rgba(115, 106, 240, 0.1);
             }
 
         .tab-badge {
@@ -299,7 +301,99 @@
                 border-radius: 10px;
             }
 
+        /* 3. Папки (Табы как в мобильном Telegram) */
+        .tabs-container {
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            background: transparent;
+        }
 
+            .tabs-container.hidden {
+                display: none !important;
+            }
+
+        .tabs-scroll {
+            display: flex;
+            gap: 0; /* Убираем пробелы, используем внутренние отступы табов */
+            padding: 0 10px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            cursor: grab; /* Курсор в виде "руки" для перетаскивания на ПК */
+        }
+
+            .tabs-scroll.is-dragging {
+                cursor: grabbing;
+                scroll-behavior: auto; /* Отключаем плавность при ручном перетаскивании */
+            }
+
+            .tabs-scroll::-webkit-scrollbar {
+                display: none;
+            }
+
+        /* Сама вкладка: невысокая, но длинная */
+        .tab {
+            padding: 0 20px; /* Делает их длинными по горизонтали */
+            height: 46px; /* Аккуратная фиксированная высота */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8e8e93;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            /* Убиваем старые "квадратные" стили */
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            /* Полоска снизу */
+            border-bottom: 3px solid transparent !important;
+            transition: color 0.2s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+            .tab:hover {
+                color: #b0b0b5;
+            }
+
+            .tab.active {
+                color: #736AF0 !important;
+                border-bottom: 3px solid #736AF0 !important;
+            }
+
+        /* Счетчик рядом со словом */
+        .tab-badge {
+            position: relative !important;
+            top: 0 !important;
+            margin-left: 8px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 11.5px;
+            font-weight: bold;
+            background: rgba(115, 106, 240, 0.15) !important;
+            color: #736AF0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        .tab.active .tab-badge {
+            background: #736AF0 !important;
+            color: white !important;
+        }
+        }
+
+        /* Эффект нажатия для новой кнопки "Заявки" */
+        #requestsBtnTop:hover {
+            transform: scale(1.05);
+        }
+
+        #requestsBtnTop:active {
+            transform: scale(0.92);
+        }
 
         /* Элемент списка чатов (НОВЫЙ ДИЗАЙН) */
 
@@ -1300,9 +1394,9 @@
                 top: 0;
                 left: 0;
                 height: 100%;
-                z-index: 100; /* Поднимаем выше сайдбара */
-                /* --- САМОЕ ГЛАВНОЕ: ДЕЛАЕМ ФОН 100% НЕПРОЗРАЧНЫМ --- */
-                background-color: #0a0c10 !important;
+                z-index: 100;
+                /* Смягчили фон для мобильной версии */
+                background-color: #121316 !important;
                 transform: translateX(100%);
                 visibility: hidden;
                 transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.35s;
@@ -1331,7 +1425,7 @@
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: radial-gradient(circle at 50% 50%, rgba(10, 12, 16, 0.3) 0%, rgba(10, 12, 16, 0.7) 100%);
+                    background: radial-gradient(circle at 50% 50%, rgba(18, 19, 22, 0.4) 0%, rgba(18, 19, 22, 0.85) 100%);
                     pointer-events: none;
                     z-index: -1;
                 }
@@ -1478,8 +1572,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1; /* Лежит под всем */
-            background-color: #0a0c10;
+            z-index: -1;
+            background-color: #121316; /* Мягкий базовый цвет */
         }
 
             #app-background::before {
@@ -1489,7 +1583,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                opacity: 0.7;
+                opacity: 0.5; /* Немного приглушили обои-эмодзи */
                 pointer-events: none;
                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
                 background-size: 400px 400px;
@@ -1502,7 +1596,8 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: radial-gradient(circle at 50% 50%, rgba(10, 12, 16, 0.3) 0%, rgba(10, 12, 16, 0.7) 100%);
+                /* Мягкий градиент без черноты */
+                background: radial-gradient(circle at 50% 50%, rgba(18, 19, 22, 0.4) 0%, rgba(18, 19, 22, 0.85) 100%);
                 pointer-events: none;
             }
 
@@ -3482,41 +3577,33 @@
     <!-- MAIN -->
     <div id="mainSidebar" class="sidebar">
         <!-- ЕДИНАЯ ВЕРХНЯЯ ПАНЕЛЬ: Аватар + Поиск -->
-        <!-- Профиль -->
-        <div class="profile-bar" style="padding: 12px 15px; gap: 12px; position: relative;">
-            <button id="searchBackBtn" onclick="closeSearch()" style="display: none; background: none; border: none; color: #007bff; font-size: 20px; cursor: pointer; flex-shrink: 0;">
-                ←
-            </button>
-
-            <button id="profileBtn" onclick="openProfileSheet()">
-                <span id="myAvatarSmall">👤</span>
-            </button>
+        <div class="profile-bar" style="padding: 16px 15px 10px 15px !important; display: flex; align-items: center; gap: 12px; position: relative;">
+            <button id="searchBackBtn" onclick="closeSearch()" style="display: none; background: none; border: none; color: #007bff; font-size: 20px; cursor: pointer; flex-shrink: 0;">←</button>
+            <button id="profileBtn" onclick="openProfileSheet()"><span id="myAvatarSmall">👤</span></button>
 
             <div style="flex: 1; position: relative;">
-                <input type="text" id="searchInput" placeholder="Поиск..."
-                                   style="width: 100%; height: 44px; padding: 0 15px; border-radius: 22px; border: 1px solid #333; background: #181818; color: white; outline: none; font-size: 14px; transition: 0.2s;"
-                                   onfocus="openSearchUI()"
-                                   oninput="handleSearchInput(this)">
-
+                <input type="text" id="searchInput" placeholder="Поиск..." onfocus="openSearchUI()" oninput="handleSearchInput(this)">
                 <div id="searchResults"></div>
             </div>
+
+            <button id="requestsBtnTop" onclick="switchTab('requests')" title="Заявки в друзья" style="width: 46px; height: 46px; border-radius: 50%; background: #1c1c1e; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s ease;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                <span id="requestsBadge" class="tab-badge hidden" style="position: absolute; top: -4px; right: -2px; background: #ff4444; color: white; border: 2px solid #0a0c10;">0</span>
+            </button>
         </div>
 
-        <!-- Выпадающий список результатов -->
-
-
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('friends')">
-                Друзья <span id="friendsBadge" class="tab-badge hidden">0</span>
+        <div class="tabs-container" id="tabsContainerMain">
+            <div class="tabs-scroll" id="tabsScroll">
+                <div class="tab active" onclick="switchTab('friends')">Личные <span id="friendsBadge" class="tab-badge hidden">0</span></div>
+                <div class="tab" onclick="switchTab('groups')">Группы</div>
+                <div class="tab" onclick="switchTab('channels')">Каналы</div>
+                <div class="tab" onclick="switchTab('bots')">Боты</div>
             </div>
-            <div class="tab" onclick="switchTab('requests')">
-                Заявки <span id="requestsBadge" class="tab-badge hidden">0</span>
-            </div>
         </div>
-        <div id="friendsList" class="list-container">
-            <div class="tg-spinner-container"><div class="tg-spinner"></div></div>
-        </div>
+
+        <div id="friendsList" class="list-container"><div class="tg-spinner-container"><div class="tg-spinner"></div></div></div>
         <div id="requestsList" class="list-container hidden"></div>
+        <div id="noDataList" class="list-container hidden" style="display:flex; align-items:center; justify-content:center; flex-direction:column;"></div>
     </div>
     <div id="mainChatArea" class="chat-area">
         <div id="noChat" style="height:100%; display:flex; align-items:center; justify-content:center; color:#555;"></div>
@@ -4346,18 +4433,88 @@
         window.addEventListener('beforeunload', updateLastSeen);
         // --- LOGIC ---
         function switchTab(t) {
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            if (t === 'friends') {
-                document.querySelectorAll('.tab')[0].classList.add('active');
-                document.getElementById('friendsList').classList.remove('hidden');
-                document.getElementById('requestsList').classList.add('hidden');
+            const friendsList = document.getElementById('friendsList');
+            const requestsList = document.getElementById('requestsList');
+            const noDataList = document.getElementById('noDataList');
+
+            // 1. Скрываем все списки
+            friendsList.classList.add('hidden');
+            requestsList.classList.add('hidden');
+            if (noDataList) noDataList.classList.add('hidden');
+
+            // 2. Если нажали кнопку "Заявки" сверху
+            if (t === 'requests') {
+                document.querySelectorAll('.tab').forEach(el => el.classList.remove('active')); // Снимаем выделение с папок
+                requestsList.classList.remove('hidden');
+                return;
             }
-            else {
-                document.querySelectorAll('.tab')[1].classList.add('active');
-                document.getElementById('friendsList').classList.add('hidden');
-                document.getElementById('requestsList').classList.remove('hidden');
+
+            // 3. Обработка клика по папкам
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            const clickedTab = document.querySelector(`.tab[onclick="switchTab('${t}')"]`);
+
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+                // Плавно прокручиваем строку с табами, чтобы выбранный оказался по центру
+                clickedTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+
+            // Показываем нужный контент
+            if (t === 'friends') {
+                friendsList.classList.remove('hidden');
+            } else {
+                // Для Групп, Каналов и Ботов показываем заглушку
+                if (!noDataList) return;
+                const tabNames = { 'groups': 'Группы', 'channels': 'Каналы', 'bots': 'Боты' };
+                noDataList.innerHTML = `<div style="color:#8e8e93; font-size:15px; margin-top:40px; text-align:center;">Папка «${tabNames[t]}» пока пуста</div>`;
+                noDataList.classList.remove('hidden');
             }
         }
+
+        // --- НОВОЕ: Горизонтальный скролл папок с помощью КОЛЕСИКА МЫШИ (для ПК) ---
+        // --- НОВОЕ: Скролл папок колесиком И перетаскивание мышкой (как в ТГ) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabsScroll = document.getElementById('tabsScroll');
+            if (tabsScroll) {
+                // 1. Скролл колесиком мыши
+                tabsScroll.addEventListener('wheel', (evt) => {
+                    if (evt.deltaY !== 0) {
+                        evt.preventDefault();
+                        tabsScroll.scrollLeft += evt.deltaY;
+                    }
+                });
+
+                // 2. Перетаскивание зажатой левой кнопкой мыши (Drag-to-scroll)
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                tabsScroll.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    tabsScroll.classList.add('is-dragging');
+                    startX = e.pageX - tabsScroll.offsetLeft;
+                    scrollLeft = tabsScroll.scrollLeft;
+                });
+
+                tabsScroll.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    tabsScroll.classList.remove('is-dragging');
+                });
+
+                tabsScroll.addEventListener('mouseup', () => {
+                    isDown = false;
+                    tabsScroll.classList.remove('is-dragging');
+                });
+
+                tabsScroll.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault(); // Блокируем выделение текста
+                    const x = e.pageX - tabsScroll.offsetLeft;
+                    const walk = (x - startX) * 2; // Умножаем на 2 для скорости прокрутки
+                    tabsScroll.scrollLeft = scrollLeft - walk;
+                });
+            }
+        });
         // Слушатель входящих заявок в друзья
         function listenForFriendRequests() {
             db.collection('friend_requests')
@@ -7148,16 +7305,21 @@
             searchInput.value = '';
 
             // Возвращаем табы
-            if (tabs) tabs.classList.remove('hidden');
+            // Возвращаем табы и кнопку заявок
+            const tabsContainer = document.getElementById('tabsContainerMain');
+            if (tabsContainer) tabsContainer.classList.remove('hidden');
+            document.getElementById('requestsBtnTop').style.display = 'flex';
 
-            // Смотрим, какая вкладка была активна, и возвращаем нужный список
+            // Возвращаем контент на основе активной папки
             const activeTab = document.querySelector('.tab.active');
-            if (activeTab && activeTab.innerText.includes('Заявки')) {
-                requestsList.classList.remove('hidden');
-                friendsList.classList.add('hidden');
+            if (activeTab) {
+                // Если активна какая-то папка - переключаемся на нее
+                const tabAction = activeTab.getAttribute('onclick');
+                const tabNameMatch = tabAction.match(/'([^']+)'/);
+                if (tabNameMatch) switchTab(tabNameMatch[1]);
             } else {
-                friendsList.classList.remove('hidden');
-                requestsList.classList.add('hidden');
+                // Иначе показываем заявки (если мы были в них)
+                switchTab('requests');
             }
 
             // Возвращаем аватарку
