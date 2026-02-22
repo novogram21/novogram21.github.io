@@ -5724,34 +5724,38 @@
             }
         }
 
+        // --- МОСТ ДЛЯ СВЯЗИ С ANDROID (C# MAUI) ---
         window.processNativeAction = async function (action, chatId, text) {
-            if (!currentUser) return;
+            // Мгновенно получаем ID из памяти, не дожидаясь загрузки Firebase
+            const uid = currentUser ? currentUser.uid : localStorage.getItem('current_user_uid');
+            if (!uid) return;
 
             if (action === "MARK_READ") {
                 try {
                     const snap = await db.collection('chats').doc(chatId).collection('msgs')
-                        .where('to', '==', currentUser.uid)
+                        .where('to', '==', uid)
                         .where('read', '==', false).get();
 
                     if (!snap.empty) {
                         const batch = db.batch();
                         snap.docs.forEach(d => batch.update(d.ref, { read: true }));
                         await batch.commit();
+                        showToast("Прочитано ✓");
                     }
                 } catch (e) { console.error(e); }
             }
             else if (action === "REPLY_MSG") {
                 try {
-                    // Вычисляем ID собеседника из ID чата
-                    const friendId = chatId.split('_').find(id => id !== currentUser.uid);
+                    const friendId = chatId.split('_').find(id => id !== uid);
 
-                    // Шифруем текст вашим ключом
+                    // ВАЖНО: Убеждаемся, что ключ шифрования загрузился перед ответом
+                    await fetchChatKey(chatId);
+
                     const encryptedText = encryptText(text, chatId);
 
-                    // Отправляем в базу!
                     await db.collection('chats').doc(chatId).collection('msgs').add({
                         txt: encryptedText,
-                        from: currentUser.uid,
+                        from: uid,
                         to: friendId,
                         sys: false,
                         type: 'text',
@@ -5759,9 +5763,8 @@
                         ts: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
-                    // Уведомляем собеседника (чтобы у него тоже булькнуло)
                     sendNotificationSecure(friendId, text, 'text');
-
+                    showToast("Ответ отправлен ✓");
                 } catch (e) { console.error("Ошибка быстрой отправки:", e); }
             }
         };
