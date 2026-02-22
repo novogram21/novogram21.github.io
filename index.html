@@ -5723,6 +5723,48 @@
                 sendNotificationSecure(currentFriendId, t, type);
             }
         }
+
+        window.processNativeAction = async function (action, chatId, text) {
+            if (!currentUser) return;
+
+            if (action === "MARK_READ") {
+                try {
+                    const snap = await db.collection('chats').doc(chatId).collection('msgs')
+                        .where('to', '==', currentUser.uid)
+                        .where('read', '==', false).get();
+
+                    if (!snap.empty) {
+                        const batch = db.batch();
+                        snap.docs.forEach(d => batch.update(d.ref, { read: true }));
+                        await batch.commit();
+                    }
+                } catch (e) { console.error(e); }
+            }
+            else if (action === "REPLY_MSG") {
+                try {
+                    // Вычисляем ID собеседника из ID чата
+                    const friendId = chatId.split('_').find(id => id !== currentUser.uid);
+
+                    // Шифруем текст вашим ключом
+                    const encryptedText = encryptText(text, chatId);
+
+                    // Отправляем в базу!
+                    await db.collection('chats').doc(chatId).collection('msgs').add({
+                        txt: encryptedText,
+                        from: currentUser.uid,
+                        to: friendId,
+                        sys: false,
+                        type: 'text',
+                        read: false,
+                        ts: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    // Уведомляем собеседника (чтобы у него тоже булькнуло)
+                    sendNotificationSecure(friendId, text, 'text');
+
+                } catch (e) { console.error("Ошибка быстрой отправки:", e); }
+            }
+        };
         let isEditingMode = false;
         let editMessageId = null;
         let replyMessageData = null; // { id, name, text }
