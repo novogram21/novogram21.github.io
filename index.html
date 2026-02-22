@@ -279,8 +279,7 @@
                 box-shadow: 0 4px 10px rgba(115, 106, 240, 0.1);
             }
 
-        box-shadow: 0 4px 10px rgba(115, 106, 240, 0.1);
-        }
+        
 
         .tab-badge {
             top: -4px !important;
@@ -471,7 +470,7 @@
             color: white !important;
         }
 
-        }
+        
 
         /* Эффект нажатия для новой кнопки "Заявки" */
         #requestsBtnTop:hover {
@@ -7045,12 +7044,32 @@
             }
             OneSignal.User.PushSubscription.addEventListener("change", savePlayerId);
             firebase.auth().onAuthStateChanged(u => { if (u) setTimeout(savePlayerId, 3000); });
+
+            OneSignal.Notifications.addEventListener("click", async (event) => {
+                const action = event.result.actionId; // ID нажатой кнопки
+                const data = event.notification.additionalData; // Данные чата
+
+                if (!data || !data.chatId) return;
+
+                if (action === "read") {
+                    // Кнопка "Прочитать": отмечаем сообщения прочитанными в фоне
+                    const user = firebase.auth().currentUser;
+                    if (user) {
+                        const snap = await db.collection('chats').doc(data.chatId).collection('msgs')
+                            .where('to', '==', user.uid).where('read', '==', false).get();
+                        const batch = db.batch();
+                        snap.docs.forEach(d => batch.update(d.ref, { read: true }));
+                        await batch.commit();
+                        showToast("Сообщения прочитаны");
+                    }
+                } else {
+                    // Клик по самому пушу или кнопке "Ответить" - открываем чат
+                    window.location.hash = "#chat/" + data.senderId;
+                }
+            });
         });
-        // 2. Функция отправки пуша (С ОБХОДОМ БЛОКИРОВКИ)
 
 
-        // Правильная функция выхода с удалением уведомлений
-        // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ВЫХОДА ---
         async function logout() {
             if (!confirm("Выйти из аккаунта?")) return;
 
@@ -7332,7 +7351,9 @@
 
                         title: senderName,
                         text: displayText,
-                        isCall: isCall
+                        isCall: isCall,
+                        chatId: [currentUser.uid, friendUid].sort().join('_'),
+                        senderId: currentUser.uid
                     })
                 })
                     .then(response => response.json())
