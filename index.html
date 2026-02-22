@@ -4746,6 +4746,7 @@
         }
         // Вспомогательная функция для обновления текста последнего сообщения в списке
         function startMessageListener(chatId, fid, createdTime) {
+            let isListInitialLoad = true;
             db.collection('chats').doc(chatId).collection('msgs')
                 .orderBy('ts', 'desc').limit(1)
                 .onSnapshot(msgSnap => {
@@ -4759,7 +4760,7 @@
                         const lastData = msgSnap.docs[0].data();
                         const tsMillis = lastData.ts ? lastData.ts.toMillis() : 0;
                         // Если сообщение пришло только что, оно НЕ от нас, и мы НЕ сидим сейчас в этом чате:
-                        if (tsMillis > APP_START_TIME && lastData.from !== currentUser.uid && currentChatId !== chatId) {
+                        if (!isListInitialLoad && lastData.from !== currentUser.uid && currentChatId !== chatId) {
                             playNotificationSound('out-chat');
                         }
                         if (lastEl) {
@@ -4814,6 +4815,7 @@
                         userDiv.setAttribute('data-time', timeToDisplay);
                         sortFriendsList();
                     }
+
                 });
             // Слушаем непрочитанные (Badge)
             db.collection('chats').doc(chatId).collection('msgs')
@@ -4835,6 +4837,7 @@
                             badgeEl.classList.add('hidden');
                         }
                     }
+                    isListInitialLoad = false;
                 });
         }
 
@@ -5255,6 +5258,7 @@
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
 
+            let isChatInitialLoad = true;
             window.msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
                 .orderBy('ts', 'asc')
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
@@ -5336,7 +5340,7 @@
                             };
                             // Одиночный клик для мобилок удален, теперь работает только долгое зажатие!
                             list.appendChild(div);
-                            if (tsMillis > APP_START_TIME && m.from !== currentUser.uid) {
+                            if (!isChatInitialLoad && m.from !== currentUser.uid) {
                                 playNotificationSound('in-chat');
                             }
                         }
@@ -5379,6 +5383,8 @@
                             list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
                         }, 50);
                     }
+
+                    isChatInitialLoad = false;
                 });
         }
 
