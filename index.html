@@ -5663,7 +5663,6 @@
             }
             // ========================================================
 
-
             // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
             if (isEditingMode && editMessageId) {
                 db.collection('chats').doc(currentChatId).collection('msgs').doc(editMessageId).update({
@@ -5724,6 +5723,11 @@
             }
         }
 
+        let isEditingMode = false;
+        let editMessageId = null;
+        let replyMessageData = null; // { id, name, text }
+
+        // --- МОСТ ДЛЯ СВЯЗИ С ANDROID (C# MAUI) ---
         window.processNativeAction = async function (action, chatId, text) {
             if (!currentUser) return;
 
