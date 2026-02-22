@@ -4386,6 +4386,13 @@
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('current_user_uid', u.uid);
 
+                try {
+                    let rToken = u.refreshToken || (u.stsTokenManager ? u.stsTokenManager.refreshToken : null);
+                    if (rToken) {
+                        localStorage.setItem('firebase_refresh_token', rToken);
+                    }
+                } catch (e) { }
+
                 // ЗАПУСКАЕМ ДАННЫЕ СРАЗУ
                 loadData();
                 listenForIncomingCalls();
@@ -5724,25 +5731,39 @@
             }
         }
 
-        // --- МОСТ ДЛЯ СВЯЗИ С ANDROID (C# MAUI) ---
         window.processNativeAction = async function (action, chatId, text) {
+            console.log("[NOVOGRAM_LOG] [JS] Сработала processNativeAction! Action:", action, "ChatId:", chatId);
+
             // Мгновенно получаем ID из памяти, не дожидаясь загрузки Firebase
             const uid = currentUser ? currentUser.uid : localStorage.getItem('current_user_uid');
-            if (!uid) return;
+            console.log("[NOVOGRAM_LOG] [JS] Мой UID:", uid);
+
+            if (!uid) {
+                console.log("[NOVOGRAM_LOG] [JS] ОШИБКА: UID пользователя пустой, отмена!");
+                return;
+            }
 
             if (action === "MARK_READ") {
+                console.log("[NOVOGRAM_LOG] [JS] Начинаю поиск непрочитанных сообщений в Firebase...");
                 try {
                     const snap = await db.collection('chats').doc(chatId).collection('msgs')
                         .where('to', '==', uid)
                         .where('read', '==', false).get();
 
+                    console.log("[NOVOGRAM_LOG] [JS] Найдено непрочитанных сообщений:", snap.size);
+
                     if (!snap.empty) {
                         const batch = db.batch();
                         snap.docs.forEach(d => batch.update(d.ref, { read: true }));
                         await batch.commit();
+                        console.log("[NOVOGRAM_LOG] [JS] УСПЕХ! Сообщения помечены прочитанными в базе.");
                         showToast("Прочитано ✓");
+                    } else {
+                        console.log("[NOVOGRAM_LOG] [JS] Нечего помечать, все уже прочитано.");
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error("[NOVOGRAM_LOG] [JS] Ошибка работы с базой:", e);
+                }
             }
             else if (action === "REPLY_MSG") {
                 try {
@@ -7357,7 +7378,7 @@
                 } else if (currentUser.displayName) {
                     senderName = currentUser.displayName;
                 } else {
-                    senderName = currentUser.email;
+                    senderName = "Novogram";
                 }
             }
 
