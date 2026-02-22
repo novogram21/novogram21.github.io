@@ -279,7 +279,7 @@
                 box-shadow: 0 4px 10px rgba(115, 106, 240, 0.1);
             }
 
-        
+
 
         .tab-badge {
             top: -4px !important;
@@ -470,7 +470,7 @@
             color: white !important;
         }
 
-        
+
 
         /* Эффект нажатия для новой кнопки "Заявки" */
         #requestsBtnTop:hover {
@@ -3292,6 +3292,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pwacompat" crossorigin="anonymous" async></script>
+    <script src="titleNotifier.js"></script>
+
 </head>
 
 <body>
@@ -4761,6 +4763,7 @@
                         // Если сообщение пришло только что, оно НЕ от нас, и мы НЕ сидим сейчас в этом чате:
                         if (!isListInitialLoad && lastData.from !== currentUser.uid && currentChatId !== chatId) {
                             playNotificationSound('out-chat');
+                            TitleNotifier.onNewMessage();
                         }
                         if (lastEl) {
                             const type = lastData.type || 'text';
@@ -5341,6 +5344,7 @@
                             list.appendChild(div);
                             if (!isChatInitialLoad && m.from !== currentUser.uid) {
                                 playNotificationSound('in-chat');
+                                TitleNotifier.onNewMessage();
                             }
                         }
 
