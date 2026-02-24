@@ -42,7 +42,10 @@
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0; /* Вместо height привязываемся к нижнему краю */
+            bottom: 0;
+            height: 100dvh;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box; /* чтобы padding не ломал height */
             width: 100%;
             /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
             /* Подстраховка для Safari */
@@ -50,6 +53,18 @@
             overflow: hidden;
             overscroll-behavior-y: none;
         }
+
+            /* Фикс чёрной полосы под Home Indicator на iPhone в PWA */
+            body::after {
+                content: '';
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: env(safe-area-inset-bottom);
+                background-color: #17181c; /* цвет как у input-bar снизу */
+                z-index: 9999;
+            }
 
 
             /* --- ЭФФЕКТ ДОЛГОГО НАЖАТИЯ (iOS СТИЛЬ) --- */
@@ -687,13 +702,14 @@
         }
 
         .chat-header {
-            padding: 8px 15px; /* Как в ТГ */
-            background: #17181c; /* Цвет фона шапки ТГ */
+            /* Добавляем env(safe-area-inset-top) чтобы шапка опускалась ниже системных часов */
+            padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
+            background: #17181c;
             border-bottom: 1px solid #101010;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 56px;
+            min-height: calc(56px + env(safe-area-inset-top)); /* Увеличиваем высоту на размер челки */
         }
 
         .chat-header-left {
@@ -846,8 +862,10 @@
             background: transparent;
             position: relative;
             z-index: 1;
+            /* ВАЖНО: Это гарантирует, что список не будет больше выделенного ему места */
             min-height: 0;
-            transition: opacity 0.15s ease-out; /* Плавное появление */
+            height: 0; /* Флекс сам растянет его до нужного размера */
+            transition: opacity 0.15s ease-out;
         }
 
             .messages.visible {
@@ -942,6 +960,7 @@
 
         /* Кнопки иконки (Скрепка и Смайл) */
         .tg-icon-btn-input {
+            position: relative; /* <--- ВАЖНОЕ ДОБАВЛЕНИЕ */
             width: 36px;
             height: 36px;
             display: flex;
@@ -953,11 +972,11 @@
             color: #8e8e93;
             padding: 0;
             flex-shrink: 0;
-            border-radius: 50%; /* Делаем фон круглым при нажатии */
-            /* Плавная дорогая анимация */
+            border-radius: 50%;
             transition: transform 0.15s cubic-bezier(0.2, 0.85, 0.3, 1), background-color 0.15s ease, color 0.15s ease;
             -webkit-tap-highlight-color: transparent !important;
             outline: none !important;
+            overflow: hidden; /* <--- ВАЖНОЕ ДОБАВЛЕНИЕ: чтобы инпут не вылезал за края кнопки */
         }
 
             .tg-icon-btn-input:hover {
@@ -2110,16 +2129,18 @@
 
         /* --- ПОИСК ВНУТРИ ЧАТА (ТЕЛЕГРАМ СТИЛЬ) --- */
         .chat-search-bar {
-            background: #17181c; /* Цвет шапки */
+            background: #17181c;
             display: flex;
             align-items: center;
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 57px;
+            /* Высота тоже должна учитывать челку */
+            height: calc(57px + env(safe-area-inset-top));
             z-index: 20;
-            padding: 0 5px 0 15px; /* Чуть уменьшили правый отступ */
+            /* Отступ сверху, чтобы текст не наезжал на батарею */
+            padding: env(safe-area-inset-top) 5px 0 15px;
         }
 
             .chat-search-bar.hidden {
@@ -3874,38 +3895,41 @@
     <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
     </svg>
     </div>
+
+
+
+
     <div class="input-bar">
 
-    <div id="replyBar" class="reply-bar hidden" style="position: absolute; bottom: 100%; left:0; right:0; border-top-left-radius: 12px; border-top-right-radius: 12px;">
-    <div class="reply-icon">↩️</div>
-    <div class="reply-content">
-    <div id="replyTitle" class="reply-title">User</div>
-    <div id="replyText" class="reply-text">Text...</div>
-    </div>
-    <button class="reply-close" onclick="cancelReplyOrEdit()">✖</button>
-    </div>
+        <div id="replyBar" class="reply-bar hidden" style="position: absolute; bottom: 100%; left:0; right:0; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+            <div class="reply-icon">↩️</div>
+            <div class="reply-content">
+                <div id="replyTitle" class="reply-title">User</div>
+                <div id="replyText" class="reply-text">Text...</div>
+            </div>
+            <button class="reply-close" onclick="cancelReplyOrEdit()">✖</button>
+        </div>
 
-    <div class="input-wrapper">
-        <button class="tg-icon-btn-input" onclick="alert('Смайлы скоро!')">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.17 8 15.33 8 13.83 8.67 13.83 9.5 14.5 11 15.33 11zm-6.66 0c.83 0 1.5-.67 1.5-1.5S9.5 8 8.67 8 7.17 8.67 7.17 9.5 7.84 11 8.67 11zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
+        <div class="input-wrapper">
+            <button class="tg-icon-btn-input" onclick="alert('Смайлы скоро!')">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.17 8 15.33 8 13.83 8.67 13.83 9.5 14.5 11 15.33 11zm-6.66 0c.83 0 1.5-.67 1.5-1.5S9.5 8 8.67 8 7.17 8.67 7.17 9.5 7.84 11 8.67 11zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
+            </button>
+
+            <textarea id="msgInput" placeholder="Сообщение" spellcheck="true" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
+
+            <div class="tg-icon-btn-input">
+                <input type="file" id="fileInput" onchange="uploadFile(this)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; padding: 0; margin: 0;">
+                <svg viewBox="0 0 24 24" style="transform: rotate(45deg); position: relative; z-index: 1; pointer-events: none;"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" /></svg>
+            </div>
+        </div>
+
+        <button id="voiceBtn" class="main-action-btn btn-mic" onclick="alert('Голосовые скоро!')">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
         </button>
 
-        <textarea id="msgInput" placeholder="Сообщение" spellcheck="true" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
-
-        <div class="tg-icon-btn-input" style="position: relative;">
-            <input type="file" id="fileInput" onchange="uploadFile(this)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; padding: 0; margin: 0; outline: none;">
-
-            <svg viewBox="0 0 24 24" style="transform: rotate(45deg); position: relative; z-index: 1; pointer-events: none;"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" /></svg>
-        </div>
-    </div>
-
-    <button id="voiceBtn" class="main-action-btn btn-mic" onclick="alert('Голосовые скоро!')">
-    <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
-    </button>
-
-    <button id="sendBtn" class="main-action-btn btn-send hidden" onclick="sendMsg()">
-    <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white; margin-left: 2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-    </button>
+        <button id="sendBtn" class="main-action-btn btn-send hidden" onclick="sendMsg()">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white; margin-left: 2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+        </button>
 
     </div>
     </div>
@@ -9378,6 +9402,12 @@
 
     closeLinkModal();
     }
+
+    // ==========================================
+    // ЛОГИКА СКРЕПКИ И ЗАПРОСА ПРАВ НА ФАЙЛЫ
+    // ==========================================
+    
+
 
     </script>
 
