@@ -1737,7 +1737,47 @@
         }
 
 
+        .premium-username-wrapper {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
 
+        .premium-username-prefix {
+            color: #736AF0; /* Твой фирменный цвет для @ */
+            font-size: 16px;
+            font-weight: 600;
+            margin-right: 2px;
+            user-select: none;
+        }
+
+        /* Статус проверки (плавное появление и смена цвета) */
+        .premium-status-msg {
+            font-size: 12px;
+            margin: -12px 0 20px 25px;
+            height: 15px; /* Фиксированная высота, чтобы элементы не прыгали */
+            transition: color 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            font-weight: 500;
+            pointer-events: none;
+        }
+
+            .premium-status-msg.visible {
+                opacity: 1;
+            }
+
+            .premium-status-msg.success {
+                color: #10b981;
+            }
+            /* Изумрудно-зеленый */
+            .premium-status-msg.error {
+                color: #ff4444;
+            }
+            /* Красный */
+            .premium-status-msg.loading {
+                color: #8e8e93;
+            }
+        /* Серый */
 
 
 
@@ -3436,6 +3476,14 @@
             background: #121316 !important; /* Цвет как у основного фона приложения */
         }
 
+        #profileSheet {
+            z-index: 6000 !important;
+        }
+
+        #editProfileSheet, #generalSettingsSheet {
+            z-index: 6010 !important;
+        }
+
         /* Красивая верхняя шапка */
         .premium-header {
             display: flex;
@@ -3445,8 +3493,6 @@
             background: #121316;
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
             z-index: 10;
-            position: sticky;
-            top: 0;
         }
 
         /* Центрированная информация (Аватар и Имя) */
@@ -3520,7 +3566,7 @@
         }
 
         .premium-section {
-            background: #1c1c1e; /* Цвет карточки */
+            background: #1c1c1e;
             border-radius: 20px;
             margin: 0 15px 25px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
@@ -3546,12 +3592,11 @@
                 background: rgba(255,255,255,0.05);
             }
 
+        /* Иконка слева */
         .premium-item-icon {
             width: 36px;
             height: 36px;
             border-radius: 12px;
-            background: rgba(115, 106, 240, 0.15);
-            color: #736AF0;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -3559,6 +3604,7 @@
             margin-right: 16px;
         }
 
+        /* Контейнер для текста */
         .premium-item-content {
             flex: 1;
             display: flex;
@@ -3566,10 +3612,16 @@
             justify-content: center;
         }
 
+        .premium-item-value {
+            font-size: 16px;
+            color: white;
+            font-weight: 500;
+        }
+
         .premium-item-label {
             font-size: 12px;
             color: #8e8e93;
-            margin-bottom: 4px;
+            margin-top: 4px;
         }
 
         .premium-item-value {
@@ -3736,7 +3788,7 @@
     </div>
 
 
-    <div id="generalSettingsSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0;">
+    <div id="generalSettingsSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0; background: #121316 !important;">
         <div class="premium-header">
             <button onclick="closeGeneralSettings()" class="header-icon-btn">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -3745,41 +3797,31 @@
             <div style="width: 40px;"></div>
         </div>
 
-        <div id="generalSettingsSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0;">
-            <div class="premium-header">
-                <button onclick="closeGeneralSettings()" class="header-icon-btn">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                </button>
-                <div style="flex:1; text-align:center; font-weight: 600; font-size: 18px; color: white;">Настройки</div>
-                <div style="width: 40px;"></div>
-            </div>
-
-            <div style="flex:1; overflow-y: auto; padding-bottom: 40px; margin-top: 20px;">
-                <div class="premium-section-title">Перевод сообщений</div>
-                <div class="premium-section">
-                    <div class="premium-item" style="cursor: default;">
-                        <div class="premium-item-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">🌐</div>
-                        <div class="premium-item-content">
-                            <div class="premium-item-value">Автоперевод</div>
-                            <div class="premium-item-label">Переводить чужие сообщения</div>
-                        </div>
-                        <label class="tg-switch" style="margin-left: auto;">
-                            <input type="checkbox" id="autoTranslateToggle" onchange="toggleAutoTranslate(this)">
-                            <span class="slider"></span>
-                        </label>
+        <div style="flex:1; overflow-y: auto; padding-bottom: 40px; margin-top: 20px;">
+            <div class="premium-section-title">Перевод сообщений</div>
+            <div class="premium-section">
+                <div class="premium-item" style="cursor: default;">
+                    <div class="premium-item-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">🌐</div>
+                    <div class="premium-item-content">
+                        <div class="premium-item-value">Автоперевод</div>
+                        <div class="premium-item-label">Переводить чужие сообщения</div>
                     </div>
-
-                    <div class="premium-item" onclick="changeTranslateLang()">
-                        <div class="premium-item-icon" style="background: rgba(115, 106, 240, 0.15); color: #736AF0;">A文</div>
-                        <div class="premium-item-content">
-                            <div class="premium-item-value">Язык перевода</div>
-                            <div class="premium-item-label" id="currentLangLabel">Загрузка...</div>
-                        </div>
-                        <div style="color: #6c7883; font-size: 18px; padding-right: 5px;">›</div>
-                    </div>
+                    <label class="tg-switch" style="margin-left: auto;">
+                        <input type="checkbox" id="autoTranslateToggle" onchange="toggleAutoTranslate(this)">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div class="field-hint" style="margin: -15px 0 25px 25px;">Используется бесплатный API MyMemory. Возможны задержки.</div>
+
+                <div class="premium-item" onclick="changeTranslateLang()">
+                    <div class="premium-item-icon" style="background: rgba(115, 106, 240, 0.15); color: #736AF0;">A文</div>
+                    <div class="premium-item-content">
+                        <div class="premium-item-value">Язык перевода</div>
+                        <div class="premium-item-label" id="currentLangLabel">Загрузка...</div>
+                    </div>
+                    <div style="color: #6c7883; font-size: 18px; padding-left: 10px;">›</div>
+                </div>
             </div>
+            <div class="field-hint" style="margin: -15px 0 25px 25px;">Используется бесплатный API MyMemory. Возможны задержки.</div>
         </div>
     </div>
 
@@ -3889,10 +3931,13 @@
                 <div class="premium-input-divider"></div>
                 <div class="premium-input-box">
                     <label>Имя пользователя</label>
-                    <input type="text" id="editUsername" placeholder="@username" oninput="checkUsernameAvailability(this)">
+                    <div class="premium-username-wrapper">
+                        <span class="premium-username-prefix">@</span>
+                        <input type="text" id="editUsername" placeholder="username" oninput="checkUsernameAvailability(this)" style="padding-left: 0;">
+                    </div>
                 </div>
+                <div id="editUsernameStatus" class="premium-status-msg"></div>
             </div>
-            <div id="editUsernameStatus" class="field-hint" style="color: #4caf50; display: none; margin: -15px 0 25px 25px;">Имя пользователя свободно.</div>
         </div>
     </div>
 
@@ -4354,17 +4399,23 @@
         let searchTimeout = null;
 
         async function handleSearchInput(input) {
-            const query = input.value.trim();
+            const rawQuery = input.value.trim();
             const resultsBox = document.getElementById('searchResults');
 
             if (searchTimeout) clearTimeout(searchTimeout);
 
-            if (query.length === 0) {
+            if (rawQuery.length === 0) {
                 resultsBox.innerHTML = '';
                 resultsBox.classList.remove('active');
                 resultsBox.style.display = 'none';
                 return;
             }
+
+            // Переводим в нижний регистр и убираем @ для удобства
+            const qLower = rawQuery.startsWith('@') ? rawQuery.slice(1).toLowerCase() : rawQuery.toLowerCase();
+
+            // Разбиваем запрос на отдельные слова (чтобы находило "Иванов Иван" так же хорошо, как "Иван Иванов")
+            const searchTerms = qLower.split(/\s+/).filter(word => word.length > 0);
 
             // Показываем блок результатов
             resultsBox.style.display = 'flex';
@@ -4375,31 +4426,41 @@
                 try {
                     const localHits = [];
                     const globalHits = [];
-                    const qLower = query.toLowerCase();
 
-                    // А. Поиск по локальным контактам
+                    // === А. ПОИСК ПО СВОИМ КОНТАКТАМ (КЭШ) ===
                     Object.keys(usersCache).forEach(id => {
                         if (id === currentUser.uid) return;
+
                         const u = usersCache[id];
                         const fullName = `${u.name || ''} ${u.surname || ''}`.toLowerCase();
-                        if (fullName.includes(qLower) || (u.username && u.username.toLowerCase().includes(qLower))) {
+                        const username = (u.username || '').toLowerCase();
+
+                        // Проверяем, содержится ли КАЖДОЕ введенное слово в имени, фамилии или нике
+                        const isMatch = searchTerms.every(term =>
+                            fullName.includes(term) || username.includes(term)
+                        );
+
+                        if (isMatch) {
                             localHits.push({ id, ...u });
                         }
                     });
 
-                    // Б. Глобальный поиск (Firebase)
-                    const snap = await db.collection('users')
-                        .where('username', '>=', query)
-                        .where('username', '<=', query + '\uf8ff')
-                        .limit(10).get();
+                    // === Б. ГЛОБАЛЬНЫЙ ПОИСК В БАЗЕ FIREBASE (ПО НИКНЕЙМУ) ===
+                    // Firebase ищет только цельные никнеймы с начала слова
+                    if (searchTerms.length === 1 && qLower.length >= 2) {
+                        const snap = await db.collection('users')
+                            .where('username', '>=', qLower)
+                            .where('username', '<=', qLower + '\uf8ff')
+                            .limit(10).get();
 
-                    snap.forEach(doc => {
-                        if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
-                            globalHits.push({ id: doc.id, ...doc.data() });
-                        }
-                    });
+                        snap.forEach(doc => {
+                            if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
+                                globalHits.push({ id: doc.id, ...doc.data() });
+                            }
+                        });
+                    }
 
-                    // В. Отрисовка
+                    // === В. ОТРИСОВКА РЕЗУЛЬТАТОВ ===
                     resultsBox.innerHTML = '';
                     if (localHits.length === 0 && globalHits.length === 0) {
                         resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
@@ -4422,6 +4483,7 @@
                         globalHits.forEach(u => resultsBox.appendChild(renderSearchResult(u, false)));
                     }
                 } catch (e) {
+                    console.error("Ошибка поиска:", e);
                     resultsBox.innerHTML = '<div style="padding:20px; color:red;">Ошибка поиска</div>';
                 }
             }, 400);
@@ -4464,91 +4526,7 @@
 
 
 
-        async function performSearch(query) {
-            const resultsBox = document.getElementById('searchResults');
-            resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Поиск...</div>';
-
-            // Убеждаемся, что окно открыто (класс active из CSS)
-            if (!resultsBox.classList.contains('active')) {
-                openSearchUI();
-            }
-
-            const cleanQuery = query.startsWith('@') ? query.slice(1).toLowerCase() : query.toLowerCase();
-
-            try {
-                // --- А. ЛОКАЛЬНЫЙ ПОИСК (СРЕДИ ДРУЗЕЙ) ---
-                // Ищем в кэше загруженных пользователей
-                const localHits = Object.keys(usersCache || {})
-                    .map(id => ({ id, ...usersCache[id] }))
-                    .filter(u => {
-                        const q = cleanQuery;
-                        return (u.name && u.name.toLowerCase().includes(q)) ||
-                            (u.username && u.username.toLowerCase().includes(q)) ||
-                            (u.email && u.email.toLowerCase().includes(q));
-                    });
-
-                // --- Б. ГЛОБАЛЬНЫЙ ПОИСК (БАЗА ДАННЫХ) ---
-                const globalHits = [];
-
-                // Если запрос длиннее 2 символов, ищем в базе
-                if (cleanQuery.length >= 2) {
-                    // Ищем по username
-                    const snapUser = await db.collection('users')
-                        .where('username', '>=', cleanQuery)
-                        .where('username', '<=', cleanQuery + '\uf8ff')
-                        .limit(5)
-                        .get();
-
-                    snapUser.forEach(doc => {
-                        // Исключаем себя и тех, кто уже есть в локальном поиске
-                        if (doc.id !== currentUser.uid && !localHits.find(h => h.id === doc.id)) {
-                            globalHits.push({ id: doc.id, ...doc.data() });
-                        }
-                    });
-
-                    // Ищем по email (если мало результатов)
-                    if (globalHits.length < 3) {
-                        const snapEmail = await db.collection('users')
-                            .where('email', '>=', cleanQuery)
-                            .where('email', '<=', cleanQuery + '\uf8ff')
-                            .limit(5)
-                            .get();
-
-                        snapEmail.forEach(doc => {
-                            if (doc.id !== currentUser.uid &&
-                                !localHits.find(h => h.id === doc.id) &&
-                                !globalHits.find(h => h.id === doc.id)) {
-                                globalHits.push({ id: doc.id, ...doc.data() });
-                            }
-                        });
-                    }
-                }
-
-                // --- В. ОТРИСОВКА ---
-                resultsBox.innerHTML = '';
-
-                if (localHits.length === 0 && globalHits.length === 0) {
-                    resultsBox.innerHTML = '<div style="padding:20px; color:#888; text-align:center;">Ничего не найдено</div>';
-                    return;
-                }
-
-                if (localHits.length > 0) {
-                    resultsBox.innerHTML += `<div class="search-section-title">Ваши контакты</div>`;
-                    localHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, true)));
-                }
-
-                if (globalHits.length > 0) {
-                    resultsBox.innerHTML += `<div class="search-section-title">Глобальный поиск</div>`;
-                    globalHits.forEach(user => resultsBox.appendChild(renderSearchResult(user, false)));
-                }
-
-            } catch (e) {
-                console.error(e);
-                resultsBox.innerHTML = '<div style="padding:10px; color:red; text-align:center;">Ошибка поиска</div>';
-            }
-        }
-        // Вспомогательная функция для создания HTML элемента результата
-
+      
         // Новая функция отправки заявки по ID (а не email)
         async function sendFriendRequestToId(targetUid) {
             try {
