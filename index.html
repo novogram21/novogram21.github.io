@@ -3704,39 +3704,59 @@
 
 
         /* ==========================================
-           АДАПТАЦИЯ ШТОРОК ДЛЯ КОМПЬЮТЕРА (ПК)
-           ========================================== */
+   АДАПТАЦИЯ ШТОРОК ДЛЯ КОМПЬЮТЕРА (ПК)
+   ========================================== */
         @media (min-width: 769px) {
-            /* Превращаем полноэкранные шторки в красивые окна по центру */
             .full-screen-sheet {
                 top: 50% !important;
                 left: 50% !important;
                 bottom: auto !important;
-                width: 420px !important; /* Аккуратная фиксированная ширина */
-                height: 80vh !important; /* 80% от высоты экрана ПК */
-                max-height: 750px !important;
-                border-radius: 24px !important; /* Перебиваем инлайн-стили без скруглений */
-                /* Скрытое состояние: смещено чуть вниз, полупрозрачное и уменьшенное */
-                transform: translate(-50%, calc(-50% + 40px)) scale(0.95) !important;
+                /* 1. Сделали шире (было 420px) */
+                width: 550px !important;
+                height: 85vh !important;
+                max-height: 800px !important;
+                border-radius: 28px !important; /* Чуть более мягкое скругление */
+                /* 2. Улучшенная анимация и глубокая премиальная тень */
+                transform: translate(-50%, -45%) scale(0.96) !important;
                 opacity: 0;
-                transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease, visibility 0s linear 0.3s !important;
-                box-shadow: 0 25px 80px rgba(0,0,0,0.6) !important;
+                transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease !important;
+                box-shadow: 0 30px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05) !important;
+                /* Прячем дефолтный скроллбар для Firefox */
+                scrollbar-width: none;
             }
 
                 .full-screen-sheet.open {
-                    /* Открытое состояние: ровно по центру экрана */
                     transform: translate(-50%, -50%) scale(1) !important;
                     opacity: 1;
-                    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease, visibility 0s !important;
                 }
 
-                /* Закругляем цветные шапки сверху, чтобы они не вылезали за края нового окна */
+                /* 3. СТИЛИЗАЦИЯ СКРОЛЛБАРА (Делаем его "невидимым" или очень тонким) */
+                /* Выбираем внутренний контейнер со скроллом (обычно это .edit-content-scroll) */
+                .full-screen-sheet ::-webkit-scrollbar {
+                    width: 4px; /* Очень тонкий */
+                }
+
+                .full-screen-sheet ::-webkit-scrollbar-track {
+                    background: transparent; /* Полностью убираем дорожку (показывалку высоты) */
+                }
+
+                .full-screen-sheet ::-webkit-scrollbar-thumb {
+                    background: rgba(115, 106, 240, 0.2); /* Едва заметный цвет твоего бренда */
+                    border-radius: 10px;
+                    transition: background 0.3s;
+                }
+
+                .full-screen-sheet :hover::-webkit-scrollbar-thumb {
+                    background: rgba(115, 106, 240, 0.5); /* Проявляется только при наведении */
+                }
+
+                /* Исправление шапок для ПК */
                 .full-screen-sheet .tg-header-bg,
                 .full-screen-sheet .premium-header {
-                    border-top-left-radius: 24px !important;
-                    border-top-right-radius: 24px !important;
-                    /* На ПК нет "челки" айфона, поэтому делаем отступ нормальным */
-                    padding-top: 15px !important;
+                    border-top-left-radius: 28px !important;
+                    border-top-right-radius: 28px !important;
+                    padding-top: 20px !important;
+                    padding-bottom: 20px !important;
                 }
         }
 
