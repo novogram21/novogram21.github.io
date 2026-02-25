@@ -1743,41 +1743,56 @@
                  width: 100%;
              }
 
-             .premium-username-prefix {
-                 color: #736AF0; /* Твой фирменный цвет для @ */
-                 font-size: 16px;
-                 font-weight: 600;
-                 margin-right: 2px;
-                 user-select: none;
-             }
+        .premium-username-prefix {
+            color: #736AF0; /* Базовый цвет */
+            font-size: 16px;
+            font-weight: 600;
+            margin-right: 2px;
+            user-select: none;
+            transition: color 0.3s ease; /* Плавная смена цвета при проверке */
+        }
 
-             /* Статус проверки (плавное появление и смена цвета) */
-             .premium-status-msg {
-                 font-size: 12px;
-                 margin: -12px 0 20px 25px;
-                 height: 15px; /* Фиксированная высота, чтобы элементы не прыгали */
-                 transition: color 0.3s ease, opacity 0.3s ease;
-                 opacity: 0;
-                 font-weight: 500;
-                 pointer-events: none;
-             }
+        .premium-status-msg {
+            font-size: 13px;
+            margin: -12px 0 20px 25px;
+            min-height: 20px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            opacity: 0;
+            transform: translateY(-5px); /* Выезжает сверху вниз */
+            font-weight: 500;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-                 .premium-status-msg.visible {
-                     opacity: 1;
-                 }
+            .premium-status-msg.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
 
-                 .premium-status-msg.success {
-                     color: #10b981;
-                 }
-                 /* Изумрудно-зеленый */
-                 .premium-status-msg.error {
-                     color: #ff4444;
-                 }
-                 /* Красный */
-                 .premium-status-msg.loading {
-                     color: #8e8e93;
-                 }
-             /* Серый */
+            .premium-status-msg.success {
+                color: #10b981; /* Изумрудный */
+            }
+
+            .premium-status-msg.error {
+                color: #ff595a; /* Красный */
+            }
+
+            .premium-status-msg.loading {
+                color: #8e8e93; /* Серый */
+            }
+
+        /* Маленькая крутилка для статуса проверки */
+        .status-spinner-small {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(142, 142, 147, 0.3);
+            border-top-color: #8e8e93;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
 
 
 
@@ -3760,6 +3775,32 @@
                 }
         }
 
+
+        /* --- ФИКС ПРЫГАЮЩЕЙ ШАПКИ И СКРОЛЛА --- */
+        #editProfileSheet {
+            display: block !important;
+        }
+
+            #editProfileSheet .premium-header {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+            }
+
+            #editProfileSheet > div:nth-child(2) {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-top: calc(env(safe-area-inset-top) + 65px) !important;
+                padding-bottom: 40px;
+                overflow-y: auto;
+                transition: padding-bottom 0.3s ease;
+            }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -3990,9 +4031,11 @@
                 <div class="premium-input-divider"></div>
                 <div class="premium-input-box">
                     <label>Имя пользователя</label>
-                    <div class="premium-username-wrapper">
+                    <div class="premium-username-wrapper" style="position: relative;">
                         <span class="premium-username-prefix">@</span>
-                        <input type="text" id="editUsername" placeholder="username" oninput="checkUsernameAvailability(this)" style="padding-left: 0;">
+                        <input type="text" id="editUsername" placeholder="username" oninput="checkUsernameAvailability(this)" style="padding-left: 0; padding-right: 90px;">
+
+                        <div id="usernameSideStatus" style="position: absolute; right: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0; transition: opacity 0.3s ease, color 0.3s ease; pointer-events: none;"></div>
                     </div>
                 </div>
                 <div id="editUsernameStatus" class="premium-status-msg"></div>
@@ -5433,9 +5476,20 @@
                     // ---------------------------------------------------------
 
                     if (snap.empty) {
-                        list.innerHTML = '<div style="padding:20px;text-align:center;color:#888">Список друзей пуст</div>';
+                        list.innerHTML = '<div class="empty-list-msg" style="padding:20px;text-align:center;color:#888">Список друзей пуст</div>';
                         return;
                     }
+
+                    // --- УДАЛЯЕМ НАДПИСЬ ПУСТОТЫ ПЕРЕД ДОБАВЛЕНИЕМ ДРУЗЕЙ ---
+                    const emptyMsg = list.querySelector('.empty-list-msg');
+                    if (emptyMsg) emptyMsg.remove();
+
+                    // Страховка на случай, если надпись подгрузилась из старого кэша
+                    if (list.innerHTML.includes('Список друзей пуст')) {
+                        list.innerHTML = '';
+                    }
+                    // ---------------------------------------------------------
+
                     // Проходим только по ИЗМЕНЕНИЯМ
                     snap.docChanges().forEach(async change => {
                         const d = change.doc.data();
@@ -8155,13 +8209,21 @@
         }
 
         function closeEditProfile(fromPopState = false) {
-            // Если нажали ESC или кнопку в интерфейсе — просто даем браузеру команду "Назад"
-            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
-                history.back();
-                return; // ВАЖНО: Прерываем функцию. Окно закроется само через системный popstate!
+            // 1. Принудительно прячем клавиатуру и сбрасываем огромный отступ
+            if (document.activeElement) {
+                document.activeElement.blur();
+            }
+            const scrollContainer = document.querySelector('#editProfileSheet > div:nth-child(2)');
+            if (scrollContainer) {
+                scrollContainer.style.paddingBottom = '40px';
             }
 
-            // Физически скрываем окно (сработает только при реальном свайпе или после history.back)
+            // 2. Системное закрытие (как было у вас)
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                history.back();
+                return;
+            }
+
             document.getElementById('editProfileSheet').classList.remove('open');
         }
 
@@ -8220,8 +8282,6 @@
         // let usernameCheckTimeout = null;
 
         function checkUsernameAvailability(input) {
-            // 1. Очистка символов (ТОЧНО КАК ПРИ РЕГИСТРАЦИИ)
-            // Разрешаем только латиницу, цифры и подчеркивание
             let val = input.value;
             const cleanVal = val.replace(/[^a-zA-Z0-9_]/g, '');
 
@@ -8231,56 +8291,89 @@
             }
 
             const statusEl = document.getElementById('editUsernameStatus');
-            // Находим кнопку сохранения внутри хедера окна редактирования
-            const saveBtn = document.querySelector('#editProfileSheet .tg-header-top button:last-child');
+            const sideStatusEl = document.getElementById('usernameSideStatus'); // <-- НОВЫЙ ЭЛЕМЕНТ
+            const saveBtn = document.querySelector('#editProfileSheet .premium-header button:last-child');
+            const prefix = document.querySelector('.premium-username-prefix');
 
-            // Сбрасываем предыдущий таймер
-            if (usernameCheckTimeout) clearTimeout(usernameCheckTimeout);
+            if (typeof usernameCheckTimeout !== 'undefined' && usernameCheckTimeout) {
+                clearTimeout(usernameCheckTimeout);
+            }
 
-            // Вспомогательная функция для управления кнопкой
             const setValid = (isValid) => {
-                isUsernameValid = isValid;
-                saveBtn.style.opacity = isValid ? "1" : "0.5";
-                saveBtn.style.pointerEvents = isValid ? "auto" : "none";
+                if (typeof isUsernameValid !== 'undefined') isUsernameValid = isValid;
+                if (saveBtn) {
+                    saveBtn.style.opacity = isValid ? "1" : "0.5";
+                    saveBtn.style.pointerEvents = isValid ? "auto" : "none";
+                }
             };
 
-            // 2. Проверка длины (как на вашем скриншоте - 5 символов)
-            if (val.length < 5) {
-                statusEl.innerText = "Минимальная длина — 5 символов.";
-                statusEl.style.color = "#ff595a"; // Красный
-                statusEl.style.display = "block";
+            // ОБНОВЛЕНО: Функция теперь принимает и длинный текст (вниз), и короткий (сбоку)
+            const showStatus = (longText, shortText, type) => {
+                statusEl.className = `premium-status-msg visible ${type}`;
+
+                // Показываем надпись сбоку
+                if (sideStatusEl) {
+                    sideStatusEl.innerText = shortText;
+                    sideStatusEl.style.opacity = "1";
+                }
+
+                if (type === 'loading') {
+                    statusEl.innerHTML = `<div class="status-spinner-small"></div> <span>${longText}</span>`;
+                    if (prefix) prefix.style.color = '#8e8e93';
+                    if (sideStatusEl) sideStatusEl.style.color = '#8e8e93'; // Серый
+                } else if (type === 'success') {
+                    statusEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>${longText}</span>`;
+                    if (prefix) prefix.style.color = '#10b981';
+                    if (sideStatusEl) sideStatusEl.style.color = '#10b981'; // Изумрудный
+                } else if (type === 'error') {
+                    statusEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> <span>${longText}</span>`;
+                    if (prefix) prefix.style.color = '#ff595a';
+                    if (sideStatusEl) sideStatusEl.style.color = '#ff595a'; // Красный
+                }
+            };
+
+            if (val.length === 0) {
+                statusEl.className = 'premium-status-msg'; // Скрываем нижний текст
+                if (prefix) prefix.style.color = '#736AF0';
+                if (sideStatusEl) sideStatusEl.style.opacity = "0"; // Скрываем боковой текст
                 setValid(false);
                 return;
             }
 
-            // 3. ВАЖНО: Если юзернейм совпадает с текущим — он свободен!
-            // (Этого нет в регистрации, но это обязательно здесь)
-            if (val === originalUsername) {
-                statusEl.style.display = "none";
+            if (val.length < 3) {
+                showStatus("Минимальная длина — 3 символа", "Короткое", "error");
+                setValid(false);
+                return;
+            }
+
+            const myOldNick = typeof originalUsername !== 'undefined' ? originalUsername : '';
+            if (val.toLowerCase() === myOldNick.toLowerCase()) {
+                showStatus("Это ваше текущее имя пользователя", "Текущее имя", "success");
                 setValid(true);
                 return;
             }
 
-            // Показываем "Проверка..."
-            statusEl.innerText = "Проверка...";
-            statusEl.style.color = "#888";
-            statusEl.style.display = "block";
-            setValid(false); // Блокируем кнопку пока идет проверка
+            showStatus("Проверка доступности...", "Поиск...", "loading");
+            setValid(false);
 
-            // 4. Запрос к базе (Debounce 500мс — как при регистрации)
+            const lowerVal = val.toLowerCase();
+            const upperVal = val.toUpperCase();
+            const capVal = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+            const variations = [...new Set([val, lowerVal, upperVal, capVal])];
+
             usernameCheckTimeout = setTimeout(() => {
-                db.collection('users').where('username', '==', val).get().then(snap => {
+                db.collection('users').where('username', 'in', variations).get().then(snap => {
                     if (snap.empty) {
-                        // Свободно
-                        statusEl.innerText = "Имя пользователя свободно.";
-                        statusEl.style.color = "#4caf50"; // Зеленый
+                        showStatus(`Имя @${val} доступно`, "Свободно", "success");
                         setValid(true);
                     } else {
-                        // Занято
-                        statusEl.innerText = "Это имя пользователя уже занято.";
-                        statusEl.style.color = "#ff595a"; // Красный
+                        showStatus("Это имя уже занято", "Занято", "error");
                         setValid(false);
                     }
+                }).catch(err => {
+                    console.error(err);
+                    showStatus("Ошибка проверки соединения", "Ошибка", "error");
+                    setValid(false);
                 });
             }, 500);
         }
@@ -9640,9 +9733,39 @@
         }
 
         // ==========================================
-        // ЛОГИКА СКРЕПКИ И ЗАПРОСА ПРАВ НА ФАЙЛЫ
+        // УМНЫЙ СКРОЛЛ ПРИ ОТКРЫТИИ КЛАВИАТУРЫ (PREMIUM UX)
         // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Находим контейнер со скроллом внутри шторки редактирования (это второй div внутри #editProfileSheet)
+            const scrollContainer = document.querySelector('#editProfileSheet > div:nth-child(2)');
+            const allEditInputs = document.querySelectorAll('#editProfileSheet input, #editProfileSheet textarea');
 
+            allEditInputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    // Применяем магию только для телефонов
+                    if (window.innerWidth <= 768) {
+                        // 1. Даем огромный временный запас снизу. Это нужно, чтобы даже самое 
+                        // нижнее поле (Юзернейм) физически могло дотянуться до центра экрана.
+                        scrollContainer.style.paddingBottom = '60vh'; 
+
+                        // 2. Ждем ровно 300мс (пока система выдвинет клавиатуру)
+                        setTimeout(() => {
+                            // 3. Плавно центрируем поле над клавиатурой
+                            this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                    }
+                });
+
+                input.addEventListener('blur', function() {
+                    if (window.innerWidth <= 768) {
+                        // Как только убрали фокус (клавиатура прячется), возвращаем родной отступ
+                        setTimeout(() => {
+                            scrollContainer.style.paddingBottom = '40px';
+                        }, 100);
+                    }
+                });
+            });
+        });
 
 
     </script>
