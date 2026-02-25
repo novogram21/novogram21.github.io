@@ -3702,6 +3702,44 @@
                  word-break: break-word;
              }
 
+
+        /* ==========================================
+           АДАПТАЦИЯ ШТОРОК ДЛЯ КОМПЬЮТЕРА (ПК)
+           ========================================== */
+        @media (min-width: 769px) {
+            /* Превращаем полноэкранные шторки в красивые окна по центру */
+            .full-screen-sheet {
+                top: 50% !important;
+                left: 50% !important;
+                bottom: auto !important;
+                width: 420px !important; /* Аккуратная фиксированная ширина */
+                height: 80vh !important; /* 80% от высоты экрана ПК */
+                max-height: 750px !important;
+                border-radius: 24px !important; /* Перебиваем инлайн-стили без скруглений */
+                /* Скрытое состояние: смещено чуть вниз, полупрозрачное и уменьшенное */
+                transform: translate(-50%, calc(-50% + 40px)) scale(0.95) !important;
+                opacity: 0;
+                transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease, visibility 0s linear 0.3s !important;
+                box-shadow: 0 25px 80px rgba(0,0,0,0.6) !important;
+            }
+
+                .full-screen-sheet.open {
+                    /* Открытое состояние: ровно по центру экрана */
+                    transform: translate(-50%, -50%) scale(1) !important;
+                    opacity: 1;
+                    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease, visibility 0s !important;
+                }
+
+                /* Закругляем цветные шапки сверху, чтобы они не вылезали за края нового окна */
+                .full-screen-sheet .tg-header-bg,
+                .full-screen-sheet .premium-header {
+                    border-top-left-radius: 24px !important;
+                    border-top-right-radius: 24px !important;
+                    /* На ПК нет "челки" айфона, поэтому делаем отступ нормальным */
+                    padding-top: 15px !important;
+                }
+        }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -5328,6 +5366,12 @@
             const list = document.getElementById('friendsList');
             if (list.innerHTML === '' || list.innerText.includes('Список друзей пуст')) {
                 list.innerHTML = '<div class="tg-spinner-container"><div class="tg-spinner"></div></div>';
+            }
+
+            if (window.mauiInterop) {
+                window.mauiInterop.postMessage("toggle_network");
+            } else {
+                window.needsNetworkReset = true; // Запасной вариант
             }
 
             if (window.mauiInterop) {
