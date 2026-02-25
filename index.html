@@ -3801,6 +3801,114 @@
                 transition: padding-bottom 0.3s ease;
             }
 
+
+        /* --- Кнопки действий в профиле друга --- */
+        .friend-actions-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 0 20px 25px;
+        }
+
+        .friend-action-btn {
+            background: #1c1c1e;
+            border-radius: 16px;
+            padding: 12px 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.03);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+            .friend-action-btn:active {
+                transform: scale(0.95);
+                background: #252528;
+            }
+
+            .friend-action-btn .icon {
+                font-size: 22px;
+            }
+
+            .friend-action-btn span {
+                font-size: 12px;
+                color: #736AF0;
+                font-weight: 600;
+            }
+
+
+
+        /* --- ВЫПАДАЮЩЕЕ МЕНЮ ЧАТА (ТРИ ТОЧКИ) --- */
+        .chat-options-dropdown {
+            position: absolute;
+            top: 60px; /* Сразу под шапкой */
+            right: 15px;
+            background: #1c1c1e; /* Премиальный темный цвет карточек */
+            border-radius: 14px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+            min-width: 210px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            padding: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+            /* Магия плавной анимации iOS/Telegram */
+            transform-origin: top right;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            pointer-events: none; /* Не кликабельно, пока скрыто */
+        }
+
+            .chat-options-dropdown.active {
+                opacity: 1;
+                transform: scale(1);
+                pointer-events: auto;
+            }
+
+        .chat-option-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 14px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+            .chat-option-item:hover {
+                background: rgba(255,255,255,0.08);
+            }
+
+            .chat-option-item:active {
+                background: rgba(255,255,255,0.12);
+                transform: scale(0.98); /* Эффект нажатия */
+            }
+
+            .chat-option-item.danger {
+                color: #ff595a;
+            }
+
+                .chat-option-item.danger .chat-option-icon {
+                    filter: grayscale(0); /* Оставляем цветной, если эмодзи */
+                }
+
+        .chat-option-icon {
+            font-size: 18px;
+            margin-right: 14px;
+            width: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #8e8e93;
+            filter: grayscale(1); /* Делаем эмодзи строгими, серыми */
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -3924,6 +4032,8 @@
             <div class="field-hint" style="margin: -15px 0 25px 25px;">Используется бесплатный API MyMemory. Возможны задержки.</div>
         </div>
     </div>
+
+
 
 
     <div id="overlaySheet" class="overlay-sheet" onclick="if(!window.isMenuJustOpened) closeAllSheets();" oncontextmenu="event.preventDefault(); event.stopPropagation();"></div>
@@ -4188,8 +4298,10 @@
             <div id="floatingDate" class="floating-date">Сегодня</div>
             <input type="date" id="chatDatePicker" style="position: absolute; top: 66px; left: 50%; opacity: 0; pointer-events: none; z-index: -1;">
 
+
+
             <div class="chat-header">
-                <div class="chat-header-left" onclick="alert('Профиль пользователя скоро!')">
+                <div class="chat-header-left" onclick="openFriendProfile()">
                     <button class="back-btn" onclick="event.stopPropagation(); closeChat();">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     </button>
@@ -4206,9 +4318,28 @@
                     <button class="header-icon-btn" onclick="startCall()">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
                     </button>
-                    <button class="header-icon-btn" onclick="alert('Меню чата скоро!')">
+                    <button class="header-icon-btn" onclick="toggleChatOptionsMenu(event)">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="#aaa"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" /></svg>
                     </button>
+                </div>
+            </div>
+
+            <div id="chatOptionsMenu" class="chat-options-dropdown">
+                <div class="chat-option-item" onclick="closeChatOptionsMenu(); toggleChatSearch();">
+                    <span class="chat-option-icon">🔍</span> Поиск
+                </div>
+                <div class="chat-option-item" onclick="closeChatOptionsMenu(); alert('Функция отключения уведомлений скоро появится!');">
+                    <span class="chat-option-icon">🔕</span> Без звука
+                </div>
+                <div class="chat-option-item" onclick="closeChatOptionsMenu(); openEditContactSheet();">
+                    <span class="chat-option-icon">✏️</span> Изменить контакт
+                </div>
+                <div class="context-divider"></div>
+                <div class="chat-option-item" onclick="closeChatOptionsMenu(); alert('История чата скоро можно будет очистить!');">
+                    <span class="chat-option-icon">🧹</span> Очистить историю
+                </div>
+                <div class="chat-option-item danger" onclick="closeChatOptionsMenu(); alert('Удаление чата в разработке!');">
+                    <span class="chat-option-icon">🗑️</span> Удалить чат
                 </div>
             </div>
 
@@ -4606,13 +4737,13 @@
                 : `<div class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">${fullName.charAt(0).toUpperCase()}</div>`;
 
             div.innerHTML = `
-                    ${avatarHtml}
-                    <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                    <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                    <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                    </div>
-                    <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
-                    `;
+                            ${avatarHtml}
+                            <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                            <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                            <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                            </div>
+                            <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
+                            `;
 
             // Событие клика теперь надежно закреплено за узлом
             div.onclick = () => {
@@ -5157,16 +5288,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                    ${avatar}
-                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                    ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                    <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                    </div>
-                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                    <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                    <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                    </div>
-                    `;
+                            ${avatar}
+                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                            </div>
+                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                            </div>
+                            `;
                         list.appendChild(div);
                     });
                 });
@@ -5396,7 +5527,7 @@
         // --- НОВАЯ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ (Вставить ПЕРЕД loadData) ---
         function getFriendItemHTML(fid, friendData, chatId, createdTime) {
             // Если данных нет, берем имя из кэша или пишем заглушку
-            const fName = friendData ? (friendData.name || friendData.username) : (usersCache[fid]?.name || 'Загрузка...');
+            const fName = getDisplayName(fid, friendData || usersCache[fid] || {});
             const fNick = friendData ? ('@' + friendData.username) : '';
 
             // Аватарка
@@ -5405,19 +5536,19 @@
                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
             return `
-                    ${avatarHtml}
-                    <div class="user-name">${fName}</div>
-                    <div class="last-msg-row">
-                    <span class="last-msg" id="last-${chatId}">...</span>
-                    </div>
-                    <div class="meta-column">
-                    <span class="last-msg-date" id="date-${chatId}"></span>
-                    <div class="meta-bottom-row">
-                    <span id="status-${chatId}" class="list-ticks"></span>
-                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                    </div>
-                    </div>
-                    `;
+                            ${avatarHtml}
+                            <div class="user-name">${fName}</div>
+                            <div class="last-msg-row">
+                            <span class="last-msg" id="last-${chatId}">...</span>
+                            </div>
+                            <div class="meta-column">
+                            <span class="last-msg-date" id="date-${chatId}"></span>
+                            <div class="meta-bottom-row">
+                            <span id="status-${chatId}" class="list-ticks"></span>
+                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                            </div>
+                            </div>
+                            `;
         }
 
         function loadData() {
@@ -5554,19 +5685,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                    ${avatarHtml}
-                    <div class="user-name">${fName}</div>
-                    <div class="last-msg-row">
-                    <span class="last-msg" id="last-${chatId}">...</span>
-                    </div>
-                    <div class="meta-column">
-                    <span class="last-msg-date" id="date-${chatId}"></span>
-                    <div class="meta-bottom-row">
-                    <span id="status-${chatId}" class="list-ticks"></span>
-                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                    </div>
-                    </div>
-                    `;
+                            ${avatarHtml}
+                            <div class="user-name">${fName}</div>
+                            <div class="last-msg-row">
+                            <span class="last-msg" id="last-${chatId}">...</span>
+                            </div>
+                            <div class="meta-column">
+                            <span class="last-msg-date" id="date-${chatId}"></span>
+                            <div class="meta-bottom-row">
+                            <span id="status-${chatId}" class="list-ticks"></span>
+                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                            </div>
+                            </div>
+                            `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -5927,10 +6058,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                    <div class="msg-reply-name">${m.replyTo.name}</div>
-                    <div class="msg-reply-text">${m.replyTo.text}</div>
-                    </div>`;
+                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                            <div class="msg-reply-name">${m.replyTo.name}</div>
+                            <div class="msg-reply-text">${m.replyTo.text}</div>
+                            </div>`;
             }
 
             // Основной контент
@@ -5977,18 +6108,18 @@
 
                 // ВАЖНО: Добавлено style="color: currentColor;" к SVG и убран onclick из верстки, чтобы не было конфликтов
                 contentHtml += `
-                    <div class="chat-call-card">
-                    <div class="call-icon-wrapper">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                    </svg>
-                    </div>
-                    <div class="call-info">
-                    <div class="call-title">${titleText}</div>
-                    <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                    </div>
-                    </div>
-                    `;
+                            <div class="chat-call-card">
+                            <div class="call-icon-wrapper">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                            </div>
+                            <div class="call-info">
+                            <div class="call-title">${titleText}</div>
+                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                            </div>
+                            </div>
+                            `;
             }
             else {
                 // Добавили класс "chat-link" и убрали target="_blank"
@@ -6013,11 +6144,11 @@
                 }
 
                 let metaHtml = `
-                    <span class="msg-meta" style="${metaStyle}">
-                    ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                    <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                    </span>`;
+                            <span class="msg-meta" style="${metaStyle}">
+                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                            <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                            </span>`;
 
                 if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                 else contentHtml += metaHtml;
@@ -6395,6 +6526,7 @@
             document.getElementById('deleteSheet')?.classList.remove('open');
             document.getElementById('profileSheet')?.classList.remove('open');
             document.getElementById('editProfileSheet')?.classList.remove('open');
+            document.getElementById('friendProfileSheet')?.classList.remove('open');
 
             const menu = document.getElementById('contextMenu');
             if (menu) {
@@ -6776,14 +6908,14 @@
                                     // 3. Формируем HTML "как в Телеграме"
                                     // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
                                     nameEl.innerHTML = `
-                    <div style="display:flex; align-items:center;">
-                    ${avatarHtml}
-                    <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                    <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                    <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
-                    </div>
-                    </div>
-                    `;
+                            <div style="display:flex; align-items:center;">
+                            ${avatarHtml}
+                            <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
+                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
+                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
+                            </div>
+                            </div>
+                            `;
                                 } else {
                                     nameEl.innerText = "Неизвестный номер";
                                 }
@@ -6802,6 +6934,72 @@
                 });
             });
         }
+
+        // --- ПРОФИЛЬ СОБЕСЕДНИКА ---
+        function openFriendProfile() {
+            if (!currentFriendId) return;
+
+            // Записываем шаг в историю (для кнопки Назад)
+            if (typeof sheetHistoryStack !== 'undefined') sheetHistoryStack++;
+            history.pushState({ isSheet: true }, "", window.location.href);
+
+            const sheet = document.getElementById('friendProfileSheet');
+            sheet.style.display = 'flex';
+            document.getElementById('overlaySheet').style.display = 'block';
+
+            setTimeout(() => { sheet.classList.add('open'); }, 10);
+
+            // Получаем данные друга из нашего кэша (он уже загружен при входе в чат)
+            const uData = usersCache[currentFriendId] || {};
+
+            // Имя и Фамилия
+            const fullName = `${uData.name || ''} ${uData.surname || ''}`.trim() || uData.username || 'Пользователь';
+            document.getElementById('friendProfileName').innerText = fullName;
+
+            // Юзернейм
+            const nick = uData.username ? `@${uData.username}` : 'Не указан';
+            document.getElementById('friendProfileUsername').innerText = nick;
+
+            // О себе
+            document.getElementById('friendProfileBio').innerText = uData.bio || 'Информация не указана';
+
+            // Статус (был(а) недавно / в сети)
+            document.getElementById('friendProfileStatus').innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen) : 'был(а) недавно';
+
+            // Аватарка
+            const img = document.getElementById('friendProfileAvatarPreview');
+            const ph = document.getElementById('friendProfileAvatarPlaceholder');
+            const wrap = document.getElementById('friendProfileAvatarWrap');
+
+            if (uData.avatar) {
+                img.src = uData.avatar;
+                img.style.display = 'block';
+                ph.style.display = 'none';
+                wrap.style.pointerEvents = 'auto'; // Можно кликнуть, чтобы увеличить
+            } else {
+                img.src = '';
+                img.style.display = 'none';
+                ph.style.display = 'flex';
+                ph.innerText = fullName.charAt(0).toUpperCase();
+                wrap.style.pointerEvents = 'none'; // Не увеличиваем пустую аватарку
+            }
+        }
+
+        function closeFriendProfile(fromPopState = false) {
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                history.back();
+                return;
+            }
+            document.getElementById('friendProfileSheet').classList.remove('open');
+
+            // Плавно убираем полупрозрачный фон, если нет других открытых окон
+            setTimeout(() => {
+                if (!document.querySelector('.action-sheet.open')) {
+                    document.getElementById('overlaySheet').style.display = 'none';
+                }
+            }, 300);
+        }
+
         // Функция отклонения входящего вызова
         function rejectCall() {
             // 1. Выключаем звук
@@ -7637,7 +7835,7 @@
 
                 if (userData) {
                     // Склеиваем имя и фамилию для шапки чата
-                    const name = `${userData.name || ''} ${userData.surname || ''}`.trim() || userData.username || 'User';
+                    const name = getDisplayName(userId, userData);
 
                     currentFriendId = userId;
                     currentChatId = [currentUser.uid, userId].sort().join('_');
@@ -7868,24 +8066,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                    <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                    <div class="upload-spinner"></div>
-                    </div>
-                    `;
+                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                            <div class="upload-spinner"></div>
+                            </div>
+                            `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                    <div class="chat-file-card" style="opacity: 0.7;">
-                    <div class="file-icon">📄</div>
-                    <div class="file-info">
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-action">Загрузка...</div>
-                    </div>
-                    <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                    </div>
-                    `;
+                            <div class="chat-file-card" style="opacity: 0.7;">
+                            <div class="file-icon">📄</div>
+                            <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-action">Загрузка...</div>
+                            </div>
+                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                            </div>
+                            `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -8921,14 +9119,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                <div class="search-msg-content">
-                                    <div class="search-msg-header">
-                                        <span class="search-msg-name">${res.name}</span>
-                                        <span class="search-msg-time">${res.time}</span>
-                                    </div>
-                                    <div class="search-msg-text">${res.text}</div>
-                                </div>
-                            `;
+                                        <div class="search-msg-content">
+                                            <div class="search-msg-header">
+                                                <span class="search-msg-name">${res.name}</span>
+                                                <span class="search-msg-time">${res.time}</span>
+                                            </div>
+                                            <div class="search-msg-text">${res.text}</div>
+                                        </div>
+                                    `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -9243,7 +9441,34 @@
             return { list, isNew };
         }
 
+        // ==========================================
+        // ЛОГИКА МЕНЮ ЧАТА (ТРИ ТОЧКИ)
+        // ==========================================
 
+        function toggleChatOptionsMenu(e) {
+            e.stopPropagation(); // Не даем клику уйти дальше на фон
+            const menu = document.getElementById('chatOptionsMenu');
+
+            if (menu.classList.contains('active')) {
+                closeChatOptionsMenu();
+            } else {
+                menu.classList.add('active');
+            }
+        }
+
+        function closeChatOptionsMenu() {
+            const menu = document.getElementById('chatOptionsMenu');
+            if (menu) menu.classList.remove('active');
+        }
+
+        // Автоматическое закрытие меню при клике мимо него
+        document.addEventListener('click', function (e) {
+            const menu = document.getElementById('chatOptionsMenu');
+            // Если меню открыто, и клик был НЕ по самому меню
+            if (menu && menu.classList.contains('active') && !e.target.closest('#chatOptionsMenu')) {
+                closeChatOptionsMenu();
+            }
+        });
 
         // --- ФУНКЦИЯ "ПИНКА" СЕТИ (Digital CPR) ---
         async function kickstartNetwork() {
@@ -9667,12 +9892,15 @@
         });
 
         // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
+        // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
         window.addEventListener('popstate', (e) => {
             if (typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 sheetHistoryStack--;
 
                 // Проверяем, какая шторка открыта сейчас сверху, и закрываем именно её
-                if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
+                if (document.getElementById('friendProfileSheet')?.classList.contains('open')) {
+                    closeFriendProfile(true); // <-- Теперь правильно закрывает и убирает затемнение
+                } else if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
                     closeEditProfile(true);
                 } else if (document.getElementById('generalSettingsSheet')?.classList.contains('open')) {
                     closeGeneralSettings(true);
@@ -9741,12 +9969,12 @@
             const allEditInputs = document.querySelectorAll('#editProfileSheet input, #editProfileSheet textarea');
 
             allEditInputs.forEach(input => {
-                input.addEventListener('focus', function() {
+                input.addEventListener('focus', function () {
                     // Применяем магию только для телефонов
                     if (window.innerWidth <= 768) {
-                        // 1. Даем огромный временный запас снизу. Это нужно, чтобы даже самое 
+                        // 1. Даем огромный временный запас снизу. Это нужно, чтобы даже самое
                         // нижнее поле (Юзернейм) физически могло дотянуться до центра экрана.
-                        scrollContainer.style.paddingBottom = '60vh'; 
+                        scrollContainer.style.paddingBottom = '60vh';
 
                         // 2. Ждем ровно 300мс (пока система выдвинет клавиатуру)
                         setTimeout(() => {
@@ -9756,7 +9984,7 @@
                     }
                 });
 
-                input.addEventListener('blur', function() {
+                input.addEventListener('blur', function () {
                     if (window.innerWidth <= 768) {
                         // Как только убрали фокус (клавиатура прячется), возвращаем родной отступ
                         setTimeout(() => {
@@ -9767,6 +9995,152 @@
             });
         });
 
+        // ==========================================
+        // ЛОКАЛЬНЫЕ ИМЕНА КОНТАКТОВ И УДАЛЕНИЕ
+        // ==========================================
+
+        // Читаем локальное имя из памяти устройства
+        function getCustomContactData(uid) {
+            if (!currentUser) return null;
+            const data = JSON.parse(localStorage.getItem('custom_contacts_' + currentUser.uid) || '{}');
+            return data[uid] || null;
+        }
+
+        // Вычисляет итоговое имя для отображения везде
+        function getDisplayName(uid, originalData) {
+            if (!originalData) return "Загрузка...";
+            const custom = getCustomContactData(uid);
+
+            if (custom && (custom.name || custom.surname)) {
+                return `${custom.name || ''} ${custom.surname || ''}`.trim();
+            }
+
+            return `${originalData.name || ''} ${originalData.surname || ''}`.trim() || originalData.username || 'Пользователь';
+        }
+
+        function openEditContactSheet() {
+            if (!currentFriendId) return;
+
+            if (typeof sheetHistoryStack !== 'undefined') sheetHistoryStack++;
+            history.pushState({ isSheet: true }, "", window.location.href);
+
+            const sheet = document.getElementById('editContactSheet');
+            sheet.style.display = 'flex';
+            document.getElementById('overlaySheet').style.display = 'block';
+            setTimeout(() => sheet.classList.add('open'), 10);
+
+            const uData = usersCache[currentFriendId] || {};
+            const originalName = `${uData.name || ''} ${uData.surname || ''}`.trim() || uData.username || 'Пользователь';
+
+            // Заполняем шапку
+            document.getElementById('contactOriginalName').innerText = originalName;
+
+            // Аватар
+            const img = document.getElementById('contactEditAvatar');
+            const ph = document.getElementById('contactEditPlaceholder');
+            if (uData.avatar) {
+                img.src = uData.avatar;
+                img.style.display = 'block';
+                ph.style.display = 'none';
+            } else {
+                img.style.display = 'none';
+                ph.style.display = 'flex';
+                ph.innerText = originalName.charAt(0).toUpperCase();
+            }
+
+            // Заполняем поля, если они уже были изменены ранее
+            const customData = getCustomContactData(currentFriendId) || {};
+            document.getElementById('contactLocalName').value = customData.name !== undefined ? customData.name : (uData.name || '');
+            document.getElementById('contactLocalSurname').value = customData.surname !== undefined ? customData.surname : (uData.surname || '');
+            document.getElementById('contactLocalNote').value = customData.note || '';
+
+            updateContactNoteCounter(document.getElementById('contactLocalNote'));
+        }
+
+        function closeEditContactSheet(fromPopState = false) {
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                history.back();
+                return;
+            }
+
+            if (document.activeElement) document.activeElement.blur();
+            document.getElementById('editContactSheet').classList.remove('open');
+
+            setTimeout(() => {
+                if (!document.querySelector('.action-sheet.open')) {
+                    document.getElementById('overlaySheet').style.display = 'none';
+                }
+            }, 300);
+        }
+
+        function updateContactNoteCounter(el) {
+            const remaining = 128 - el.value.length;
+            document.getElementById('contactNoteCounter').innerText = remaining;
+        }
+
+        function saveLocalContact() {
+            if (!currentFriendId || !currentUser) return;
+
+            const newName = document.getElementById('contactLocalName').value.trim();
+            const newSurname = document.getElementById('contactLocalSurname').value.trim();
+            const newNote = document.getElementById('contactLocalNote').value.trim();
+
+            const allContacts = JSON.parse(localStorage.getItem('custom_contacts_' + currentUser.uid) || '{}');
+
+            allContacts[currentFriendId] = {
+                name: newName,
+                surname: newSurname,
+                note: newNote
+            };
+
+            localStorage.setItem('custom_contacts_' + currentUser.uid, JSON.stringify(allContacts));
+
+            showToast("Контакт обновлен");
+            closeEditContactSheet();
+
+            // Мгновенно обновляем интерфейс
+            const finalName = getDisplayName(currentFriendId, usersCache[currentFriendId]);
+
+            // Обновляем шапку чата
+            const titleEl = document.getElementById('chatTitle');
+            if (titleEl) titleEl.innerText = finalName;
+
+            // Обновляем имя в списке друзей (если он отрендерен)
+            const listCard = document.querySelector(`#u-${currentFriendId} .user-name`);
+            if (listCard) listCard.innerText = finalName;
+        }
+
+        // Логика удаления из друзей
+        async function removeFriendAction() {
+            if (!confirm("Вы уверены, что хотите удалить пользователя из списка друзей? Чат будет сохранен, но вы не увидите его в основном списке.")) return;
+
+            try {
+                // Ищем запись в коллекции friends, где есть мы и друг
+                const snap = await db.collection('friends')
+                    .where('users', 'array-contains', currentUser.uid)
+                    .get();
+
+                let friendDocId = null;
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.users.includes(currentFriendId)) {
+                        friendDocId = doc.id;
+                    }
+                });
+
+                if (friendDocId) {
+                    await db.collection('friends').doc(friendDocId).delete();
+                    showToast("Пользователь удален из друзей");
+                    closeEditContactSheet();
+                    closeChat(); // Закрываем чат и возвращаем на главный экран
+                } else {
+                    alert("Ошибка: Пользователь не найден в списке друзей.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Ошибка при удалении.");
+            }
+        }
 
     </script>
 
@@ -9818,7 +10192,109 @@
         </div>
     </div>
 
+    <div id="friendProfileSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0;">
+        <div class="premium-header">
+            <button onclick="closeFriendProfile()" class="header-icon-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div style="flex:1; text-align:center; font-weight: 600; font-size: 18px; color: white;">Информация</div>
+            <div style="width: 40px;"></div>
+        </div>
 
+        <div style="flex:1; overflow-y: auto; padding-bottom: 40px;">
+            <div class="premium-profile-info" style="padding-bottom: 15px;">
+                <div class="premium-avatar-wrap" id="friendProfileAvatarWrap" onclick="openImageViewer(this.querySelector('img').src)">
+                    <img id="friendProfileAvatarPreview" src="" style="display:none">
+                    <div id="friendProfileAvatarPlaceholder" class="placeholder">👤</div>
+                </div>
+                <div id="friendProfileName" class="premium-name-input" style="margin-bottom: 5px;">Загрузка...</div>
+                <div id="friendProfileStatus" class="premium-status" style="color: #8e8e93; font-weight: normal;">загрузка...</div>
+            </div>
+
+            <div class="friend-actions-row">
+                <div class="friend-action-btn" onclick="startCall()">
+                    <div class="icon">📞</div>
+                    <span>Звонок</span>
+                </div>
+                <div class="friend-action-btn" onclick="alert('Уведомления отключены')">
+                    <div class="icon">🔕</div>
+                    <span>Без звука</span>
+                </div>
+                <div class="friend-action-btn" onclick="closeFriendProfile(); toggleChatSearch();">
+                    <div class="icon">🔍</div>
+                    <span>Поиск</span>
+                </div>
+            </div>
+
+            <div class="premium-section-title">Аккаунт</div>
+            <div class="premium-section">
+                <div class="premium-item click-to-copy" onclick="copyData('friendProfileUsername', 'Username')">
+                    <div class="premium-item-icon">@</div>
+                    <div class="premium-item-content">
+                        <div class="premium-item-label">Имя пользователя</div>
+                        <div class="premium-item-value" id="friendProfileUsername">@username</div>
+                    </div>
+                </div>
+                <div class="premium-item">
+                    <div class="premium-item-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">ℹ️</div>
+                    <div class="premium-item-content">
+                        <div class="premium-item-label">О себе</div>
+                        <div class="premium-item-value" id="friendProfileBio" style="white-space: pre-wrap; font-size: 15px;">Информация не указана</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editContactSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0; background: #1c1c1e !important;">
+        <div class="premium-header" style="background: transparent; border-bottom: none;">
+            <button onclick="closeEditContactSheet()" class="header-icon-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div style="flex:1; text-align:center; font-weight: 600; font-size: 18px; color: white;">Изменить</div>
+            <button onclick="saveLocalContact()" class="header-icon-btn" style="color: #736AF0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            </button>
+        </div>
+
+        <div style="flex:1; overflow-y: auto; padding-bottom: 40px;">
+            <div class="premium-profile-info" style="padding-bottom: 5px;">
+                <div class="premium-avatar-wrap" style="pointer-events: none; width: 100px; height: 100px; background: none; box-shadow: none; border-radius: 50%; padding: 0;">
+                    <img id="contactEditAvatar" src="" style="display:none; border: none;">
+                    <div id="contactEditPlaceholder" class="placeholder" style="border: none;">👤</div>
+                </div>
+                <div id="contactOriginalName" style="color: white; font-size: 20px; font-weight: bold; margin-top: 10px; letter-spacing: -0.3px;">Загрузка...</div>
+            </div>
+
+            <div style="padding: 20px;">
+                <div class="tg-input-field" style="background: transparent;">
+                    <input type="text" id="contactLocalName" placeholder=" ">
+                    <label style="background: #1c1c1e;">Имя</label>
+                </div>
+                <div class="tg-input-field" style="background: transparent;">
+                    <input type="text" id="contactLocalSurname" placeholder=" ">
+                    <label style="background: #1c1c1e;">Фамилия</label>
+                </div>
+                <div class="tg-input-field" style="background: transparent; margin-bottom: 5px;">
+                    <textarea id="contactLocalNote" placeholder=" " rows="2" maxlength="128" oninput="updateContactNoteCounter(this)"></textarea>
+                    <label style="background: #1c1c1e;">Заметка</label>
+                    <div class="char-counter" id="contactNoteCounter" style="bottom: -20px;">128</div>
+                </div>
+                <div style="font-size: 13px; color: #8e8e93; margin-bottom: 30px; padding-left: 5px;">Заметку видите только Вы.</div>
+
+                <div class="premium-section" style="margin: 0; background: transparent; box-shadow: none; border: none;">
+                    <div class="premium-item" onclick="removeFriendAction()" style="background: #252525; border-radius: 12px; border: none;">
+                        <div class="premium-item-icon" style="background: transparent; color: #ff595a; margin-right: 12px; width: auto; font-size: 24px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"></line><line x1="23" y1="8" x2="18" y2="13"></line></svg>
+                        </div>
+                        <div class="premium-item-content">
+                            <div class="premium-item-value" style="color: #ff595a;">Удалить из друзей</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
