@@ -1752,33 +1752,31 @@
              }
 
              /* Статус проверки (плавное появление и смена цвета) */
-        .premium-status-msg {
-            font-size: 13px;
-            margin: -10px 0 20px 25px;
-            padding: 4px 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0;
-            transform: translateY(-5px);
-            display: block;
-        }
+             .premium-status-msg {
+                 font-size: 12px;
+                 margin: -12px 0 20px 25px;
+                 height: 15px; /* Фиксированная высота, чтобы элементы не прыгали */
+                 transition: color 0.3s ease, opacity 0.3s ease;
+                 opacity: 0;
+                 font-weight: 500;
+                 pointer-events: none;
+             }
 
-            .premium-status-msg.visible {
-                opacity: 1;
-                transform: translateY(0);
-            }
+                 .premium-status-msg.visible {
+                     opacity: 1;
+                 }
 
-            .premium-status-msg.success {
-                color: #34c759; /* Apple Green */
-            }
-
-            .premium-status-msg.error {
-                color: #ff3b30; /* Apple Red */
-            }
-
-            .premium-status-msg.loading {
-                color: #8e8e93;
-                font-style: italic;
-            }
+                 .premium-status-msg.success {
+                     color: #10b981;
+                 }
+                 /* Изумрудно-зеленый */
+                 .premium-status-msg.error {
+                     color: #ff4444;
+                 }
+                 /* Красный */
+                 .premium-status-msg.loading {
+                     color: #8e8e93;
+                 }
              /* Серый */
 
 
@@ -6952,8 +6950,7 @@
                 surname: surname,
                 bio: bio,
                 birthdate: birthdate,
-                username: username,
-                username_lower: username.toLowerCase()
+                username: username
             };
 
             // !!! ЕСЛИ ЕСТЬ ССЫЛКА НА ГУГЛ ДИСК - СОХРАНЯЕМ ЕЁ !!!
@@ -8217,65 +8214,7 @@
             reader.readAsDataURL(file);
         }
 
-        let usernameCheckTimeout = null;
-        let isUsernameValid = true;
 
-        async function checkUsernameAvailability(input) {
-            let val = input.value.trim();
-            // 1. Разрешаем только латиницу, цифры и нижнее подчеркивание
-            const cleanVal = val.replace(/[^a-zA-Z0-9_]/g, '');
-            if (val !== cleanVal) {
-                input.value = cleanVal;
-                val = cleanVal;
-            }
-
-            const statusEl = document.getElementById('editUsernameStatus');
-            const saveBtn = document.querySelector('#editProfileSheet .tg-header-top button:last-child');
-
-            const setStatus = (text, type) => {
-                statusEl.innerText = text;
-                statusEl.className = 'premium-status-msg visible ' + type;
-                isUsernameValid = (type === 'success' || type === 'neutral');
-                saveBtn.style.opacity = isUsernameValid ? "1" : "0.5";
-                saveBtn.style.pointerEvents = isUsernameValid ? "auto" : "none";
-            };
-
-            if (usernameCheckTimeout) clearTimeout(usernameCheckTimeout);
-
-            // 2. Базовая валидация
-            if (val.length < 5) {
-                setStatus("Минимум 5 символов", "error");
-                return;
-            }
-
-            // Если это наш текущий ник (игнорируя регистр) — всё ок
-            if (val.toLowerCase() === originalUsername.toLowerCase()) {
-                statusEl.classList.remove('visible');
-                setStatus("", "neutral");
-                return;
-            }
-
-            setStatus("Проверка...", "loading");
-
-            // 3. Умный поиск в базе (игнорируя регистр)
-            usernameCheckTimeout = setTimeout(async () => {
-                try {
-                    // Ищем в поле username_lower, где всё хранится маленькими буквами
-                    const snap = await db.collection('users')
-                        .where('username_lower', '==', val.toLowerCase())
-                        .get();
-
-                    if (snap.empty) {
-                        setStatus(`@${val} свободно`, "success");
-                    } else {
-                        setStatus("Этот юзернейм уже занят", "error");
-                    }
-                } catch (e) {
-                    console.error(e);
-                    setStatus("Ошибка связи с сервером", "error");
-                }
-            }, 600);
-        }
 
         // Переменная для таймера (добавьте в начало скрипта, если еще нет)
         // let usernameCheckTimeout = null;
