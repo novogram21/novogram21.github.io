@@ -6898,44 +6898,42 @@
             isConnected = false;
             wasCallConnected = false;
 
-            // СОЗДАЕМ УНИКАЛЬНЫЙ ID СЕССИИ (UID1_UID2_TIMESTAMP)
-            const sessionTimestamp = Date.now();
-            currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTimestamp;
+            // Генерируем уникальный ID, чтобы не было ошибки "Document already exists"
+            const sessionTs = Date.now();
+            currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTs;
 
             const callDoc = db.collection('calls').doc(currentCallId);
 
-            // Сразу открываем экран
+            // Мгновенно открываем экран звонка
             document.getElementById('callScreen').style.display = 'flex';
-            document.getElementById('callStatusText').innerText = "Вызов...";
+            document.getElementById('callStatusText').innerText = "Подготовка...";
             playConnectingTone();
 
             try {
-                setupPeerConnection(); // 1. Создаем PC
-                await getMedia();      // 2. Берем камеру
+                // КРИТИЧЕСКИЙ ПОРЯДОК:
+                setupPeerConnection(); // 1. Сначала создаем объект pc
+                await getMedia();      // 2. Потом берем камеру (теперь pc.addTrack не упадет)
 
-                // 3. Настройка кандидатов
                 pc.onicecandidate = e => {
                     if (e.candidate) {
-                        callDoc.collection('offerCandidates').add(e.candidate.toJSON()).catch(err => console.warn("Ошибка кандидата:", err));
+                        callDoc.collection('offerCandidates').add(e.candidate.toJSON())
+                            .catch(err => console.warn("Ошибка кандидата:", err));
                     }
                 };
 
-                // 4. Создаем звонок в базе
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
                 await callDoc.set({
-                    offer: { type: (await pc.createOffer()).type, sdp: (await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })).sdp },
+                    offer: { type: offer.type, sdp: offer.sdp },
                     caller: currentUser.uid,
                     callerName: usersCache[currentUser.uid]?.name || "Novogram User",
                     to: currentFriendId,
                     status: 'dialing',
-                    ts: firebase.firestore.FieldValue.serverTimestamp()
+                    ts: firebase.firestore.FieldValue.serverTimestamp() // Важно для сортировки
                 });
 
-                // Повторно устанавливаем локальное описание после создания оффера
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                await callDoc.update({ offer: { type: offer.type, sdp: offer.sdp } });
-
-                // 5. Слушаем ответ
+                // Слушаем ответ
                 callDoc.onSnapshot(async snap => {
                     const data = snap.data();
                     if (!data) return;
@@ -6944,53 +6942,56 @@
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
-                }, err => console.error("Snapshot error:", err));
+                });
 
                 callDoc.collection('answerCandidates').onSnapshot(snap => {
                     snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
                 });
 
             } catch (err) {
-                console.error("Call Start Error:", err);
+                console.error("Ошибка старта звонка:", err);
+                showToast("Ошибка: " + err.message);
                 endCall(true);
             }
         }
         async function answerCall() {
-            // ... настройки UI и звука ...
+            document.getElementById('ringtone').pause();
+            document.getElementById('incomingPopup').style.display = 'none';
+            document.getElementById('callScreen').style.display = 'flex';
+            updateCallStatus("Соединение...");
+
             const callDoc = db.collection('calls').doc(currentCallId);
             const callData = (await callDoc.get()).data();
 
-            setupPeerConnection();
+            try {
+                setupPeerConnection(); // Опять же: Сначала создаем pc!
 
-            pc.onicecandidate = e => {
-                if (e.candidate) {
-                    callDoc.collection('answerCandidates').add(e.candidate.toJSON());
-                }
-            };
+                pc.onicecandidate = e => {
+                    if (e.candidate) callDoc.collection('answerCandidates').add(e.candidate.toJSON());
+                };
 
-            await getMedia();
+                await getMedia();
 
-            // 1. Сначала ставим то, что прислал звонящий
-            await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                await flushCandidateQueue();
 
-            // 2. Теперь выпускаем кандидатов, которые могли прийти раньше оффера
-            await flushCandidateQueue();
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
 
-            // 3. Создаем свой ответ
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-
-            await callDoc.update({
-                answer: { type: answer.type, sdp: answer.sdp },
-                status: 'connected'
-            });
-
-            // ... слушаем кандидаты звонящего ...
-            callDoc.collection('offerCandidates').onSnapshot(snap => {
-                snap.docChanges().forEach(change => {
-                    if (change.type === 'added') addCandidateSafely(change.doc.data());
+                await callDoc.update({
+                    answer: { type: answer.type, sdp: answer.sdp },
+                    status: 'connected'
                 });
-            });
+
+                callDoc.collection('offerCandidates').onSnapshot(snap => {
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added') addCandidateSafely(change.doc.data());
+                    });
+                });
+            } catch (e) {
+                console.error("Ошибка при ответе:", e);
+                endCall(true);
+            }
         }
         function toggleMic() {
             if (!localStream) return;
@@ -7059,14 +7060,15 @@
         function listenForIncomingCalls() {
             db.collection('calls')
                 .where('to', '==', currentUser.uid)
-                .orderBy('ts', 'desc') // Берем самый свежий
+                .orderBy('ts', 'desc')
                 .limit(1)
                 .onSnapshot(snap => {
                     snap.docChanges().forEach(change => {
                         if (change.type === "added") {
                             const data = change.doc.data();
+                            // Если звонок свежий (создан не более 30 сек назад)
                             if (data.status === 'dialing' || data.status === 'ringing') {
-                                currentCallId = change.doc.id; // Запоминаем текущий уникальный ID
+                                currentCallId = change.doc.id;
                                 const popup = document.getElementById('incomingPopup');
                                 popup.style.display = 'flex';
                                 document.getElementById('callerName').innerText = data.callerName || "Входящий вызов";
