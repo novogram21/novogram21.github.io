@@ -6838,15 +6838,27 @@
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
                 setLocalMirror(currentFacingMode);
-                // как было у тебя: видео по умолчанию выключено, микрофон включен
+
+                // По умолчанию видео выключено, микрофон включен
                 localStream.getVideoTracks()[0].enabled = false;
                 updateCamBtnUI(false);
                 localStream.getAudioTracks()[0].enabled = true;
                 updateMicBtnUI(true);
+
                 localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
             } catch (e) {
-                console.error(e);
-                alert("Нет доступа к микр/камере");
+                console.error("🚨 Ошибка камеры/микрофона:", e);
+
+                if (e.name === 'NotAllowedError') {
+                    alert("❌ ДОСТУП ЗАПРЕЩЕН!\n\nРазрешите доступ к камере и микрофону в настройках браузера. (Также убедитесь, что используете HTTPS).");
+                } else if (e.name === 'NotFoundError') {
+                    alert("❌ Камера или микрофон не найдены на устройстве.");
+                } else {
+                    alert("❌ Ошибка при доступе к медиа: " + e.message);
+                }
+
+                // ВАЖНО: пробрасываем ошибку дальше, чтобы startCall/answerCall остановились
+                throw e;
             }
         }
 
