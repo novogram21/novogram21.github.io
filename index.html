@@ -6721,33 +6721,47 @@
         function setupPeerConnection() {
             candidateQueue = [];
             pc = new RTCPeerConnection(iceServers);
-            pc.oniceconnectionstatechange = () => {
-                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-                    pc.getStats().then(stats => {
-                        stats.forEach(report => {
-                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                                const local = stats.get(report.localCandidateId);
-                                console.log(`🚀 Connection: ${local.candidateType}`);
-                            }
-                        });
-                    });
+
+            // Единая функция для перевода интерфейса в режим разговора
+            const handleConnected = () => {
+                if (!isConnected) {
+                    console.log("🔥 СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
+                    isConnected = true;
+                    wasCallConnected = true;
+                    updateCallStatus("В разговоре");
+                    stopAllTones();
+                    startTimer();
+                    startPing();
                 }
             };
-            pc.onicecandidate = e => { };
+
+            // Слушаем состояние ICE (самый надежный метод для мобилок)
+            pc.oniceconnectionstatechange = () => {
+                console.log("📡 ICE State:", pc.iceConnectionState);
+                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                    handleConnected();
+                } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                    endCall(false);
+                }
+            };
+
+            // Дублируем для новых браузеров
+            pc.onconnectionstatechange = () => {
+                console.log("🌐 Connection State:", pc.connectionState);
+                if (pc.connectionState === 'connected') {
+                    handleConnected();
+                } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                    endCall(false);
+                }
+            };
+
             pc.ontrack = e => {
+                console.log("🎥 Получен удаленный видео/аудио поток!");
                 const remoteVid = document.getElementById('remoteVideo');
                 remoteVid.muted = false;
                 if (remoteVid.srcObject !== e.streams[0]) {
                     remoteVid.srcObject = e.streams[0];
                     remoteVid.play().catch(console.error);
-                }
-            };
-            pc.onconnectionstatechange = () => {
-                if (pc.connectionState === 'connected') {
-                    isConnected = true; wasCallConnected = true; updateCallStatus("В разговоре");
-                    stopAllTones(); startTimer(); startPing();
-                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-                    endCall(false);
                 }
             };
         }
@@ -6767,22 +6781,20 @@
         async function addCandidateSafely(candidate) {
             if (!pc) return;
             try {
-                // Добавляем кандидата только если remoteDescription уже установлен
                 if (pc.remoteDescription && pc.remoteDescription.type) {
                     await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                    console.log("✅ Кандидат успешно добавлен");
                 } else {
-                    // Если еще нет — кладем в очередь
                     candidateQueue.push(candidate);
-                    console.log("⏳ Кандидат помещен в очередь (ждем RemoteDescription)");
                 }
             } catch (e) {
-                console.error("❌ Ошибка добавления ICE-кандидата:", e);
+                console.error("Ошибка добавления ICE-кандидата:", e);
             }
         }
         async function flushCandidateQueue() {
             if (!pc) return;
-            for (const cand of candidateQueue) { try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) { } }
+            for (const cand of candidateQueue) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) { }
+            }
             candidateQueue = [];
         }
         function setLocalMirror(facing) {
@@ -6902,31 +6914,37 @@
 
             amICaller = true;
             isConnected = false;
+            wasCallConnected = false;
 
             // Генерируем уникальный ID для ЭТОГО звонка
             const sessionTs = Date.now();
             currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTs;
 
-            // Ссылка на ВХОДЯЩИЙ звонок для друга (чтобы он легко его нашел)
+            // Ссылка на ВХОДЯЩИЙ звонок для друга
             const callRef = rtdb.ref('incoming_calls/' + currentFriendId);
-
             // Ссылка на сам сеанс связи (где будут кандидаты и SDP)
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
 
             document.getElementById('callScreen').style.display = 'flex';
-            updateCallStatus("Инициализация...");
+            updateCallStatus("Подготовка...");
             playConnectingTone();
 
             try {
                 setupPeerConnection();
-                await getMedia();
 
-                // Отправка кандидатов (мгновенно!)
+                // СРАЗУ слушаем кандидатов собеседника (они пойдут в очередь, если придут слишком рано)
+                sessionRef.child('answerCandidates').on('child_added', snap => {
+                    addCandidateSafely(snap.val());
+                });
+
+                // Отправка наших кандидатов
                 pc.onicecandidate = e => {
                     if (e.candidate) {
                         sessionRef.child('offerCandidates').push(e.candidate.toJSON());
                     }
                 };
+
+                await getMedia();
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
@@ -6954,24 +6972,16 @@
                     const data = snap.val();
                     if (!data) return;
 
-                    if (data.status === 'connected' && !isConnected) {
-                        updateCallStatus("В разговоре");
-                        stopAllTones();
-                        startTimer();
-                        startPing();
-                        isConnected = true;
-                    } else if (data.status === 'rejected') {
-                        endCall(false, true); // Друг сбросил
+                    if (data.status === 'rejected') {
+                        updateCallStatus("Занято");
+                        setTimeout(() => endCall(false, true), 1500);
                     }
 
                     if (pc && !pc.remoteDescription && data.answer) {
+                        console.log("✅ Ответ получен, соединяем...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                        await flushCandidateQueue();
                     }
-                });
-
-                // 4. Слушаем кандидатов собеседника
-                sessionRef.child('answerCandidates').on('child_added', snap => {
-                    addCandidateSafely(snap.val());
                 });
 
             } catch (err) {
@@ -6987,6 +6997,11 @@
 
             if (!currentCallId) return;
 
+            // ВАЖНО: Сбрасываем флаги перед ответом!
+            isConnected = false;
+            wasCallConnected = false;
+            amICaller = false;
+
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
 
             // Снимаем уведомление о входящем звонке, чтобы он перестал звенеть
@@ -6998,12 +7013,17 @@
                 const callData = sessionSnap.val();
 
                 if (!callData || !callData.offer) {
-                    updateCallStatus("Звонок сброшен");
+                    updateCallStatus("Звонок отменен");
                     setTimeout(() => endCall(false), 2000);
                     return;
                 }
 
                 setupPeerConnection();
+
+                // СРАЗУ слушаем кандидатов звонящего
+                sessionRef.child('offerCandidates').on('child_added', snap => {
+                    addCandidateSafely(snap.val());
+                });
 
                 pc.onicecandidate = e => {
                     if (e.candidate) sessionRef.child('answerCandidates').push(e.candidate.toJSON());
@@ -7022,12 +7042,7 @@
                 // Отправляем Ответ в базу
                 await sessionRef.update({
                     answer: { type: answer.type, sdp: answer.sdp },
-                    status: 'connected'
-                });
-
-                // Начинаем слушать кандидатов звонящего
-                sessionRef.child('offerCandidates').on('child_added', snap => {
-                    addCandidateSafely(snap.val());
+                    status: 'connected' // Для галочки
                 });
 
             } catch (e) {
@@ -7102,15 +7117,20 @@
         function listenForIncomingCalls() {
             if (!currentUser) return;
 
-            // Слушаем папку входящих звонков именно для меня
+            // Слушаем папку входящих звонков ИМЕННО ДЛЯ НАС
             const incomingRef = rtdb.ref('incoming_calls/' + currentUser.uid);
 
             incomingRef.on('value', snap => {
                 const data = snap.val();
 
-                if (!data) return; // Нет звонков
+                if (!data) {
+                    // Если данные удалили (кто-то сбросил или мы ответили) - прячем плашку
+                    document.getElementById('incomingPopup').style.display = 'none';
+                    document.getElementById('ringtone').pause();
+                    return;
+                }
 
-                // Если звонок свежий (не старше 1 минуты) и его статус ringing
+                // Если звонок свежий (не старше 1 минуты)
                 if (Date.now() - data.ts < 60000 && data.status === 'ringing') {
                     currentCallId = data.sessionId; // Берем ID сеанса
 
@@ -7120,7 +7140,6 @@
 
                     document.getElementById('ringtone').play().catch((e) => console.log("Браузер заблокировал звук", e));
                 } else {
-                    // Звонок устарел или отменен
                     document.getElementById('incomingPopup').style.display = 'none';
                     document.getElementById('ringtone').pause();
                 }
@@ -7194,22 +7213,18 @@
 
         // Функция отклонения входящего вызова
         function rejectCall() {
-            // 1. Выключаем звук
             document.getElementById('ringtone').pause();
             document.getElementById('ringtone').currentTime = 0;
-            // 2. Скрываем окно входящего звонка
             document.getElementById('incomingPopup').style.display = 'none';
-            // 3. Если есть активный звонок (ID звонка)
+
+            // Удаляем уведомление, чтобы звонок перестал звенеть
+            if (currentUser) {
+                rtdb.ref('incoming_calls/' + currentUser.uid).remove();
+            }
+
             if (currentCallId) {
-                // Удаляем документ звонка из базы (это автоматически завершит звонок и у звонящего)
-                db.collection('calls').doc(currentCallId).delete()
-                    .then(() => {
-                        console.log("Звонок отклонен");
-                    })
-                    .catch(error => {
-                        console.error("Ошибка при отклонении:", error);
-                    });
-                // Сбрасываем локальную переменную
+                // Говорим звонящему, что мы сбросили трубку
+                rtdb.ref('call_sessions/' + currentCallId).update({ status: 'rejected' });
                 currentCallId = null;
             }
         }
