@@ -4605,6 +4605,7 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4AnViDZV8N6X-Tk9XFG2LQwTUVb2TWWR3RcoCNhkRmOM5XLug9UBi1Ky-_j2sQB5u/exec";
         const TRANSLATE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwONUKG_V_R6rdKui4SfEbNQEwfWOGiwu0rMpRl669REYvFG0Qd2kHcWYGSehe5vWbr/exec";
         const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc";
+        const TURN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfoDAYY2otmNxEQ6tsrWLekLwthAPxnYDIW6HRUrA263qQgAYDDHPeQq7-Km_PcpI/exec";
 
         const APP_START_TIME = Date.now();
 
@@ -5088,6 +5089,7 @@
                 } catch (e) { }
 
                 // ЗАПУСКАЕМ ДАННЫЕ СРАЗУ
+                loadTurnServers();
                 loadData();
                 listenForIncomingCalls();
 
@@ -6720,7 +6722,7 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-            pc = new RTCPeerConnection(iceServers);
+            pc = new RTCPeerConnection(dynamicIceServers);
 
             // Единая функция для перевода интерфейса в режим разговора
             const handleConnected = () => {
@@ -6847,6 +6849,37 @@
                 alert("Нет доступа к микр/камере");
             }
         }
+
+        // Базовый конфиг (пока грузятся мощные серверы, используем дефолтные от Google)
+        // Базовый конфиг (пока не загрузится Google Script)
+        let dynamicIceServers = {
+            iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }]
+        };
+
+        // Функция тихой загрузки серверов
+        async function loadTurnServers() {
+            try {
+                console.log("📡 Запрашиваем TURN сервера через Google Script...");
+                const response = await fetch(TURN_SCRIPT_URL, {
+                    method: "POST",
+                    redirect: "follow",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "getTurn",
+                        secret: APP_SECRET_KEY
+                    })
+                });
+
+                const data = await response.json();
+                if (data.result === "success" && data.config) {
+                    dynamicIceServers = data.config;
+                    console.log("✅ TURN сервера успешно загружены!");
+                }
+            } catch (e) {
+                console.error("❌ Не удалось загрузить TURN сервера:", e);
+            }
+        }
+
         async function switchCamera() {
             if (!pc || !localStream) return;
 
@@ -9542,6 +9575,7 @@
             }
 
             // Теперь loadData() не упадет с ошибкой и данные начнут грузиться мгновенно
+            loadTurnServers();
             loadData();
         }
 
