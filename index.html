@@ -5009,6 +5009,51 @@
                 }
             });
         });
+
+        function managePresence(uid) {
+            const statusRef = rtdb.ref('/status/' + uid);
+            const connectionRef = rtdb.ref('.info/connected');
+
+            connectionRef.on('value', (snap) => {
+                if (snap.val() === false) return;
+                // При дисконнекте (закрыл вкладку) - ставим offline и время
+                statusRef.onDisconnect().set({
+                    state: 'offline',
+                    last_seen: firebase.database.ServerValue.TIMESTAMP
+                }).then(() => {
+                    // Пока открыто - online
+                    statusRef.set({
+                        state: 'online',
+                        last_seen: firebase.database.ServerValue.TIMESTAMP
+                    });
+                });
+            });
+        }
+
+        function listenToAllStatuses() {
+            rtdb.ref('status').on('value', (snap) => {
+                const statuses = snap.val() || {};
+                Object.keys(statuses).forEach(uid => {
+                    const data = statuses[uid];
+                    // Обновляем статус в шапке, если чат открыт
+                    if (currentFriendId === uid) {
+                        const el = document.getElementById('chatStatus');
+                        if (el && !el.querySelector('.typing-text')) {
+                            el.innerText = data.state === 'online' ? 'в сети' : formatLastSeenRTDB(data.last_seen);
+                            el.style.color = data.state === 'online' ? '#736AF0' : '#888';
+                        }
+                    }
+                });
+            });
+        }
+
+        function formatLastSeenRTDB(timestamp) {
+            if (!timestamp) return "был недавно";
+            const date = new Date(timestamp);
+            // Используем твою существующую логику форматирования
+            return "был(а) " + formatTelegramDate(date);
+        }
+
         function updateLastSeen() {
             const now = Date.now();
             // Если с последней активности прошло меньше 30 секунд - обновляем базу
@@ -5075,6 +5120,10 @@
         // --- 2. ОСНОВНАЯ ЛОГИКА (Вместо старого слушателя) ---
         auth.onAuthStateChanged(u => {
             if (u) {
+                currentUser = u;
+                managePresence(u.uid); // Запускаем онлайн
+                listenToAllStatuses(); // Слушаем чужой онлайн
+                listenAllUnreadRTDB(); // Слушаем счетчики сообщений
                 currentUser = u;
 
 
@@ -8216,6 +8265,7 @@
                     // =======================================================
 
                     loadMessages();
+                    listenTypingRTDB(currentChatId, userId);
 
                     // --- НОВОЕ: АВТОФОКУС ПРИ ВХОДЕ В ЧАТ ---
                     setTimeout(() => {
@@ -9178,28 +9228,39 @@
         // --- ЛОГИКА ПРОЧТЕНИЯ ПРИ ВОЗВРАЩЕНИИ НА ВКЛАДКУ ---
 
         function markCurrentChatRead() {
-            // Если чат не открыт или окно не активно - выходим
             if (!currentChatId || !currentUser) return;
-            if (!document.hasFocus() || document.visibilityState !== 'visible') return;
+            // Обнуляем счетчик в RTDB
+            rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).set(0);
 
-            // Ищем все непрочитанные сообщения в текущем чате, адресованные мне
+            // В фоне помечаем в Firestore (для истории), но это уже не горит
             db.collection('chats').doc(currentChatId).collection('msgs')
-                .where('to', '==', currentUser.uid)
-                .where('read', '==', false)
-                .get()
+                .where('to', '==', currentUser.uid).where('read', '==', false).get()
                 .then(snap => {
-                    if (snap.empty) return;
-
                     const batch = db.batch();
-                    snap.docs.forEach(doc => {
-                        batch.update(doc.ref, { read: true });
-                    });
+                    snap.docs.forEach(doc => batch.update(doc.ref, { read: true }));
+                    batch.commit();
+                });
+        }
 
-                    batch.commit().then(() => {
-                        console.log('Сообщения помечены прочитанными при возвращении');
-                    });
-                })
-                .catch(err => console.error("Ошибка при пометке прочитанным:", err));
+        function listenAllUnreadRTDB() {
+            rtdb.ref(`unread/${currentUser.uid}`).on('value', (snap) => {
+                const data = snap.val() || {};
+                unreadCounts = data; // Синхронизируем с твоей переменной
+
+                Object.keys(data).forEach(chatId => {
+                    const badgeEl = document.getElementById('badge-' + chatId);
+                    if (badgeEl) {
+                        const count = data[chatId];
+                        if (count > 0) {
+                            badgeEl.innerText = count;
+                            badgeEl.classList.remove('hidden');
+                        } else {
+                            badgeEl.classList.add('hidden');
+                        }
+                    }
+                });
+                updateTotalFriendsBadge(); // Твоя функция общего счетчика на папке
+            });
         }
 
         // Запускаем проверку, когда пользователь фокусируется на окне
@@ -9218,35 +9279,61 @@
             if (currentChatId) markCurrentChatRead();
         });
 
+        // 1. Отправка статуса
         function handleTyping() {
             if (!currentChatId || !currentUser) return;
-
             const now = Date.now();
 
-            // Отправляем статус "печатаю" раз в 2 секунды
             if (!isTyping || (now - lastTypingTime > 2000)) {
                 isTyping = true;
                 lastTypingTime = now;
-
-                console.log("📤 Отправляю статус: печатаю..."); // <-- Проверка в консоли
-
-                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
-                    isTyping: true,
-                    ts: firebase.firestore.FieldValue.serverTimestamp()
-                }).catch(err => console.error("Ошибка отправки статуса:", err));
+                rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`).set(true);
             }
 
-            // Сброс через 3 секунды тишины
             if (typingTimeout) clearTimeout(typingTimeout);
-
             typingTimeout = setTimeout(() => {
                 isTyping = false;
-                console.log("📤 Статус сброшен (не печатаю)"); // <-- Проверка в консоли
-
-                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
-                    isTyping: false
-                });
+                rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`).remove();
             }, 3000);
+        }
+
+        // Эту функцию вызови ОДИН РАЗ внутри handleHashChange, когда открывается чат
+        function listenTypingRTDB(chatId, friendId) {
+            if (window.typingUnsubRTDB) window.typingUnsubRTDB(); // Сброс старого
+
+            const ref = rtdb.ref(`typing/${chatId}/${friendId}`);
+            ref.on('value', (snap) => {
+                const statusEl = document.getElementById('chatStatus');
+                if (!statusEl) return;
+                if (snap.val() === true) {
+                    statusEl.innerHTML = '<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
+                } else {
+                    // Возвращаем обычный статус (в сети / оффлайн)
+                    const friendData = usersCache[friendId];
+                    rtdb.ref(`status/${friendId}`).once('value', s => {
+                        const d = s.val();
+                        if (d) {
+                            statusEl.innerText = d.state === 'online' ? 'в сети' : formatLastSeenRTDB(d.last_seen);
+                            statusEl.style.color = d.state === 'online' ? '#736AF0' : '#888';
+                        }
+                    });
+                }
+            });
+            window.typingUnsubRTDB = () => ref.off();
+        }
+
+        // 2. Слушатель (вызывай это внутри openChat)
+        function listenTyping(chatId, friendId) {
+            const typingRef = rtdb.ref(`typing/${chatId}/${friendId}`);
+            typingRef.on('value', (snap) => {
+                const statusEl = document.getElementById('chatStatus');
+                if (snap.val() === true) {
+                    statusEl.innerHTML = '<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
+                } else {
+                    // Если перестал печатать — возвращаем "в сети / был тогда-то"
+                    // (данные берем из кэша или новой функции статуса)
+                }
+            });
         }
 
 
