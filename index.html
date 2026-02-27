@@ -6925,43 +6925,41 @@
                 });
             }
         }
-        async function getMedia() {
+        async function getMedia(requestVideo = false) {
             try {
-                // Возвращаем шикарное HD качество (720p)!
-                const videoConstraints = {
-                    facingMode: { ideal: currentFacingMode },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    frameRate: { ideal: 24, max: 30 }
+                // 1. Сначала всегда запрашиваем только аудио, чтобы звонок начался
+                const constraints = {
+                    audio: true,
+                    video: false
                 };
 
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: videoConstraints
-                }).catch(() => {
-                    // Если камера телефона вдруг не умеет 720p, берем дефолт
-                    return navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                });
+                // Если мы явно хотим начать с видео (например, видеозвонок), меняем настройки
+                if (requestVideo) {
+                    constraints.video = {
+                        facingMode: { ideal: currentFacingMode },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    };
+                }
+
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
-                setLocalMirror(currentFacingMode);
 
-                localStream.getVideoTracks()[0].enabled = false;
-                updateCamBtnUI(false);
-                localStream.getAudioTracks()[0].enabled = true;
-                updateMicBtnUI(true);
-
-                // Добавляем треки (без всяких урезаний скорости!)
+                // Добавляем треки в PeerConnection
                 localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-            } catch (e) {
-                console.error("🚨 Ошибка камеры/микрофона:", e);
-                if (e.name === 'NotAllowedError') {
-                    alert("❌ ДОСТУП ЗАПРЕЩЕН!\nРазрешите доступ к камере и микрофону в настройках браузера.");
+                // Если видео не запрашивали, кнопка камеры должна быть в состоянии "выкл"
+                if (!requestVideo) {
+                    updateCamBtnUI(false);
                 } else {
-                    alert("❌ Ошибка при доступе к медиа: " + e.message);
+                    updateCamBtnUI(true);
+                    setLocalMirror(currentFacingMode);
                 }
+
+            } catch (e) {
+                console.error("🚨 Ошибка медиа:", e);
                 throw e;
             }
         }
@@ -7218,11 +7216,42 @@
                 iconOff.style.display = 'block';
             }
         }
-        function toggleCamera() {
-            if (!localStream) return;
-            const sender = pc.getSenders().find(s => s.track.kind === 'video');
-            if (sender && sender.track.label.includes('screen')) stopScreen(sender);
-            const track = localStream.getVideoTracks()[0]; track.enabled = !track.enabled; updateCamBtnUI(track.enabled);
+        async function toggleCamera() {
+            if (!localStream || !pc) return;
+
+            let videoTrack = localStream.getVideoTracks()[0];
+
+            // Если видео-трека нет — значит, мы его еще не включали. Нужно захватить!
+            if (!videoTrack) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
+                    videoTrack = stream.getVideoTracks()[0];
+
+                    // Добавляем новый трек в наш локальный поток
+                    localStream.addTrack(videoTrack);
+
+                    // Отправляем новый трек собеседнику
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) {
+                        sender.replaceTrack(videoTrack);
+                    } else {
+                        pc.addTrack(videoTrack, localStream);
+                        // После добавления нового трека в процессе звонка может потребоваться пересогласование (re-negotiation)
+                        // Но для начала попробуем просто замену.
+                    }
+
+                    updateCamBtnUI(true);
+                    setLocalMirror(currentFacingMode);
+                } catch (e) {
+                    console.error("Не удалось включить камеру:", e);
+                }
+            } else {
+                // Если трек уже есть, просто включаем/выключаем его (индикатор будет гореть, если включен)
+                videoTrack.enabled = !videoTrack.enabled;
+                updateCamBtnUI(videoTrack.enabled);
+            }
         }
         function updateCamBtnUI(enabled) {
             const btn = document.getElementById('btnCam');
