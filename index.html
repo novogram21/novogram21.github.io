@@ -6777,6 +6777,9 @@
 
             pc = new RTCPeerConnection(dynamicIceServers);
 
+            pc.addTransceiver('audio', { direction: 'sendrecv' });
+            pc.addTransceiver('video', { direction: 'inactive' });
+
             const handleConnected = () => {
                 if (!isConnected) {
                     console.log("🟢 [WebRTC] СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
@@ -7063,13 +7066,10 @@
             isConnected = false;
             wasCallConnected = false;
 
-            // Генерируем уникальный ID для ЭТОГО звонка
             const sessionTs = Date.now();
             currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTs;
 
-            // Ссылка на ВХОДЯЩИЙ звонок для друга
             const callRef = rtdb.ref('incoming_calls/' + currentFriendId);
-            // Ссылка на сам сеанс связи (где будут кандидаты и SDP)
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
 
             document.getElementById('callScreen').style.display = 'flex';
@@ -7079,24 +7079,15 @@
             try {
                 setupPeerConnection();
 
-                // СРАЗУ слушаем кандидатов собеседника (они пойдут в очередь, если придут слишком рано)
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                // Отправка наших кандидатов
-                pc.onicecandidate = e => {
-                    if (e.candidate) {
-                        sessionRef.child('offerCandidates').push(e.candidate.toJSON());
-                    }
-                };
-
-                await getMedia();
+                await getMedia(false); // Начинаем без камеры
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                // 1. Создаем сеанс связи
                 await sessionRef.set({
                     offer: { type: offer.type, sdp: offer.sdp },
                     caller: currentUser.uid,
@@ -7105,7 +7096,6 @@
                     ts: sessionTs
                 });
 
-                // 2. Кидаем "уведомление" другу
                 await callRef.set({
                     sessionId: currentCallId,
                     caller: currentUser.uid,
@@ -7114,7 +7104,6 @@
                     status: 'ringing'
                 });
 
-                // 3. Слушаем ответ в СЕАНСЕ
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
@@ -7144,18 +7133,14 @@
 
             if (!currentCallId) return;
 
-            // ВАЖНО: Сбрасываем флаги перед ответом!
             isConnected = false;
             wasCallConnected = false;
             amICaller = false;
 
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
-
-            // Снимаем уведомление о входящем звонке, чтобы он перестал звенеть
             rtdb.ref('incoming_calls/' + currentUser.uid).remove();
 
             try {
-                // Читаем Оффер
                 const sessionSnap = await sessionRef.once('value');
                 const callData = sessionSnap.val();
 
@@ -7167,29 +7152,33 @@
 
                 setupPeerConnection();
 
-                // СРАЗУ слушаем кандидатов звонящего
+                // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
+                sessionRef.on('value', async snap => {
+                    const data = snap.val();
+                    if (data && data.renegotiate && !amICaller) {
+                        console.log("🔄 Получено обновление потока (камера)...");
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
+                    }
+                });
+
                 sessionRef.child('offerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                pc.onicecandidate = e => {
-                    if (e.candidate) sessionRef.child('answerCandidates').push(e.candidate.toJSON());
-                };
+                await getMedia(false);
 
-                await getMedia();
-
-                // Подключаем Оффер звонящего
                 await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                 await flushCandidateQueue();
 
-                // Создаем Ответ (Answer)
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
 
-                // Отправляем Ответ в базу
                 await sessionRef.update({
                     answer: { type: answer.type, sdp: answer.sdp },
-                    status: 'connected' // Для галочки
+                    status: 'connected'
                 });
 
             } catch (e) {
@@ -7217,40 +7206,66 @@
             }
         }
         async function toggleCamera() {
-            if (!localStream || !pc) return;
+            if (!pc) return;
 
-            let videoTrack = localStream.getVideoTracks()[0];
+            // Ищем наш зарезервированный видео-трансивер
+            const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
 
-            // Если видео-трека нет — значит, мы его еще не включали. Нужно захватить!
-            if (!videoTrack) {
+            if (!videoTransceiver) {
+                console.error("Видео-канал не был зарезервирован при старте");
+                return;
+            }
+
+            // Если видео еще не захвачено (первое нажатие кнопки)
+            if (!localStream || localStream.getVideoTracks().length === 0) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
                     });
-                    videoTrack = stream.getVideoTracks()[0];
+                    const videoTrack = stream.getVideoTracks()[0];
 
-                    // Добавляем новый трек в наш локальный поток
+                    // 1. Добавляем трек в наш локальный поток для превью
+                    if (!localStream) localStream = new MediaStream();
                     localStream.addTrack(videoTrack);
+                    document.getElementById('localVideo').srcObject = localStream;
 
-                    // Отправляем новый трек собеседнику
-                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (sender) {
-                        sender.replaceTrack(videoTrack);
-                    } else {
-                        pc.addTrack(videoTrack, localStream);
-                        // После добавления нового трека в процессе звонка может потребоваться пересогласование (re-negotiation)
-                        // Но для начала попробуем просто замену.
-                    }
+                    // 2. Вставляем трек в "слот" WebRTC и активируем его
+                    await videoTransceiver.sender.replaceTrack(videoTrack);
+                    videoTransceiver.direction = 'sendrecv';
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
+
+                    // ВАЖНО: После активации нового типа медиа (видео), 
+                    // нужно обновить "договор" между телефонами (Renegotiation)
+                    handleRenegotiation();
+
                 } catch (e) {
-                    console.error("Не удалось включить камеру:", e);
+                    console.error("Ошибка включения камеры:", e);
+                    alert("Не удалось включить камеру");
                 }
             } else {
-                // Если трек уже есть, просто включаем/выключаем его (индикатор будет гореть, если включен)
-                videoTrack.enabled = !videoTrack.enabled;
-                updateCamBtnUI(videoTrack.enabled);
+                // Если камера уже была включена ранее, просто гасим/включаем трек
+                const track = localStream.getVideoTracks()[0];
+                track.enabled = !track.enabled;
+                updateCamBtnUI(track.enabled);
+            }
+        }
+
+        async function handleRenegotiation() {
+            if (!amICaller) return; // Обычно пересогласование инициирует тот, кто звонил
+
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                // Отправляем обновленный Offer в ту же сессию Firebase
+                rtdb.ref('call_sessions/' + currentCallId).update({
+                    offer: { type: offer.type, sdp: offer.sdp },
+                    renegotiate: Date.now() // Метка, чтобы друг понял, что это обновление
+                });
+            } catch (e) {
+                console.error("Ошибка пересогласования:", e);
             }
         }
         function updateCamBtnUI(enabled) {
@@ -9329,16 +9344,23 @@
         // Эту функцию вызови ОДИН РАЗ внутри handleHashChange, когда открывается чат
         function listenTypingRTDB(chatId, friendId) {
             const ref = rtdb.ref(`typing/${chatId}/${friendId}`);
-            console.log("🔍 Подписываюсь на статус печати:", `typing/${chatId}/${friendId}`);
 
             ref.on('value', (snap) => {
-                console.log("⚡ Данные печати обновились:", snap.val());
                 const statusEl = document.getElementById('chatStatus');
+                if (!statusEl) return;
+
                 if (snap.val() === true) {
                     statusEl.innerHTML = '<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
+                    statusEl.style.color = '#736AF0';
                 } else {
-                    // Возвращаем онлайн статус, если не печатает
-                    updateHeaderStatusFromRTDB(friendId);
+                    // Просто запрашиваем актуальный статус из RTDB
+                    rtdb.ref('status/' + friendId).once('value', s => {
+                        const d = s.val();
+                        if (d && currentFriendId === friendId) {
+                            statusEl.innerText = d.state === 'online' ? 'в сети' : formatLastSeenRTDB(d.last_seen);
+                            statusEl.style.color = d.state === 'online' ? '#736AF0' : '#888';
+                        }
+                    });
                 }
             });
         }
