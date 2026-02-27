@@ -6894,83 +6894,64 @@
         async function startCall() {
             if (!currentFriendId || !currentUser) return;
 
-            console.log("📞 Начинаем премиум-звонок...");
             amICaller = true;
             isConnected = false;
             wasCallConnected = false;
 
-            const newCallId = [currentUser.uid, currentFriendId].sort().join('_');
-            currentCallId = newCallId;
-            const callDoc = db.collection('calls').doc(newCallId);
+            // СОЗДАЕМ УНИКАЛЬНЫЙ ID СЕССИИ (UID1_UID2_TIMESTAMP)
+            const sessionTimestamp = Date.now();
+            currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTimestamp;
 
-            // 1. Инициализируем UI сразу
+            const callDoc = db.collection('calls').doc(currentCallId);
+
+            // Сразу открываем экран
             document.getElementById('callScreen').style.display = 'flex';
-            document.getElementById('callStatusText').innerText = "Настройка связи...";
+            document.getElementById('callStatusText').innerText = "Вызов...";
             playConnectingTone();
 
             try {
-                // 2. СНАЧАЛА создаем RTCPeerConnection (чтобы pc не был null)
-                setupPeerConnection();
+                setupPeerConnection(); // 1. Создаем PC
+                await getMedia();      // 2. Берем камеру
 
-                // 3. ПОТОМ получаем медиа (теперь pc.addTrack сработает!)
-                await getMedia();
-
-                // 4. Очищаем старых кандидатов "тихо"
-                callDoc.collection('offerCandidates').get().then(s => s.forEach(d => d.ref.delete()));
-                callDoc.collection('answerCandidates').get().then(s => s.forEach(d => d.ref.delete()));
-
-                // 5. Настраиваем отправку кандидатов
+                // 3. Настройка кандидатов
                 pc.onicecandidate = e => {
                     if (e.candidate) {
-                        callDoc.collection('offerCandidates').add(e.candidate.toJSON()).catch(err => {
-                            console.warn("⚠️ Ошибка записи кандидата:", err);
-                        });
+                        callDoc.collection('offerCandidates').add(e.candidate.toJSON()).catch(err => console.warn("Ошибка кандидата:", err));
                     }
                 };
 
-                // 6. Создаем оффер
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-
-                const callData = {
-                    offer: { type: offer.type, sdp: offer.sdp },
+                // 4. Создаем звонок в базе
+                await callDoc.set({
+                    offer: { type: (await pc.createOffer()).type, sdp: (await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })).sdp },
                     caller: currentUser.uid,
+                    callerName: usersCache[currentUser.uid]?.name || "Novogram User",
                     to: currentFriendId,
                     status: 'dialing',
                     ts: firebase.firestore.FieldValue.serverTimestamp()
-                };
+                });
 
-                await callDoc.set(callData);
+                // Повторно устанавливаем локальное описание после создания оффера
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                await callDoc.update({ offer: { type: offer.type, sdp: offer.sdp } });
 
-                // 7. Слушаем ответы
+                // 5. Слушаем ответ
                 callDoc.onSnapshot(async snap => {
-                    if (!snap.exists) return;
                     const data = snap.data();
-
-                    if (data.status === 'ringing' && !isConnected) {
-                        updateCallStatus("Звонок...");
-                        playRingingTone();
-                    }
-
+                    if (!data) return;
+                    if (data.status === 'ringing' && !isConnected) { updateCallStatus("Звонок..."); playRingingTone(); }
                     if (pc && !pc.remoteDescription && data.answer) {
-                        console.log("✅ Собеседник на связи!");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
-                }, err => {
-                    console.error("🔥 Ошибка слушателя звонка:", err);
-                });
+                }, err => console.error("Snapshot error:", err));
 
-                // Слушаем кандидатов от второй стороны
                 callDoc.collection('answerCandidates').onSnapshot(snap => {
-                    snap.docChanges().forEach(change => {
-                        if (change.type === 'added') addCandidateSafely(change.doc.data());
-                    });
+                    snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
                 });
 
             } catch (err) {
-                console.error("❌ Критическая ошибка старта звонка:", err);
-                showToast("Ошибка доступа к медиа или базе");
+                console.error("Call Start Error:", err);
                 endCall(true);
             }
         }
@@ -7076,72 +7057,25 @@
             btn.classList.remove('btn-screen-on'); lbl.innerText = 'Экран';
         }
         function listenForIncomingCalls() {
-            db.collection('calls').where('to', '==', currentUser.uid).onSnapshot(snap => {
-                snap.docChanges().forEach(change => {
-                    if (change.type === "added") {
-                        if (change.doc.id.includes(currentUser.uid)) {
-                            if (currentCallId) {
-                                console.log("Ignored incoming call because busy");
-                                return;
-                            }
-                            currentCallId = change.doc.id;
-                            // Показываем плашку
-                            const popup = document.getElementById('incomingPopup');
-                            popup.style.display = 'flex';
-                            document.getElementById('ringtone').play().catch(() => { });
-                            db.collection('calls').doc(currentCallId).update({ status: 'ringing' }).catch(() => { });
+            db.collection('calls')
+                .where('to', '==', currentUser.uid)
+                .orderBy('ts', 'desc') // Берем самый свежий
+                .limit(1)
+                .onSnapshot(snap => {
+                    snap.docChanges().forEach(change => {
+                        if (change.type === "added") {
                             const data = change.doc.data();
-                            const callerId = data.caller;
-                            // Ссылка на элемент имени
-                            const nameEl = document.getElementById('callerName');
-                            nameEl.innerHTML = "Загрузка..."; // Сброс перед загрузкой
-                            // --- ИЗМЕНЕНИЯ ЗДЕСЬ: ЗАГРУЗКА ИМЕНИ, ФАМИЛИИ И АВАТАРКИ ---
-                            db.collection('users').doc(callerId).get().then(userDoc => {
-                                if (userDoc.exists) {
-                                    const u = userDoc.data();
-                                    // 1. Формируем Имя + Фамилия
-                                    // Если фамилии нет, будет только имя. trim() убирает лишние пробелы.
-                                    let fullName = `${u.name || ''} ${u.surname || ''}`.trim();
-                                    // Если и имени нет, берем никнейм или заглушку
-                                    if (!fullName) fullName = u.username ? `@${u.username}` : "Неизвестный";
-                                    // 2. Логика Аватарки
-                                    let avatarHtml;
-                                    if (u.avatar) {
-                                        // Если есть фото - показываем фото
-                                        avatarHtml = `<img src="${u.avatar}" style="width:42px; height:42px; border-radius:50%; object-fit:cover; margin-right:12px;">`;
-                                    } else {
-                                        // Если нет фото - делаем градиентный кружок с первой буквой (Стиль Telegram)
-                                        const firstLetter = fullName.charAt(0).toUpperCase();
-                                        avatarHtml = `<div style="width:42px; height:42px; border-radius:50%; background: linear-gradient(135deg, #6a11cb, #2575fc); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; margin-right:12px; border: 1px solid #444;">${firstLetter}</div>`;
-                                    }
-                                    // 3. Формируем HTML "как в Телеграме"
-                                    // Сверху имя (белое, жирное), снизу "Telegram Audio..." (голубоватое/серое)
-                                    nameEl.innerHTML = `
-                            <div style="display:flex; align-items:center;">
-                            ${avatarHtml}
-                            <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center;">
-                            <span style="font-size: 15px; font-weight: 600; color: white; line-height: 1.2;">${fullName}</span>
-                            <span style="font-size: 13px; color: #8faebf; font-weight: normal; margin-top: 2px;">Telegram Audio...</span>
-                            </div>
-                            </div>
-                            `;
-                                } else {
-                                    nameEl.innerText = "Неизвестный номер";
-                                }
-                            }).catch(err => {
-                                console.error(err);
-                                nameEl.innerText = "Ошибка ID";
-                            });
-                            // -------------------------------------------------------------
+                            if (data.status === 'dialing' || data.status === 'ringing') {
+                                currentCallId = change.doc.id; // Запоминаем текущий уникальный ID
+                                const popup = document.getElementById('incomingPopup');
+                                popup.style.display = 'flex';
+                                document.getElementById('callerName').innerText = data.callerName || "Входящий вызов";
+                                document.getElementById('ringtone').play().catch(() => { });
+                                db.collection('calls').doc(currentCallId).update({ status: 'ringing' });
+                            }
                         }
-                    }
-                    if (change.type === "removed") {
-                        if (currentCallId === change.doc.id) {
-                            endCall(false, true);
-                        }
-                    }
+                    });
                 });
-            });
         }
 
         // --- ПРОФИЛЬ СОБЕСЕДНИКА ---
