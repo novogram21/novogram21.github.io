@@ -6807,27 +6807,39 @@
         }
         async function getStreamForFacing(facing, withAudio) {
             const audio = !!withAudio;
-            // 1) пробуем строго нужную камеру
+
+            // Задаем идеальные параметры: 720p (HD) и 24-30 кадров в секунду (кинематографично и не сильно грузит сеть)
+            const videoConstraints = {
+                facingMode: { ideal: facing },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 24, max: 30 }
+            };
+
+            // 1) пробуем с нашими HD-настройками
             try {
                 return await navigator.mediaDevices.getUserMedia({
-                    audio,
-                    video: { facingMode: { exact: facing } }
+                    audio: audio,
+                    video: videoConstraints
                 });
-            } catch (e1) { }
-            // 2) пробуем "желательно"
+            } catch (e1) {
+                console.warn("Не удалось получить 720p, пробуем стандартное разрешение...");
+            }
+
+            // 2) fallback: если камера телефона не поддерживает 720p или занята, берем что дадут
             try {
                 return await navigator.mediaDevices.getUserMedia({
-                    audio,
+                    audio: audio,
                     video: { facingMode: { ideal: facing } }
                 });
             } catch (e2) {
-                // 3) fallback: через enumerateDevices + deviceId
+                // 3) самый жесткий fallback: через enumerateDevices (как было у тебя)
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const cams = devices.filter(d => d.kind === 'videoinput');
                 if (!cams.length) throw e2;
                 const cam = (facing === 'environment') ? cams[cams.length - 1] : cams[0];
                 return await navigator.mediaDevices.getUserMedia({
-                    audio,
+                    audio: audio,
                     video: { deviceId: { exact: cam.deviceId } }
                 });
             }
