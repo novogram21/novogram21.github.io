@@ -6722,12 +6722,15 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
+
+            // ЛОГ 1: Проверяем, какие серверы реально используются
+            console.log("🛠️ Создаем RTCPeerConnection. Используемые серверы:", JSON.stringify(dynamicIceServers, null, 2));
+
             pc = new RTCPeerConnection(dynamicIceServers);
 
-            // Единая функция для перевода интерфейса в режим разговора
             const handleConnected = () => {
                 if (!isConnected) {
-                    console.log("🔥 СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
+                    console.log("🟢 [WebRTC] СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
                     isConnected = true;
                     wasCallConnected = true;
                     updateCallStatus("В разговоре");
@@ -6737,34 +6740,57 @@
                 }
             };
 
-            // Слушаем состояние ICE (самый надежный метод для мобилок)
             pc.oniceconnectionstatechange = () => {
-                console.log("📡 ICE State:", pc.iceConnectionState);
+                console.log("📡 [ICE State]:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     handleConnected();
                 } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                    console.error("❌ [ICE State] Ошибка или разрыв соединения!");
                     endCall(false);
                 }
             };
 
-            // Дублируем для новых браузеров
             pc.onconnectionstatechange = () => {
-                console.log("🌐 Connection State:", pc.connectionState);
+                console.log("🌐 [Connection State]:", pc.connectionState);
                 if (pc.connectionState === 'connected') {
                     handleConnected();
                 } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                    console.error("❌ [Connection State] Ошибка соединения!");
                     endCall(false);
                 }
             };
 
             pc.ontrack = e => {
-                console.log("🎥 Получен удаленный видео/аудио поток!");
+                console.log("🎥 [Track] Получен удаленный медиа-поток:", e.track.kind);
                 const remoteVid = document.getElementById('remoteVideo');
                 remoteVid.muted = false;
                 if (remoteVid.srcObject !== e.streams[0]) {
                     remoteVid.srcObject = e.streams[0];
-                    remoteVid.play().catch(console.error);
+                    remoteVid.play().catch(err => console.error("Ошибка автовоспроизведения:", err));
                 }
+            };
+
+            // ЛОГ 2: Следим за сбором кандидатов
+            pc.onicecandidate = e => {
+                if (e.candidate) {
+                    console.log(`🧊 [Кандидат СОБРАН]: тип=${e.candidate.type}, протокол=${e.candidate.protocol}, IP=${e.candidate.address}`);
+
+                    // Если мы звоним - шлем в offerCandidates, если отвечаем - в answerCandidates
+                    if (currentCallId) {
+                        const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
+                        if (amICaller) {
+                            sessionRef.child('offerCandidates').push(e.candidate.toJSON());
+                        } else {
+                            sessionRef.child('answerCandidates').push(e.candidate.toJSON());
+                        }
+                    }
+                } else {
+                    console.log("🛑 [Кандидаты] Сбор завершен.");
+                }
+            };
+
+            pc.onicegatheringstatechange = () => {
+                console.log("🔎 [ICE Gathering]:", pc.iceGatheringState);
             };
         }
         function startPing() {
@@ -6785,17 +6811,23 @@
             try {
                 if (pc.remoteDescription && pc.remoteDescription.type) {
                     await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    console.log(`📥 [Кандидат ДОБАВЛЕН]: тип=${candidate.type}, IP=${candidate.address}`);
                 } else {
+                    console.log("⏳ [Кандидат В ОЧЕРЕДИ] Ждем RemoteDescription...");
                     candidateQueue.push(candidate);
                 }
             } catch (e) {
-                console.error("Ошибка добавления ICE-кандидата:", e);
+                console.error("❌ Ошибка добавления ICE-кандидата:", e);
             }
         }
         async function flushCandidateQueue() {
             if (!pc) return;
+            console.log(`🔄 [Очередь] Добавляем ${candidateQueue.length} кандидатов из очереди...`);
             for (const cand of candidateQueue) {
-                try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) { }
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(cand));
+                    console.log(`📥 [Кандидат из очереди ДОБАВЛЕН]: тип=${cand.type}`);
+                } catch (e) { console.error("Ошибка кандидата из очереди", e); }
             }
             candidateQueue = [];
         }
