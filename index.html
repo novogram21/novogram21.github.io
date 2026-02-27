@@ -4631,6 +4631,7 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const rtdb = firebase.database();
 
         db.enablePersistence({ synchronizeTabs: true })
             .then(() => console.log("🔥 Offline Persistence enabled"))
@@ -6896,61 +6897,62 @@
 
             amICaller = true;
             isConnected = false;
-            wasCallConnected = false;
 
-            // Генерируем уникальный ID, чтобы не было ошибки "Document already exists"
             const sessionTs = Date.now();
             currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTs;
 
-            const callDoc = db.collection('calls').doc(currentCallId);
+            // Ссылка в Realtime Database
+            const callRef = rtdb.ref('calls/' + currentCallId);
 
-            // Мгновенно открываем экран звонка
             document.getElementById('callScreen').style.display = 'flex';
-            document.getElementById('callStatusText').innerText = "Подготовка...";
+            updateCallStatus("Инициализация...");
             playConnectingTone();
 
             try {
-                // КРИТИЧЕСКИЙ ПОРЯДОК:
-                setupPeerConnection(); // 1. Сначала создаем объект pc
-                await getMedia();      // 2. Потом берем камеру (теперь pc.addTrack не упадет)
+                setupPeerConnection();
+                await getMedia();
 
+                // Отправка кандидатов через RTDB (мгновенно!)
                 pc.onicecandidate = e => {
                     if (e.candidate) {
-                        callDoc.collection('offerCandidates').add(e.candidate.toJSON())
-                            .catch(err => console.warn("Ошибка кандидата:", err));
+                        callRef.child('offerCandidates').push(e.candidate.toJSON());
                     }
                 };
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                await callDoc.set({
+                // Создаем звонок в RTDB
+                await callRef.set({
                     offer: { type: offer.type, sdp: offer.sdp },
                     caller: currentUser.uid,
-                    callerName: usersCache[currentUser.uid]?.name || "Novogram User",
+                    callerName: usersCache[currentUser.uid]?.name || "User",
                     to: currentFriendId,
                     status: 'dialing',
-                    ts: firebase.firestore.FieldValue.serverTimestamp() // Важно для сортировки
+                    ts: sessionTs
                 });
 
-                // Слушаем ответ
-                callDoc.onSnapshot(async snap => {
-                    const data = snap.data();
+                // Слушаем ответ через RTDB
+                callRef.on('value', async snap => {
+                    const data = snap.val();
                     if (!data) return;
-                    if (data.status === 'ringing' && !isConnected) { updateCallStatus("Звонок..."); playRingingTone(); }
+
+                    if (data.status === 'connected' && !isConnected) {
+                        updateCallStatus("В разговоре");
+                    }
+
                     if (pc && !pc.remoteDescription && data.answer) {
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                        await flushCandidateQueue();
                     }
                 });
 
-                callDoc.collection('answerCandidates').onSnapshot(snap => {
-                    snap.docChanges().forEach(change => { if (change.type === 'added') addCandidateSafely(change.doc.data()); });
+                // Слушаем кандидатов собеседника
+                callRef.child('answerCandidates').on('child_added', snap => {
+                    addCandidateSafely(snap.val());
                 });
 
             } catch (err) {
-                console.error("Ошибка старта звонка:", err);
-                showToast("Ошибка: " + err.message);
+                console.error(err);
                 endCall(true);
             }
         }
@@ -7058,26 +7060,24 @@
             btn.classList.remove('btn-screen-on'); lbl.innerText = 'Экран';
         }
         function listenForIncomingCalls() {
-            db.collection('calls')
-                .where('to', '==', currentUser.uid)
-                .orderBy('ts', 'desc')
-                .limit(1)
-                .onSnapshot(snap => {
-                    snap.docChanges().forEach(change => {
-                        if (change.type === "added") {
-                            const data = change.doc.data();
-                            // Если звонок свежий (создан не более 30 сек назад)
-                            if (data.status === 'dialing' || data.status === 'ringing') {
-                                currentCallId = change.doc.id;
-                                const popup = document.getElementById('incomingPopup');
-                                popup.style.display = 'flex';
-                                document.getElementById('callerName').innerText = data.callerName || "Входящий вызов";
-                                document.getElementById('ringtone').play().catch(() => { });
-                                db.collection('calls').doc(currentCallId).update({ status: 'ringing' });
-                            }
-                        }
-                    });
-                });
+            // Слушаем корень коллекции звонков
+            rtdb.ref('calls').on('child_added', snap => {
+                const data = snap.val();
+                if (!data || data.to !== currentUser.uid) return;
+
+                // Если звонок свежий (не старше 1 минуты)
+                if (Date.now() - data.ts < 60000 && data.status === 'dialing') {
+                    currentCallId = snap.key;
+
+                    const popup = document.getElementById('incomingPopup');
+                    popup.style.display = 'flex';
+                    document.getElementById('callerName').innerText = data.callerName;
+                    document.getElementById('ringtone').play().catch(() => { });
+
+                    // Помечаем, что мы «зазвонили»
+                    rtdb.ref('calls/' + currentCallId).update({ status: 'ringing' });
+                }
+            });
         }
 
         // --- ПРОФИЛЬ СОБЕСЕДНИКА ---
