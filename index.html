@@ -6846,30 +6846,41 @@
         }
         async function getMedia() {
             try {
-                localStream = await getStreamForFacing(currentFacingMode, true);
+                // Возвращаем шикарное HD качество (720p)!
+                const videoConstraints = {
+                    facingMode: { ideal: currentFacingMode },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 24, max: 30 }
+                };
+
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: videoConstraints
+                }).catch(() => {
+                    // Если камера телефона вдруг не умеет 720p, берем дефолт
+                    return navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                });
+
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
                 setLocalMirror(currentFacingMode);
 
-                // По умолчанию видео выключено, микрофон включен
                 localStream.getVideoTracks()[0].enabled = false;
                 updateCamBtnUI(false);
                 localStream.getAudioTracks()[0].enabled = true;
                 updateMicBtnUI(true);
 
+                // Добавляем треки (без всяких урезаний скорости!)
                 localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
             } catch (e) {
                 console.error("🚨 Ошибка камеры/микрофона:", e);
-
                 if (e.name === 'NotAllowedError') {
-                    alert("❌ ДОСТУП ЗАПРЕЩЕН!\n\nРазрешите доступ к камере и микрофону в настройках браузера. (Также убедитесь, что используете HTTPS).");
-                } else if (e.name === 'NotFoundError') {
-                    alert("❌ Камера или микрофон не найдены на устройстве.");
+                    alert("❌ ДОСТУП ЗАПРЕЩЕН!\nРазрешите доступ к камере и микрофону в настройках браузера.");
                 } else {
                     alert("❌ Ошибка при доступе к медиа: " + e.message);
                 }
-
-                // ВАЖНО: пробрасываем ошибку дальше, чтобы startCall/answerCall остановились
                 throw e;
             }
         }
