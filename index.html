@@ -9299,27 +9299,19 @@
 
         // Эту функцию вызови ОДИН РАЗ внутри handleHashChange, когда открывается чат
         function listenTypingRTDB(chatId, friendId) {
-            if (window.typingUnsubRTDB) window.typingUnsubRTDB(); // Сброс старого
-
             const ref = rtdb.ref(`typing/${chatId}/${friendId}`);
+            console.log("🔍 Подписываюсь на статус печати:", `typing/${chatId}/${friendId}`);
+
             ref.on('value', (snap) => {
+                console.log("⚡ Данные печати обновились:", snap.val());
                 const statusEl = document.getElementById('chatStatus');
-                if (!statusEl) return;
                 if (snap.val() === true) {
                     statusEl.innerHTML = '<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
                 } else {
-                    // Возвращаем обычный статус (в сети / оффлайн)
-                    const friendData = usersCache[friendId];
-                    rtdb.ref(`status/${friendId}`).once('value', s => {
-                        const d = s.val();
-                        if (d) {
-                            statusEl.innerText = d.state === 'online' ? 'в сети' : formatLastSeenRTDB(d.last_seen);
-                            statusEl.style.color = d.state === 'online' ? '#736AF0' : '#888';
-                        }
-                    });
+                    // Возвращаем онлайн статус, если не печатает
+                    updateHeaderStatusFromRTDB(friendId);
                 }
             });
-            window.typingUnsubRTDB = () => ref.off();
         }
 
         // 2. Слушатель (вызывай это внутри openChat)
