@@ -6371,6 +6371,11 @@
                 closeChatTimeout = null;
             }
 
+            if (activeFriendStatusUnsub) {
+                activeFriendStatusUnsub();
+                activeFriendStatusUnsub = null;
+            }
+
             if (window.innerWidth <= 768) {
                 document.getElementById('mainChatArea').classList.remove('active');
                 document.getElementById('mainSidebar').classList.remove('hidden-mobile');
@@ -8286,6 +8291,7 @@
 
                     loadMessages();
                     listenTypingRTDB(currentChatId, userId);
+                    listenActiveFriendStatus(userId);
 
                     // --- НОВОЕ: АВТОФОКУС ПРИ ВХОДЕ В ЧАТ ---
                     setTimeout(() => {
@@ -9334,13 +9340,13 @@
                     statusEl.innerHTML = '<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
                     statusEl.style.color = '#736AF0';
                 } else {
-                    // Если snap.val() === null (запись удалена) — возвращаем статус Онлайн/Оффлайн
-                    // Берем данные из другой ветки RTDB, которую мы настроили вчера
-                    rtdb.ref(`status/${friendId}`).once('value', (statusSnap) => {
-                        const s = statusSnap.val();
-                        if (s && currentFriendId === friendId) {
-                            statusEl.innerText = s.state === 'online' ? 'в сети' : formatLastSeenRTDB(s.last_seen);
-                            statusEl.style.color = s.state === 'online' ? '#736AF0' : '#888';
+                    // Просто вызываем функцию, которую мы написали в Шаге 1, 
+                    // чтобы она мгновенно вернула правильный статус в сети/оффлайн
+                    rtdb.ref(`status/${friendId}`).once('value', s => {
+                        const d = s.val();
+                        if (d) {
+                            statusEl.innerText = d.state === 'online' ? 'в сети' : formatLastSeenRTDB(d.last_seen);
+                            statusEl.style.color = d.state === 'online' ? '#736AF0' : '#888';
                         }
                     });
                 }
@@ -10560,6 +10566,35 @@
                 console.error(e);
                 alert("Ошибка при удалении.");
             }
+        }
+
+        let activeFriendStatusUnsub = null; // Глобальная переменная для отписки
+
+        function listenActiveFriendStatus(friendId) {
+            // Если уже кто-то слушался — отписываемся, чтобы не плодить процессы
+            if (activeFriendStatusUnsub) activeFriendStatusUnsub();
+
+            const statusRef = rtdb.ref(`status/${friendId}`);
+
+            const listener = statusRef.on('value', (snap) => {
+                const data = snap.val();
+                const statusEl = document.getElementById('chatStatus');
+                if (!statusEl || !data) return;
+
+                // Если сейчас идет процесс "печатает", не перебиваем его текстом онлайна
+                if (statusEl.querySelector('.typing-text')) return;
+
+                if (data.state === 'online') {
+                    statusEl.innerText = 'в сети';
+                    statusEl.style.color = '#736AF0'; // Фиолетовый
+                } else {
+                    statusEl.innerText = formatLastSeenRTDB(data.last_seen);
+                    statusEl.style.color = '#888'; // Серый
+                }
+            });
+
+            // Сохраняем функцию для отписки
+            activeFriendStatusUnsub = () => statusRef.off('value', listener);
         }
 
     </script>
