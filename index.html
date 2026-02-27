@@ -114,8 +114,8 @@
 
 
              /* =========================================
-             ОПТИМИЗАЦИЯ ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ
-             ========================================= */
+                  ОПТИМИЗАЦИЯ ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ
+                  ========================================= */
              .is-app .chat-date-separator,
              .is-app .floating-date {
                  /* Отключаем тяжелое размытие в WebView, оно вызывает тормоза на Android */
@@ -362,8 +362,8 @@
 
 
              /* ==========================================
-                     АНИМАЦИИ ДЛЯ ПАПОК (TELEGRAM STYLE)
-                     ========================================== */
+                          АНИМАЦИИ ДЛЯ ПАПОК (TELEGRAM STYLE)
+                          ========================================== */
 
              /* 1. Эффект "всплеска" (Ripple) при нажатии на вкладку */
              .tab {
@@ -1313,143 +1313,143 @@
                  gap: 10px;
              }
 
-        /* ==========================================
-   ПРЕМИУМ ДИЗАЙН ЗВОНКОВ
-   ========================================== */
-        .call-screen {
-            background: linear-gradient(135deg, #121316 0%, #1c1c1e 100%);
-        }
+             /* ==========================================
+        ПРЕМИУМ ДИЗАЙН ЗВОНКОВ
+        ========================================== */
+             .call-screen {
+                 background: linear-gradient(135deg, #121316 0%, #1c1c1e 100%);
+             }
 
-        .premium-call-header {
-            position: absolute;
-            top: calc(env(safe-area-inset-top) + 40px);
-            left: 0;
-            right: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 4005;
-            pointer-events: none; /* Чтобы не мешало кликать по видео */
-            text-shadow: 0 2px 15px rgba(0,0,0,0.8);
-        }
+             .premium-call-header {
+                 position: absolute;
+                 top: calc(env(safe-area-inset-top) + 40px);
+                 left: 0;
+                 right: 0;
+                 display: flex;
+                 flex-direction: column;
+                 align-items: center;
+                 z-index: 4005;
+                 pointer-events: none; /* Чтобы не мешало кликать по видео */
+                 text-shadow: 0 2px 15px rgba(0,0,0,0.8);
+             }
 
-        .call-name-display {
-            font-size: 26px;
-            font-weight: 600;
-            color: #ffffff;
-            letter-spacing: -0.5px;
-            margin-bottom: 6px;
-        }
+             .call-name-display {
+                 font-size: 26px;
+                 font-weight: 600;
+                 color: #ffffff;
+                 letter-spacing: -0.5px;
+                 margin-bottom: 6px;
+             }
 
-        .call-status-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 6px 14px;
-            border-radius: 20px;
-        }
+             .call-status-row {
+                 display: flex;
+                 gap: 8px;
+                 align-items: center;
+                 background: rgba(0, 0, 0, 0.3);
+                 backdrop-filter: blur(10px);
+                 -webkit-backdrop-filter: blur(10px);
+                 padding: 6px 14px;
+                 border-radius: 20px;
+             }
 
-        #callStatusText {
-            font-size: 15px;
-            color: rgba(255, 255, 255, 0.85);
-            font-weight: 500;
-        }
+             #callStatusText {
+                 font-size: 15px;
+                 color: rgba(255, 255, 255, 0.85);
+                 font-weight: 500;
+             }
 
-        #callTimer {
-            font-size: 15px;
-            color: #fff;
-            font-weight: bold;
-            font-variant-numeric: tabular-nums;
-        }
+             #callTimer {
+                 font-size: 15px;
+                 color: #fff;
+                 font-weight: bold;
+                 font-variant-numeric: tabular-nums;
+             }
 
-        .call-ping-display {
-            margin-top: 10px;
-            font-size: 12px;
-            color: #10b981;
-            opacity: 0.8;
-        }
+             .call-ping-display {
+                 margin-top: 10px;
+                 font-size: 12px;
+                 color: #10b981;
+                 opacity: 0.8;
+             }
 
-        /* Островок кнопок */
-        .premium-call-controls {
-            position: absolute;
-            bottom: calc(env(safe-area-inset-bottom) + 30px);
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 15px;
-            background: rgba(28, 28, 30, 0.65);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            padding: 12px 20px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            z-index: 4005;
-        }
+             /* Островок кнопок */
+             .premium-call-controls {
+                 position: absolute;
+                 bottom: calc(env(safe-area-inset-bottom) + 30px);
+                 left: 50%;
+                 transform: translateX(-50%);
+                 display: flex;
+                 gap: 15px;
+                 background: rgba(28, 28, 30, 0.65);
+                 backdrop-filter: blur(25px);
+                 -webkit-backdrop-filter: blur(25px);
+                 padding: 12px 20px;
+                 border-radius: 40px;
+                 border: 1px solid rgba(255, 255, 255, 0.1);
+                 box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+                 z-index: 4005;
+             }
 
-        /* Сами кнопки */
-        .premium-btn {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-            -webkit-tap-highlight-color: transparent;
-        }
+             /* Сами кнопки */
+             .premium-btn {
+                 width: 52px;
+                 height: 52px;
+                 border-radius: 50%;
+                 border: none;
+                 background: rgba(255, 255, 255, 0.15);
+                 color: white;
+                 display: flex;
+                 justify-content: center;
+                 align-items: center;
+                 cursor: pointer;
+                 transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+                 -webkit-tap-highlight-color: transparent;
+             }
 
-            .premium-btn svg {
-                width: 24px;
-                height: 24px;
-                stroke-width: 2px;
-            }
+                 .premium-btn svg {
+                     width: 24px;
+                     height: 24px;
+                     stroke-width: 2px;
+                 }
 
-            .premium-btn:hover {
-                background: rgba(255, 255, 255, 0.25);
-            }
+                 .premium-btn:hover {
+                     background: rgba(255, 255, 255, 0.25);
+                 }
 
-            .premium-btn:active {
-                transform: scale(0.9);
-            }
+                 .premium-btn:active {
+                     transform: scale(0.9);
+                 }
 
-            /* Активное состояние (когда выключен микрофон или камера) */
-            .premium-btn.muted-state {
-                background: #ffffff;
-                color: #1c1c1e;
-            }
+                 /* Активное состояние (когда выключен микрофон или камера) */
+                 .premium-btn.muted-state {
+                     background: #ffffff;
+                     color: #1c1c1e;
+                 }
 
-            /* Кнопка сброса вызова */
-            .premium-btn.btn-hangup {
-                background: #ff4444;
-                box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
-                margin-left: 5px;
-            }
+                 /* Кнопка сброса вызова */
+                 .premium-btn.btn-hangup {
+                     background: #ff4444;
+                     box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+                     margin-left: 5px;
+                 }
 
-                .premium-btn.btn-hangup:hover {
-                    background: #ff595a;
-                }
+                     .premium-btn.btn-hangup:hover {
+                         background: #ff595a;
+                     }
 
-                .premium-btn.btn-hangup svg {
-                    transform: rotate(135deg); /* Поворачиваем трубку вниз */
-                    stroke-width: 2.5px;
-                }
+                     .premium-btn.btn-hangup svg {
+                         transform: rotate(135deg); /* Поворачиваем трубку вниз */
+                         stroke-width: 2.5px;
+                     }
 
-        /* Красивое мини-видео (PiP) */
-        .local-video-container {
-            border: 1px solid rgba(255,255,255,0.15) !important;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
-            border-radius: 20px !important;
-            overflow: hidden;
-            bottom: calc(env(safe-area-inset-bottom) + 110px) !important; /* Поднимаем над островком */
-        }
+             /* Красивое мини-видео (PiP) */
+             .local-video-container {
+                 border: 1px solid rgba(255,255,255,0.15) !important;
+                 box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
+                 border-radius: 20px !important;
+                 overflow: hidden;
+                 bottom: calc(env(safe-area-inset-bottom) + 110px) !important; /* Поднимаем над островком */
+             }
 
 
              /* Звонки */
@@ -1879,56 +1879,56 @@
                  width: 100%;
              }
 
-        .premium-username-prefix {
-            color: #736AF0; /* Базовый цвет */
-            font-size: 16px;
-            font-weight: 600;
-            margin-right: 2px;
-            user-select: none;
-            transition: color 0.3s ease; /* Плавная смена цвета при проверке */
-        }
+             .premium-username-prefix {
+                 color: #736AF0; /* Базовый цвет */
+                 font-size: 16px;
+                 font-weight: 600;
+                 margin-right: 2px;
+                 user-select: none;
+                 transition: color 0.3s ease; /* Плавная смена цвета при проверке */
+             }
 
-        .premium-status-msg {
-            font-size: 13px;
-            margin: -12px 0 20px 25px;
-            min-height: 20px;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            opacity: 0;
-            transform: translateY(-5px); /* Выезжает сверху вниз */
-            font-weight: 500;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+             .premium-status-msg {
+                 font-size: 13px;
+                 margin: -12px 0 20px 25px;
+                 min-height: 20px;
+                 transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                 opacity: 0;
+                 transform: translateY(-5px); /* Выезжает сверху вниз */
+                 font-weight: 500;
+                 pointer-events: none;
+                 display: flex;
+                 align-items: center;
+                 gap: 6px;
+             }
 
-            .premium-status-msg.visible {
-                opacity: 1;
-                transform: translateY(0);
-            }
+                 .premium-status-msg.visible {
+                     opacity: 1;
+                     transform: translateY(0);
+                 }
 
-            .premium-status-msg.success {
-                color: #10b981; /* Изумрудный */
-            }
+                 .premium-status-msg.success {
+                     color: #10b981; /* Изумрудный */
+                 }
 
-            .premium-status-msg.error {
-                color: #ff595a; /* Красный */
-            }
+                 .premium-status-msg.error {
+                     color: #ff595a; /* Красный */
+                 }
 
-            .premium-status-msg.loading {
-                color: #8e8e93; /* Серый */
-            }
+                 .premium-status-msg.loading {
+                     color: #8e8e93; /* Серый */
+                 }
 
-        /* Маленькая крутилка для статуса проверки */
-        .status-spinner-small {
-            width: 14px;
-            height: 14px;
-            border: 2px solid rgba(142, 142, 147, 0.3);
-            border-top-color: #8e8e93;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            flex-shrink: 0;
-        }
+             /* Маленькая крутилка для статуса проверки */
+             .status-spinner-small {
+                 width: 14px;
+                 height: 14px;
+                 border: 2px solid rgba(142, 142, 147, 0.3);
+                 border-top-color: #8e8e93;
+                 border-radius: 50%;
+                 animation: spin 0.8s linear infinite;
+                 flex-shrink: 0;
+             }
 
 
 
@@ -3619,8 +3619,8 @@
 
 
              /* ==========================================
-        ПРЕМИАЛЬНЫЙ ДИЗАЙН ПРОФИЛЯ
-        ========================================== */
+             ПРЕМИАЛЬНЫЙ ДИЗАЙН ПРОФИЛЯ
+             ========================================== */
 
              /* Общий фон шторок профиля */
              .action-sheet.full-screen-sheet {
@@ -3854,197 +3854,197 @@
              }
 
 
-        /* ==========================================
-   АДАПТАЦИЯ ШТОРОК ДЛЯ КОМПЬЮТЕРА (ПК)
-   ========================================== */
-        @media (min-width: 769px) {
-            .full-screen-sheet {
-                top: 50% !important;
-                left: 50% !important;
-                bottom: auto !important;
-                /* 1. Сделали шире (было 420px) */
-                width: 550px !important;
-                height: 85vh !important;
-                max-height: 800px !important;
-                border-radius: 28px !important; /* Чуть более мягкое скругление */
-                /* 2. Улучшенная анимация и глубокая премиальная тень */
-                transform: translate(-50%, -45%) scale(0.96) !important;
-                opacity: 0;
-                transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease !important;
-                box-shadow: 0 30px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05) !important;
-                /* Прячем дефолтный скроллбар для Firefox */
-                scrollbar-width: none;
-            }
+             /* ==========================================
+        АДАПТАЦИЯ ШТОРОК ДЛЯ КОМПЬЮТЕРА (ПК)
+        ========================================== */
+             @media (min-width: 769px) {
+                 .full-screen-sheet {
+                     top: 50% !important;
+                     left: 50% !important;
+                     bottom: auto !important;
+                     /* 1. Сделали шире (было 420px) */
+                     width: 550px !important;
+                     height: 85vh !important;
+                     max-height: 800px !important;
+                     border-radius: 28px !important; /* Чуть более мягкое скругление */
+                     /* 2. Улучшенная анимация и глубокая премиальная тень */
+                     transform: translate(-50%, -45%) scale(0.96) !important;
+                     opacity: 0;
+                     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease !important;
+                     box-shadow: 0 30px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05) !important;
+                     /* Прячем дефолтный скроллбар для Firefox */
+                     scrollbar-width: none;
+                 }
 
-                .full-screen-sheet.open {
-                    transform: translate(-50%, -50%) scale(1) !important;
-                    opacity: 1;
-                }
+                     .full-screen-sheet.open {
+                         transform: translate(-50%, -50%) scale(1) !important;
+                         opacity: 1;
+                     }
 
-                /* 3. СТИЛИЗАЦИЯ СКРОЛЛБАРА (Делаем его "невидимым" или очень тонким) */
-                /* Выбираем внутренний контейнер со скроллом (обычно это .edit-content-scroll) */
-                .full-screen-sheet ::-webkit-scrollbar {
-                    width: 4px; /* Очень тонкий */
-                }
+                     /* 3. СТИЛИЗАЦИЯ СКРОЛЛБАРА (Делаем его "невидимым" или очень тонким) */
+                     /* Выбираем внутренний контейнер со скроллом (обычно это .edit-content-scroll) */
+                     .full-screen-sheet ::-webkit-scrollbar {
+                         width: 4px; /* Очень тонкий */
+                     }
 
-                .full-screen-sheet ::-webkit-scrollbar-track {
-                    background: transparent; /* Полностью убираем дорожку (показывалку высоты) */
-                }
+                     .full-screen-sheet ::-webkit-scrollbar-track {
+                         background: transparent; /* Полностью убираем дорожку (показывалку высоты) */
+                     }
 
-                .full-screen-sheet ::-webkit-scrollbar-thumb {
-                    background: rgba(115, 106, 240, 0.2); /* Едва заметный цвет твоего бренда */
-                    border-radius: 10px;
-                    transition: background 0.3s;
-                }
+                     .full-screen-sheet ::-webkit-scrollbar-thumb {
+                         background: rgba(115, 106, 240, 0.2); /* Едва заметный цвет твоего бренда */
+                         border-radius: 10px;
+                         transition: background 0.3s;
+                     }
 
-                .full-screen-sheet :hover::-webkit-scrollbar-thumb {
-                    background: rgba(115, 106, 240, 0.5); /* Проявляется только при наведении */
-                }
+                     .full-screen-sheet :hover::-webkit-scrollbar-thumb {
+                         background: rgba(115, 106, 240, 0.5); /* Проявляется только при наведении */
+                     }
 
-                /* Исправление шапок для ПК */
-                .full-screen-sheet .tg-header-bg,
-                .full-screen-sheet .premium-header {
-                    border-top-left-radius: 28px !important;
-                    border-top-right-radius: 28px !important;
-                    padding-top: 20px !important;
-                    padding-bottom: 20px !important;
-                }
-        }
-
-
-        /* --- ФИКС ПРЫГАЮЩЕЙ ШАПКИ И СКРОЛЛА --- */
-        #editProfileSheet {
-            display: block !important;
-        }
-
-            #editProfileSheet .premium-header {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                z-index: 100;
-            }
-
-            #editProfileSheet > div:nth-child(2) {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                padding-top: calc(env(safe-area-inset-top) + 65px) !important;
-                padding-bottom: 40px;
-                overflow-y: auto;
-                transition: padding-bottom 0.3s ease;
-            }
+                     /* Исправление шапок для ПК */
+                     .full-screen-sheet .tg-header-bg,
+                     .full-screen-sheet .premium-header {
+                         border-top-left-radius: 28px !important;
+                         border-top-right-radius: 28px !important;
+                         padding-top: 20px !important;
+                         padding-bottom: 20px !important;
+                     }
+             }
 
 
-        /* --- Кнопки действий в профиле друга --- */
-        .friend-actions-row {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            padding: 0 20px 25px;
-        }
+             /* --- ФИКС ПРЫГАЮЩЕЙ ШАПКИ И СКРОЛЛА --- */
+             #editProfileSheet {
+                 display: block !important;
+             }
 
-        .friend-action-btn {
-            background: #1c1c1e;
-            border-radius: 16px;
-            padding: 12px 0;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            border: 1px solid rgba(255,255,255,0.03);
-            transition: transform 0.2s, background 0.2s;
-        }
+                 #editProfileSheet .premium-header {
+                     position: absolute;
+                     top: 0;
+                     left: 0;
+                     right: 0;
+                     z-index: 100;
+                 }
 
-            .friend-action-btn:active {
-                transform: scale(0.95);
-                background: #252528;
-            }
-
-            .friend-action-btn .icon {
-                font-size: 22px;
-            }
-
-            .friend-action-btn span {
-                font-size: 12px;
-                color: #736AF0;
-                font-weight: 600;
-            }
+                 #editProfileSheet > div:nth-child(2) {
+                     position: absolute;
+                     top: 0;
+                     left: 0;
+                     right: 0;
+                     bottom: 0;
+                     padding-top: calc(env(safe-area-inset-top) + 65px) !important;
+                     padding-bottom: 40px;
+                     overflow-y: auto;
+                     transition: padding-bottom 0.3s ease;
+                 }
 
 
+             /* --- Кнопки действий в профиле друга --- */
+             .friend-actions-row {
+                 display: flex;
+                 justify-content: center;
+                 gap: 15px;
+                 padding: 0 20px 25px;
+             }
 
-        /* --- ВЫПАДАЮЩЕЕ МЕНЮ ЧАТА (ТРИ ТОЧКИ) --- */
-        .chat-options-dropdown {
-            position: absolute;
-            top: 60px; /* Сразу под шапкой */
-            right: 15px;
-            background: #1c1c1e; /* Премиальный темный цвет карточек */
-            border-radius: 14px;
-            box-shadow: 0 10px 35px rgba(0,0,0,0.6);
-            min-width: 210px;
-            z-index: 3000;
-            display: flex;
-            flex-direction: column;
-            padding: 6px;
-            border: 1px solid rgba(255,255,255,0.05);
-            /* Магия плавной анимации iOS/Telegram */
-            transform-origin: top right;
-            opacity: 0;
-            transform: scale(0.9);
-            transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-            pointer-events: none; /* Не кликабельно, пока скрыто */
-        }
+             .friend-action-btn {
+                 background: #1c1c1e;
+                 border-radius: 16px;
+                 padding: 12px 0;
+                 flex: 1;
+                 display: flex;
+                 flex-direction: column;
+                 align-items: center;
+                 gap: 8px;
+                 cursor: pointer;
+                 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                 border: 1px solid rgba(255,255,255,0.03);
+                 transition: transform 0.2s, background 0.2s;
+             }
 
-            .chat-options-dropdown.active {
-                opacity: 1;
-                transform: scale(1);
-                pointer-events: auto;
-            }
+                 .friend-action-btn:active {
+                     transform: scale(0.95);
+                     background: #252528;
+                 }
 
-        .chat-option-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 14px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: background 0.2s, transform 0.1s;
-        }
+                 .friend-action-btn .icon {
+                     font-size: 22px;
+                 }
 
-            .chat-option-item:hover {
-                background: rgba(255,255,255,0.08);
-            }
+                 .friend-action-btn span {
+                     font-size: 12px;
+                     color: #736AF0;
+                     font-weight: 600;
+                 }
 
-            .chat-option-item:active {
-                background: rgba(255,255,255,0.12);
-                transform: scale(0.98); /* Эффект нажатия */
-            }
 
-            .chat-option-item.danger {
-                color: #ff595a;
-            }
 
-                .chat-option-item.danger .chat-option-icon {
-                    filter: grayscale(0); /* Оставляем цветной, если эмодзи */
-                }
+             /* --- ВЫПАДАЮЩЕЕ МЕНЮ ЧАТА (ТРИ ТОЧКИ) --- */
+             .chat-options-dropdown {
+                 position: absolute;
+                 top: 60px; /* Сразу под шапкой */
+                 right: 15px;
+                 background: #1c1c1e; /* Премиальный темный цвет карточек */
+                 border-radius: 14px;
+                 box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+                 min-width: 210px;
+                 z-index: 3000;
+                 display: flex;
+                 flex-direction: column;
+                 padding: 6px;
+                 border: 1px solid rgba(255,255,255,0.05);
+                 /* Магия плавной анимации iOS/Telegram */
+                 transform-origin: top right;
+                 opacity: 0;
+                 transform: scale(0.9);
+                 transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+                 pointer-events: none; /* Не кликабельно, пока скрыто */
+             }
 
-        .chat-option-icon {
-            font-size: 18px;
-            margin-right: 14px;
-            width: 24px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #8e8e93;
-            filter: grayscale(1); /* Делаем эмодзи строгими, серыми */
-        }
+                 .chat-options-dropdown.active {
+                     opacity: 1;
+                     transform: scale(1);
+                     pointer-events: auto;
+                 }
+
+             .chat-option-item {
+                 display: flex;
+                 align-items: center;
+                 padding: 12px 14px;
+                 color: #fff;
+                 font-size: 15px;
+                 font-weight: 500;
+                 cursor: pointer;
+                 border-radius: 8px;
+                 transition: background 0.2s, transform 0.1s;
+             }
+
+                 .chat-option-item:hover {
+                     background: rgba(255,255,255,0.08);
+                 }
+
+                 .chat-option-item:active {
+                     background: rgba(255,255,255,0.12);
+                     transform: scale(0.98); /* Эффект нажатия */
+                 }
+
+                 .chat-option-item.danger {
+                     color: #ff595a;
+                 }
+
+                     .chat-option-item.danger .chat-option-icon {
+                         filter: grayscale(0); /* Оставляем цветной, если эмодзи */
+                     }
+
+             .chat-option-icon {
+                 font-size: 18px;
+                 margin-right: 14px;
+                 width: 24px;
+                 display: flex;
+                 justify-content: center;
+                 align-items: center;
+                 color: #8e8e93;
+                 filter: grayscale(1); /* Делаем эмодзи строгими, серыми */
+             }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -4054,6 +4054,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pwacompat" crossorigin="anonymous" async></script>
     <script src="titleNotifier.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
 </head>
 
@@ -4618,7 +4623,7 @@
         const firebaseConfig = {
             apiKey: "AIzaSyBncXLA4D1JdsqQtA8_8rPqQioq2XRfic4",
             authDomain: "mycoolmessenger.firebaseapp.com",
-            databaseURL: "https://mycoolmessenger-default-rtdb.firebaseio.com",
+            databaseURL: "https://mycoolmessenger-default-rtdb.firebaseio.com", // Убедись, что эта ссылка правильная
             projectId: "mycoolmessenger",
             storageBucket: "mycoolmessenger.firebasestorage.app",
             messagingSenderId: "225503087166",
