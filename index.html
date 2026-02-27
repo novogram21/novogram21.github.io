@@ -6771,78 +6771,41 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-
-            // ЛОГ 1: Проверяем, какие серверы реально используются
-            console.log("🛠️ Создаем RTCPeerConnection. Используемые серверы:", JSON.stringify(dynamicIceServers, null, 2));
-
+            console.log("🛠️ Создаем RTCPeerConnection...");
             pc = new RTCPeerConnection(dynamicIceServers);
 
+            // СОЗДАЕМ ТРАНСИВЕРЫ (Слоты)
+            // Аудио всегда работает, видео по умолчанию "inactive" (выключено и не светится)
             pc.addTransceiver('audio', { direction: 'sendrecv' });
             pc.addTransceiver('video', { direction: 'inactive' });
-
-            const handleConnected = () => {
-                if (!isConnected) {
-                    console.log("🟢 [WebRTC] СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
-                    isConnected = true;
-                    wasCallConnected = true;
-                    updateCallStatus("В разговоре");
-                    stopAllTones();
-                    startTimer();
-                    startPing();
-                }
-            };
 
             pc.oniceconnectionstatechange = () => {
                 console.log("📡 [ICE State]:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-                    handleConnected();
+                    if (!isConnected) {
+                        isConnected = true; wasCallConnected = true;
+                        updateCallStatus("В разговоре"); stopAllTones(); startTimer(); startPing();
+                    }
                 } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-                    console.error("❌ [ICE State] Ошибка или разрыв соединения!");
-                    endCall(false);
-                }
-            };
-
-            pc.onconnectionstatechange = () => {
-                console.log("🌐 [Connection State]:", pc.connectionState);
-                if (pc.connectionState === 'connected') {
-                    handleConnected();
-                } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-                    console.error("❌ [Connection State] Ошибка соединения!");
                     endCall(false);
                 }
             };
 
             pc.ontrack = e => {
-                console.log("🎥 [Track] Получен удаленный медиа-поток:", e.track.kind);
+                console.log("🎥 Получен поток:", e.track.kind);
                 const remoteVid = document.getElementById('remoteVideo');
-                remoteVid.muted = false;
-                if (remoteVid.srcObject !== e.streams[0]) {
+                if (e.streams[0]) {
                     remoteVid.srcObject = e.streams[0];
-                    remoteVid.play().catch(err => console.error("Ошибка автовоспроизведения:", err));
+                    remoteVid.play().catch(() => { });
                 }
             };
 
-            // ЛОГ 2: Следим за сбором кандидатов
             pc.onicecandidate = e => {
-                if (e.candidate) {
-                    console.log(`🧊 [Кандидат СОБРАН]: тип=${e.candidate.type}, протокол=${e.candidate.protocol}, IP=${e.candidate.address}`);
-
-                    // Если мы звоним - шлем в offerCandidates, если отвечаем - в answerCandidates
-                    if (currentCallId) {
-                        const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
-                        if (amICaller) {
-                            sessionRef.child('offerCandidates').push(e.candidate.toJSON());
-                        } else {
-                            sessionRef.child('answerCandidates').push(e.candidate.toJSON());
-                        }
-                    }
-                } else {
-                    console.log("🛑 [Кандидаты] Сбор завершен.");
+                if (e.candidate && currentCallId) {
+                    const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
+                    const path = amICaller ? 'offerCandidates' : 'answerCandidates';
+                    sessionRef.child(path).push(e.candidate.toJSON());
                 }
-            };
-
-            pc.onicegatheringstatechange = () => {
-                console.log("🔎 [ICE Gathering]:", pc.iceGatheringState);
             };
         }
         function startPing() {
@@ -7155,14 +7118,17 @@
                 // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
-                    if (data && data.renegotiate && !amICaller) {
-                        console.log("🔄 Получено обновление потока (камера)...");
+                    if (!data) return;
+
+                    // Если пришел сигнал на обновление потока
+                    if (data.renegotiate && !amICaller) {
+                        console.log("🔄 Обновляем видео-поток по просьбе собеседника...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
                         sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
                     }
-                });
+                });;
 
                 sessionRef.child('offerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
@@ -7207,49 +7173,59 @@
         }
         async function toggleCamera() {
             if (!pc) return;
-
-            // Ищем наш зарезервированный видео-трансивер
             const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
+            if (!videoTransceiver) return;
 
-            if (!videoTransceiver) {
-                console.error("Видео-канал не был зарезервирован при старте");
-                return;
-            }
+            const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
 
-            // Если видео еще не захвачено (первое нажатие кнопки)
-            if (!localStream || localStream.getVideoTracks().length === 0) {
+            if (!currentTrack) {
+                // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
                     });
-                    const videoTrack = stream.getVideoTracks()[0];
+                    const newTrack = stream.getVideoTracks()[0];
 
-                    // 1. Добавляем трек в наш локальный поток для превью
                     if (!localStream) localStream = new MediaStream();
-                    localStream.addTrack(videoTrack);
+                    localStream.addTrack(newTrack);
                     document.getElementById('localVideo').srcObject = localStream;
 
-                    // 2. Вставляем трек в "слот" WebRTC и активируем его
-                    await videoTransceiver.sender.replaceTrack(videoTrack);
+                    await videoTransceiver.sender.replaceTrack(newTrack);
                     videoTransceiver.direction = 'sendrecv';
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
 
-                    // ВАЖНО: После активации нового типа медиа (видео), 
-                    // нужно обновить "договор" между телефонами (Renegotiation)
+                    // Сообщаем другу, что мы добавили видео (Renegotiation)
                     handleRenegotiation();
-
-                } catch (e) {
-                    console.error("Ошибка включения камеры:", e);
-                    alert("Не удалось включить камеру");
-                }
+                } catch (e) { console.error("Ошибка камеры:", e); }
             } else {
-                // Если камера уже была включена ранее, просто гасим/включаем трек
-                const track = localStream.getVideoTracks()[0];
-                track.enabled = !track.enabled;
-                updateCamBtnUI(track.enabled);
+                // --- ВЫКЛЮЧАЕМ КАМЕРУ ПОЛНОСТЬЮ ---
+                currentTrack.stop(); // ГАСИМ ИНДИКАТОР (отключаем питание)
+                localStream.removeTrack(currentTrack);
+
+                await videoTransceiver.sender.replaceTrack(null);
+                videoTransceiver.direction = 'inactive'; // Перестаем слать данные
+
+                updateCamBtnUI(false);
+                document.getElementById('localVideo').srcObject = localStream;
+
+                // Сообщаем другу, что видео пропало
+                handleRenegotiation();
             }
+        }
+
+        async function handleRenegotiation() {
+            if (!currentCallId) return;
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                rtdb.ref('call_sessions/' + currentCallId).update({
+                    offer: { type: offer.type, sdp: offer.sdp },
+                    renegotiate: Date.now() // Сигнал другу: "Обнови поток!"
+                });
+            } catch (e) { console.error("Ошибка пересогласования:", e); }
         }
 
         async function handleRenegotiation() {
