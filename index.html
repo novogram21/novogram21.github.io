@@ -6892,72 +6892,90 @@
             setLocalMirror(currentFacingMode);
         }
         async function startCall() {
-            if (currentCallId) {
-                try {
-                    const snap = await db.collection('calls').doc(currentCallId).get();
-                    if (snap.exists) { return alert("Вы уже в звонке!"); }
-                    else { currentCallId = null; isConnected = false; }
-                } catch (e) { currentCallId = null; }
-            }
-            if (isConnected) return alert("Вы уже в звонке!");
+            if (!currentFriendId) return;
+
+            // 1. МГНОВЕННО открываем экран (чтобы не было ощущения "не нажимается")
+            const callScreen = document.getElementById('callScreen');
+            callScreen.style.display = 'flex';
+            callScreen.style.pointerEvents = 'auto';
+            updateCallStatus("Инициализация...");
+
             amICaller = true;
+            wasCallConnected = false;
+            isConnected = false;
+
+            // Сброс UI таймера
+            const timerEl = document.getElementById('callTimer');
+            if (timerEl) { timerEl.innerText = "00:00"; timerEl.style.display = 'none'; }
+            document.getElementById('callStatusText').style.display = 'inline-block';
+
             const newCallId = [currentUser.uid, currentFriendId].sort().join('_');
             currentCallId = newCallId;
-
             const callDoc = db.collection('calls').doc(newCallId);
 
-            // ОЧИСТКА старых кандидатов (чтобы не соединяло по старым портам)
-            const oldOffers = await callDoc.collection('offerCandidates').get();
-            oldOffers.forEach(d => d.ref.delete());
-            const oldAnswers = await callDoc.collection('answerCandidates').get();
-            oldAnswers.forEach(d => d.ref.delete());
+            // 2. ФОНОВАЯ ОЧИСТКА (без await, чтобы не вешать функцию)
+            callDoc.collection('offerCandidates').get().then(snap => {
+                snap.forEach(d => d.ref.delete().catch(() => { }));
+            }).catch(() => { });
 
+            callDoc.collection('answerCandidates').get().then(snap => {
+                snap.forEach(d => d.ref.delete().catch(() => { }));
+            }).catch(() => { });
+
+            // 3. Запуск WebRTC
             setupPeerConnection();
+            playConnectingTone();
 
-            // Отправляем свои кандидаты
             pc.onicecandidate = e => {
                 if (e.candidate) {
-                    callDoc.collection('offerCandidates').add(e.candidate.toJSON());
+                    callDoc.collection('offerCandidates').add(e.candidate.toJSON()).catch(err => {
+                        console.error("Ошибка записи кандидата:", err);
+                    });
                 }
             };
 
-            await getMedia();
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
+            try {
+                await getMedia();
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
 
-            await callDoc.set({
-                offer: { type: offer.type, sdp: offer.sdp },
-                caller: currentUser.uid,
-                to: currentFriendId,
-                status: 'dialing'
-            });
+                await callDoc.set({
+                    offer: { type: offer.type, sdp: offer.sdp },
+                    caller: currentUser.uid,
+                    to: currentFriendId,
+                    status: 'dialing',
+                    ts: firebase.firestore.FieldValue.serverTimestamp()
+                });
 
-            // Слушаем ответ
-            callDoc.onSnapshot(async snap => {
-                const data = snap.data();
-                if (!data) return;
+                // Слушаем изменения статуса звонка
+                callDoc.onSnapshot(async snap => {
+                    const data = snap.data();
+                    if (!data) return;
 
-                if (data.status === 'ringing' && !isConnected) {
-                    updateCallStatus("Звонок...");
-                    playRingingTone();
-                }
+                    if (data.status === 'ringing' && !isConnected) {
+                        updateCallStatus("Звонок...");
+                        playRingingTone();
+                    }
 
-                // ВАЖНО: Устанавливаем ответ и ТОЛЬКО ПОТОМ выпускаем кандидатов
-                if (pc && !pc.remoteDescription && data.answer) {
-                    console.log("📩 Получен ответ, устанавливаем RemoteDescription");
-                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    await flushCandidateQueue(); // Теперь можно!
-                }
-            });
-
-            // Слушаем ICE-кандидаты от собеседника
-            callDoc.collection('answerCandidates').onSnapshot(snap => {
-                snap.docChanges().forEach(change => {
-                    if (change.type === 'added') {
-                        addCandidateSafely(change.doc.data());
+                    if (pc && !pc.remoteDescription && data.answer) {
+                        console.log("✅ Собеседник ответил, соединяем...");
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                        await flushCandidateQueue();
                     }
                 });
-            });
+
+                // Кандидаты от второй стороны
+                callDoc.collection('answerCandidates').onSnapshot(snap => {
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added') addCandidateSafely(change.doc.data());
+                    });
+                });
+
+            } catch (err) {
+                console.error("Критическая ошибка звонка:", err);
+                showToast("Ошибка камеры или микрофона");
+                endCall(true);
+            }
         }
         async function answerCall() {
             // ... настройки UI и звука ...
