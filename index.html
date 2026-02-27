@@ -6903,48 +6903,49 @@
             currentCallId = newCallId;
             const callDoc = db.collection('calls').doc(newCallId);
 
-            // 1. Мгновенно открываем UI (чтобы кнопка не "залипала")
+            // 1. Инициализируем UI сразу
             document.getElementById('callScreen').style.display = 'flex';
-            document.getElementById('callStatusText').innerText = "Инициализация...";
+            document.getElementById('callStatusText').innerText = "Настройка связи...";
             playConnectingTone();
 
             try {
-                // 2. ЖЕСТКАЯ ЗАЧИСТКА. Удаляем старый документ, чтобы не было ошибки "Document already exists"
-                await callDoc.delete();
-
-                // 3. Получаем доступ к камере/микрофону ДО создания сессии
-                await getMedia();
-
-                // 4. Инициализируем соединение
+                // 2. СНАЧАЛА создаем RTCPeerConnection (чтобы pc не был null)
                 setupPeerConnection();
 
-                // Кандидаты (адреса для связи)
+                // 3. ПОТОМ получаем медиа (теперь pc.addTrack сработает!)
+                await getMedia();
+
+                // 4. Очищаем старых кандидатов "тихо"
+                callDoc.collection('offerCandidates').get().then(s => s.forEach(d => d.ref.delete()));
+                callDoc.collection('answerCandidates').get().then(s => s.forEach(d => d.ref.delete()));
+
+                // 5. Настраиваем отправку кандидатов
                 pc.onicecandidate = e => {
                     if (e.candidate) {
-                        // Пишем в подколлекцию. Если правила из Шага 1 обновлены, ошибки не будет.
                         callDoc.collection('offerCandidates').add(e.candidate.toJSON()).catch(err => {
-                            console.warn("⚠️ Ошибка записи кандидата (пропускаем):", err);
+                            console.warn("⚠️ Ошибка записи кандидата:", err);
                         });
                     }
                 };
 
-                // 5. Создаем Оффер
+                // 6. Создаем оффер
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                // 6. Создаем НОВЫЙ документ звонка
-                await callDoc.set({
+                const callData = {
                     offer: { type: offer.type, sdp: offer.sdp },
                     caller: currentUser.uid,
                     to: currentFriendId,
                     status: 'dialing',
                     ts: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                };
 
-                // 7. Слушаем ответную часть
+                await callDoc.set(callData);
+
+                // 7. Слушаем ответы
                 callDoc.onSnapshot(async snap => {
+                    if (!snap.exists) return;
                     const data = snap.data();
-                    if (!data) return;
 
                     if (data.status === 'ringing' && !isConnected) {
                         updateCallStatus("Звонок...");
@@ -6952,13 +6953,15 @@
                     }
 
                     if (pc && !pc.remoteDescription && data.answer) {
-                        console.log("✅ Собеседник поднял трубку!");
+                        console.log("✅ Собеседник на связи!");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
+                }, err => {
+                    console.error("🔥 Ошибка слушателя звонка:", err);
                 });
 
-                // Слушаем кандидатов от собеседника
+                // Слушаем кандидатов от второй стороны
                 callDoc.collection('answerCandidates').onSnapshot(snap => {
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added') addCandidateSafely(change.doc.data());
@@ -6966,12 +6969,8 @@
                 });
 
             } catch (err) {
-                console.error("❌ Ошибка при старте звонка:", err);
-                if (err.message.includes("permissions")) {
-                    showToast("Ошибка прав Firebase. Проверь правила!");
-                } else {
-                    showToast("Нет доступа к камере/микрофону");
-                }
+                console.error("❌ Критическая ошибка старта звонка:", err);
+                showToast("Ошибка доступа к медиа или базе");
                 endCall(true);
             }
         }
