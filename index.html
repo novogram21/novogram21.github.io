@@ -5009,18 +5009,46 @@
             const statusRef = rtdb.ref('/status/' + uid);
             const connectionRef = rtdb.ref('.info/connected');
 
+            // 1. Стандартная логика Firebase (работает при полном закрытии или обрыве интернета)
             connectionRef.on('value', (snap) => {
                 if (snap.val() === false) return;
-                // При дисконнекте (закрыл вкладку) - ставим offline и время
+
                 statusRef.onDisconnect().set({
                     state: 'offline',
                     last_seen: firebase.database.ServerValue.TIMESTAMP
                 }).then(() => {
-                    // Пока открыто - online
+                    // Ставим онлайн только если приложение реально открыто на экране
+                    if (document.visibilityState === 'visible') {
+                        statusRef.set({
+                            state: 'online',
+                            last_seen: firebase.database.ServerValue.TIMESTAMP
+                        });
+                    }
+                });
+            });
+
+            // 2. НОВОЕ: Отслеживаем сворачивание/переключение вкладок
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    // Пользователь вернулся в приложение/вкладку
                     statusRef.set({
                         state: 'online',
                         last_seen: firebase.database.ServerValue.TIMESTAMP
                     });
+                } else {
+                    // Пользователь свернул приложение или переключил вкладку
+                    statusRef.set({
+                        state: 'offline',
+                        last_seen: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
+            });
+
+            // 3. Подстраховка для iOS Safari / старых мобильных браузеров
+            window.addEventListener('pagehide', () => {
+                statusRef.set({
+                    state: 'offline',
+                    last_seen: firebase.database.ServerValue.TIMESTAMP
                 });
             });
         }
@@ -6414,9 +6442,14 @@
             }
 
             if (currentChatId && currentUser) {
-                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
-                    isTyping: false
-                }).catch(() => { });
+                rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`).remove();
+            }
+
+            // Убиваем таймер, чтобы он не сработал после выхода
+            if (typeof typingTimeout !== 'undefined' && typingTimeout) {
+                clearTimeout(typingTimeout);
+                typingTimeout = null;
+                isTyping = false;
             }
 
             if (chatStatusUnsub) { chatStatusUnsub(); chatStatusUnsub = null; }
@@ -7371,7 +7404,25 @@
             document.getElementById('friendProfileBio').innerText = uData.bio || 'Информация не указана';
 
             // Статус (был(а) недавно / в сети)
-            document.getElementById('friendProfileStatus').innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen) : 'был(а) недавно';
+            // Статус (был(а) недавно / в сети) - берем из быстрой базы (RTDB)
+            const profileStatusEl = document.getElementById('friendProfileStatus');
+            profileStatusEl.innerText = 'загрузка...';
+            profileStatusEl.style.color = '#8e8e93';
+
+            rtdb.ref(`status/${currentFriendId}`).once('value', snap => {
+                const data = snap.val();
+                if (data && data.state === 'online') {
+                    profileStatusEl.innerText = 'в сети';
+                    profileStatusEl.style.color = '#736AF0';
+                } else if (data && data.last_seen) {
+                    profileStatusEl.innerText = formatLastSeenRTDB(data.last_seen);
+                    profileStatusEl.style.color = '#8e8e93';
+                } else {
+                    // Запасной вариант, если пользователь давно не заходил
+                    profileStatusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen) : 'был(а) недавно';
+                    profileStatusEl.style.color = '#8e8e93';
+                }
+            });
 
             // Аватарка
             const img = document.getElementById('friendProfileAvatarPreview');
@@ -9334,9 +9385,15 @@
 
         // Эту функцию вызови ОДИН РАЗ внутри handleHashChange, когда открывается чат
         function listenTypingRTDB(chatId, friendId) {
+            // Отписываемся от предыдущего слушателя, чтобы не лагало
+            if (typeof typingUnsub === 'function') {
+                typingUnsub();
+                typingUnsub = null;
+            }
+
             const ref = rtdb.ref(`typing/${chatId}/${friendId}`);
 
-            ref.on('value', (snap) => {
+            const listener = ref.on('value', (snap) => {
                 const statusEl = document.getElementById('chatStatus');
                 if (!statusEl) return;
 
@@ -9347,8 +9404,7 @@
                     statusEl.innerHTML = '<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
                     statusEl.style.color = '#736AF0';
                 } else {
-                    // Просто вызываем функцию, которую мы написали в Шаге 1, 
-                    // чтобы она мгновенно вернула правильный статус в сети/оффлайн
+                    // Возвращаем статус из кэша RTDB
                     rtdb.ref(`status/${friendId}`).once('value', s => {
                         const d = s.val();
                         if (d) {
@@ -9358,21 +9414,12 @@
                     });
                 }
             });
+
+            // Сохраняем функцию отписки для следующего раза
+            typingUnsub = () => ref.off('value', listener);
         }
 
-        // 2. Слушатель (вызывай это внутри openChat)
-        function listenTyping(chatId, friendId) {
-            const typingRef = rtdb.ref(`typing/${chatId}/${friendId}`);
-            typingRef.on('value', (snap) => {
-                const statusEl = document.getElementById('chatStatus');
-                if (snap.val() === true) {
-                    statusEl.innerHTML = '<span class="typing-text">печатает<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
-                } else {
-                    // Если перестал печатать — возвращаем "в сети / был тогда-то"
-                    // (данные берем из кэша или новой функции статуса)
-                }
-            });
-        }
+        
 
 
 
@@ -10575,7 +10622,7 @@
             }
         }
 
-        let activeFriendStatusUnsub = null; // Глобальная переменная для отписки
+        let activeFriendStatusUnsub = null;
 
         function listenActiveFriendStatus(friendId) {
             // Если уже кто-то слушался — отписываемся, чтобы не плодить процессы
@@ -10585,18 +10632,32 @@
 
             const listener = statusRef.on('value', (snap) => {
                 const data = snap.val();
-                const statusEl = document.getElementById('chatStatus');
-                if (!statusEl || !data) return;
+                if (!data) return;
 
-                // Если сейчас идет процесс "печатает", не перебиваем его текстом онлайна
-                if (statusEl.querySelector('.typing-text')) return;
+                const statusEl = document.getElementById('chatStatus');
+                const profileStatusEl = document.getElementById('friendProfileStatus');
+
+                let newText = '';
+                let newColor = '';
 
                 if (data.state === 'online') {
-                    statusEl.innerText = 'в сети';
-                    statusEl.style.color = '#736AF0'; // Фиолетовый
+                    newText = 'в сети';
+                    newColor = '#736AF0'; // Фиолетовый
                 } else {
-                    statusEl.innerText = formatLastSeenRTDB(data.last_seen);
-                    statusEl.style.color = '#888'; // Серый
+                    newText = formatLastSeenRTDB(data.last_seen);
+                    newColor = '#888'; // Серый
+                }
+
+                // 1. Обновляем шапку чата (если не идет процесс "печатает")
+                if (statusEl && !statusEl.querySelector('.typing-text')) {
+                    statusEl.innerText = newText;
+                    statusEl.style.color = newColor;
+                }
+
+                // 2. Обновляем профиль (ЖИВОЕ ОБНОВЛЕНИЕ!)
+                if (profileStatusEl) {
+                    profileStatusEl.innerText = newText;
+                    profileStatusEl.style.color = newColor;
                 }
             });
 
