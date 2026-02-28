@@ -4639,6 +4639,12 @@
         const db = firebase.firestore();
         const rtdb = firebase.database();
 
+        // --- ИДЕАЛЬНАЯ СИНХРОНИЗАЦИЯ ВРЕМЕНИ ---
+        let serverTimeOffset = 0;
+        rtdb.ref('.info/serverTimeOffset').on('value', function (snap) {
+            serverTimeOffset = snap.val() || 0;
+        });
+
         db.enablePersistence({ synchronizeTabs: true })
             .then(() => console.log("🔥 Offline Persistence enabled"))
             .catch((err) => {
@@ -4997,18 +5003,7 @@
             if (days < 30) return `${days} ${days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'} назад`;
             return "был давно";
         }
-        let lastActivityTime = Date.now();
-        let isOnline = false;
-        // Следим за активностью пользователя
-        ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
-            document.addEventListener(event, () => {
-                lastActivityTime = Date.now();
-                if (!isOnline) {
-                    // Если он "проснулся" - сразу обновляем статус
-                    updateLastSeen();
-                }
-            });
-        });
+        
 
         function managePresence(uid) {
             const statusRef = rtdb.ref('/status/' + uid);
@@ -5048,31 +5043,61 @@
         }
 
         function formatLastSeenRTDB(timestamp) {
-            if (!timestamp) return "был недавно";
-            const date = new Date(timestamp);
-            // Используем твою существующую логику форматирования
-            return "был(а) " + formatTelegramDate(date);
+            if (!timestamp) return "был(а) недавно";
+
+            // Используем серверное время, а не локальное!
+            const exactNow = Date.now() + serverTimeOffset;
+            let diff = exactNow - timestamp;
+
+            // Если из-за пинга сети разница ушла в минус, считаем что это 0
+            if (diff < 0) diff = 0;
+
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+
+            if (seconds < 60) return "был(а) только что";
+
+            if (minutes < 60) {
+                let suffix = "минут";
+                if (minutes % 10 === 1 && minutes % 100 !== 11) suffix = "минуту";
+                else if ([2, 3, 4].includes(minutes % 10) && ![12, 13, 14].includes(minutes % 100)) suffix = "минуты";
+                return `был(а) в сети ${minutes} ${suffix} назад`;
+            }
+
+            if (hours < 24) {
+                let suffix = "часов";
+                if (hours % 10 === 1 && hours % 100 !== 11) suffix = "час";
+                else if ([2, 3, 4].includes(hours % 10) && ![12, 13, 14].includes(hours % 100)) suffix = "часа";
+                return `был(а) в сети ${hours} ${suffix} назад`;
+            }
+
+            const d = new Date(timestamp);
+            const months = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+            return `был(а) в сети ${d.getDate()} ${months[d.getMonth()]}`;
         }
 
-        function updateLastSeen() {
-            const now = Date.now();
-            // Если с последней активности прошло меньше 30 секунд - обновляем базу
-            if (now - lastActivityTime < 30000) {
-                isOnline = true;
-                if (currentUser) {
-                    db.collection('users').doc(currentUser.uid).update({
-                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-                    }).catch(e => console.log('Err update lastSeen', e));
-                }
-            } else {
-                isOnline = false;
-                // Можно (опционально) явно поставить статус "офлайн" в базу, но лучше просто не обновлять дату
-            }
+        function formatLastSeen(timestamp) {
+            if (!timestamp) return "был(а) давно";
+
+            const exactNow = Date.now() + serverTimeOffset;
+            let diff = exactNow - timestamp.toMillis();
+            if (diff < 0) diff = 0;
+
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (seconds < 60) return "был(а) только что";
+            if (minutes < 60) return `был(а) в сети ${minutes} ${minutes % 10 === 1 && minutes % 100 !== 11 ? 'минуту' : ([2, 3, 4].includes(minutes % 10) && ![12, 13, 14].includes(minutes % 100) ? 'минуты' : 'минут')} назад`;
+            if (hours < 24) return `был(а) в сети ${hours} ${hours % 10 === 1 && hours % 100 !== 11 ? 'час' : ([2, 3, 4].includes(hours % 10) && ![12, 13, 14].includes(hours % 100) ? 'часа' : 'часов')} назад`;
+
+            return "был(а) давно";
         }
-        // Запускаем проверку каждые 15 секунд
-        // Если активен -> обновит дату в базе.
-        // Если НЕ активен -> не обновит, и через 30-60 сек для других он станет "был недавно"
-        setInterval(updateLastSeen, 15000);
+
+        
+        
         // --- AUTH ---
         // 1. Обработка входа/регистрации
         function authAction() {
@@ -5172,8 +5197,6 @@
                         if (d.username) {
                             document.getElementById('authScreen').classList.add('hidden');
                             document.getElementById('profileEmail').innerText = u.email;
-                            updateLastSeen();
-                            if (lastSeenInterval) clearInterval(lastSeenInterval);
                         } else {
                             // Логика если нет юзернейма
                             document.getElementById('stepEmail').style.display = 'none';
@@ -5281,11 +5304,10 @@
                 loadData();
                 listenForIncomingCalls();
                 loadTgId();
-                if (lastSeenInterval) clearInterval(lastSeenInterval);
-                lastSeenInterval = setInterval(updateLastSeen, 30000);
+                
             });
         }
-        window.addEventListener('beforeunload', updateLastSeen);
+        
         // --- LOGIC ---
         var tabOrder = ['friends', 'groups', 'channels', 'bots'];
         var currentTabIndex = 0;
@@ -8268,22 +8290,7 @@
                         statusEl.innerText = userData.lastSeen ? formatLastSeen(userData.lastSeen) : 'загрузка...';
                     }
 
-                    // 3. Запускаем живое прослушивание
-                    chatStatusUnsub = db.collection('users').doc(userId).onSnapshot(userSnap => {
-                        if (userSnap.exists && currentFriendId === userId) {
-                            const uData = userSnap.data();
-                            usersCache[userId] = uData; // Обновляем кэш
-
-                            const el = document.getElementById('chatStatus');
-                            if (el) {
-                                // Обновляем статус ТОЛЬКО если сейчас НЕ идет анимация "печатает"
-                                if (!el.querySelector('.typing-text')) {
-                                    el.innerText = formatLastSeen(uData.lastSeen);
-                                    el.style.color = "#888";
-                                }
-                            }
-                        }
-                    }, err => console.error("Ошибка слушателя статуса:", err));
+                    
 
                     // =======================================================
 
