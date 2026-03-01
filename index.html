@@ -7096,6 +7096,7 @@
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
 
             document.getElementById('callScreen').style.display = 'flex';
+            document.getElementById('callScreen').style.pointerEvents = 'auto';
             updateCallStatus("Подготовка...");
             playConnectingTone();
 
@@ -7154,6 +7155,7 @@
             document.getElementById('ringtone').pause();
             document.getElementById('incomingPopup').style.display = 'none';
             document.getElementById('callScreen').style.display = 'flex';
+            document.getElementById('callScreen').style.pointerEvents = 'auto';
             updateCallStatus("Соединение...");
 
             if (!currentCallId) return;
