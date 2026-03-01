@@ -907,7 +907,7 @@
         }
 
         /* Скругленный плавающий бар ТОЛЬКО для веб-версии (ПК) */
-        @media (min-width: 769px) {
+        @media (min-width: 851px) and (min-height: 501px) {
             .input-bar {
                 border-radius: 16px;
                 margin: 0 auto 20px auto; /* Центрируем и делаем отступ снизу */
@@ -1641,7 +1641,7 @@
             display: none !important;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 850px), (max-height: 500px) {
             .sidebar {
                 width: 100%;
                 border-right: none;
@@ -2436,7 +2436,7 @@
         }
 
         /* Адаптация для телефона (открывается по центру с отступами по краям) */
-        @media (max-width: 768px) {
+        @media (max-width: 850px), (max-height: 500px) {
             .chat-search-dropdown {
                 left: 10px;
                 right: 10px;
@@ -3857,7 +3857,7 @@
         /* ==========================================
         АДАПТАЦИЯ ШТОРОК ДЛЯ КОМПЬЮТЕРА (ПК)
         ========================================== */
-        @media (min-width: 769px) {
+        @media (min-width: 851px) and (min-height: 501px) {
             .full-screen-sheet {
                 top: 50% !important;
                 left: 50% !important;
@@ -5602,7 +5602,7 @@
 
             // Касание
             sidebar.addEventListener('touchstart', (e) => {
-                if (window.innerWidth > 768) return; // Работает только на телефонах
+                if ((window.innerWidth > 850 && window.innerHeight > 500)) return; // Работает только на телефонах
                 // Запрещаем свайп, если мы нажимаем на шапку или на саму полоску папок (там свой скролл)
                 if (e.target.closest('.tabs-container, .profile-bar')) return;
 
@@ -6371,7 +6371,7 @@
                                 e.preventDefault(); e.stopPropagation();
 
                                 // ИГНОРИРУЕМ НАТИВНЫЙ ВЫЗОВ НА ТЕЛЕФОНЕ (там работает наш touch-таймер)
-                                if (window.innerWidth <= 768) return;
+                                if ((window.innerWidth <= 850 || window.innerHeight <= 500)) return;
 
                                 // --- НОВОЕ: Закрытие при повторном клике ---
                                 const menu = document.getElementById('contextMenu');
@@ -6635,7 +6635,7 @@
                 activeFriendStatusUnsub = null;
             }
 
-            if (window.innerWidth <= 768) {
+            if ((window.innerWidth <= 850 || window.innerHeight <= 500)) {
                 document.getElementById('mainChatArea').classList.remove('active');
                 document.getElementById('mainSidebar').classList.remove('hidden-mobile');
 
@@ -8721,7 +8721,7 @@
                     fetchChatKey(currentChatId);
 
 
-                    if (window.innerWidth <= 768) {
+                    if ((window.innerWidth <= 850 || window.innerHeight <= 500)) {
                         // Плавно прячем список контактов
                         document.getElementById('mainSidebar').classList.add('hidden-mobile');
                         // Плавно выдвигаем чат
@@ -8733,7 +8733,7 @@
                     activeChatElement.classList.remove('hidden');
 
                     // Красивая анимация для ПК
-                    if (window.innerWidth > 768) {
+                    if ((window.innerWidth > 850 && window.innerHeight > 500)) {
                         activeChatElement.classList.remove('chat-slide-animate');
                         void activeChatElement.offsetWidth; // Сброс кэша анимации
                         activeChatElement.classList.add('chat-slide-animate');
@@ -9197,7 +9197,7 @@
 
         document.addEventListener('scroll', () => {
             // НА МОБИЛКЕ ОТКЛЮЧАЕМ ЗАКРЫТИЕ ПО СКРОЛЛУ (чтобы меню не прыгало)
-            if (window.innerWidth <= 768) return;
+            if ((window.innerWidth <= 850 || window.innerHeight <= 500)) return;
 
             if (window.ignoreScrollClose) return;
 
@@ -10464,7 +10464,7 @@
         let backSwipeCurrentX = 0;
 
         function handleChatTouchStart(e) {
-            if (window.innerWidth > 768) return;
+            if ((window.innerWidth > 850 && window.innerHeight > 500)) return;
 
             const touch = e.touches[0];
             swipeStartX = touch.clientX;
@@ -10507,7 +10507,7 @@
         }
 
         function handleChatTouchMove(e) {
-            if (window.innerWidth > 768) return;
+            if ((window.innerWidth > 850 && window.innerHeight > 500)) return;
             const touch = e.touches[0];
             const deltaX = touch.clientX - swipeStartX;
             const deltaY = touch.clientY - swipeStartY;
@@ -10682,7 +10682,7 @@
 
         // Правый клик (Вызов меню)
         function handleDesktopSideRightClick(e) {
-            if (window.innerWidth <= 768) return;
+            if ((window.innerWidth <= 850 || window.innerHeight <= 500)) return;
             if (e.target.closest('.msg')) return;
 
             const msgEl = getMsgByYCoordinate(e.clientY);
@@ -10707,7 +10707,7 @@
 
         // ДВОЙНОЙ левый клик (Быстрый ответ: работает и по фону, и по самому сообщению)
         function handleDesktopSideDoubleClick(e) {
-            if (window.innerWidth <= 768) return;
+            if ((window.innerWidth <= 850 || window.innerHeight <= 500)) return;
 
             // Ищем сообщение: либо мы кликнули прямо по нему, либо по фону рядом
             const msgEl = e.target.closest('.msg') || getMsgByYCoordinate(e.clientY);
@@ -10920,7 +10920,7 @@
             allEditInputs.forEach(input => {
                 input.addEventListener('focus', function () {
                     // Применяем магию только для телефонов
-                    if (window.innerWidth <= 768) {
+                    if ((window.innerWidth <= 850 || window.innerHeight <= 500)) {
                         // 1. Даем огромный временный запас снизу. Это нужно, чтобы даже самое
                         // нижнее поле (Юзернейм) физически могло дотянуться до центра экрана.
                         scrollContainer.style.paddingBottom = '60vh';
@@ -10934,7 +10934,7 @@
                 });
 
                 input.addEventListener('blur', function () {
-                    if (window.innerWidth <= 768) {
+                    if ((window.innerWidth <= 850 || window.innerHeight <= 500)) {
                         // Как только убрали фокус (клавиатура прячется), возвращаем родной отступ
                         setTimeout(() => {
                             scrollContainer.style.paddingBottom = '40px';
