@@ -7132,6 +7132,7 @@
         }
         async function startCall() {
             if (!currentFriendId || !currentUser) return;
+            updateCallControlsVisibility();
 
             amICaller = true;
             isConnected = false;
@@ -7211,7 +7212,7 @@
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             updateCallStatus("Соединение...");
-
+            updateCallControlsVisibility();
             if (!currentCallId) return;
 
             isConnected = false;
@@ -8283,31 +8284,29 @@
             }
         }
         function updateCallControlsVisibility() {
-            const isMobile = isMobileDevice();
-            // Ищем кнопки
-            const btnFlip = document.getElementById('btnFlip');
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv');
+
             const btnScr = document.getElementById('btnScr');
-            // Ищем их родительские .control-item
-            const flipItem = btnFlip ? btnFlip.closest('.control-item') : null;
-            const scrItem = btnScr ? btnScr.closest('.control-item') : null;
-            // Применяем класс скрытия:
-            // - Демонстрация экрана (btnScr) скрыта на телефоне
-            // - Переключение камеры (btnFlip) скрыто на ПК
-            if (scrItem) {
-                if (isMobile) {
-                    scrItem.classList.add('control-item-hidden');
-                } else {
-                    scrItem.classList.remove('control-item-hidden');
-                }
+            const btnSpeaker = document.getElementById('btnSpeaker');
+            const btnFlip = document.getElementById('btnFlip');
+
+            if (!isMobile) {
+                // 1. НА КОМПЬЮТЕРЕ: Показываем "Экран", прячем "Динамик" и "Смену камеры"
+                if (btnScr) btnScr.style.display = 'flex';
+                if (btnSpeaker) btnSpeaker.style.display = 'none';
+                if (btnFlip) btnFlip.style.display = 'none';
+            } else if (isMobile && isApp) {
+                // 2. В МОБИЛЬНОМ ПРИЛОЖЕНИИ (MAUI): Прячем "Экран", показываем "Динамик" и "Камеру"
+                if (btnScr) btnScr.style.display = 'none';
+                if (btnSpeaker) btnSpeaker.style.display = 'flex';
+                if (btnFlip) btnFlip.style.display = 'flex';
+            } else {
+                // 3. В МОБИЛЬНОМ БРАУЗЕРЕ (Safari/Chrome): Прячем "Экран" и "Динамик", оставляем только "Камеру"
+                if (btnScr) btnScr.style.display = 'none';
+                if (btnSpeaker) btnSpeaker.style.display = 'none';
+                if (btnFlip) btnFlip.style.display = 'flex';
             }
-            if (flipItem) {
-                if (isMobile) {
-                    flipItem.classList.remove('control-item-hidden');
-                } else {
-                    flipItem.classList.add('control-item-hidden');
-                }
-            }
-            console.log('[updateCallControls] isMobile:', isMobile, '| scrItem скрыта:', scrItem?.classList.contains('control-item-hidden'), '| flipItem скрыта:', flipItem?.classList.contains('control-item-hidden'));
         }
     </script>
     <!-- OneSignal Push Logic (Вставь это в самый низ перед </body>) -->
@@ -9909,21 +9908,23 @@
         function toggleSpeaker() {
             isEarpiece = !isEarpiece;
             const btn = document.getElementById('btnSpeaker');
-            const lbl = document.getElementById('lblSpeaker');
+
+            // Красивые SVG-иконки под новый стиль
+            const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+            const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
 
             if (isEarpiece) {
-                btn.innerHTML = '👂';
-                lbl.innerText = 'Громкая';
-                btn.classList.add('btn-active-white');
+                // Звук тихо ("В ухо") -> подсвечиваем кнопку белым
+                btn.innerHTML = iconEar;
+                btn.classList.add('muted-state');
             } else {
-                btn.innerHTML = '🔈';
-                lbl.innerText = 'В ухо';
-                btn.classList.remove('btn-active-white');
+                // Громкая связь -> обычный темный фон
+                btn.innerHTML = iconLoud;
+                btn.classList.remove('muted-state');
             }
 
-            // ВЫЗОВ C# КОДА (MAUI)
+            // Передаем команду в C# (MAUI)
             if (window.chrome && window.chrome.webview) {
-                // Передаем команду в MainActivity.cs
                 window.chrome.webview.postMessage(JSON.stringify({
                     action: "setAudioMode",
                     earpiece: isEarpiece
