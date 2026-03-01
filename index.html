@@ -5385,7 +5385,13 @@
                     loadData(); // <-- Сброс сети произойдет здесь, но UI уже разблокирован
                     listenForIncomingCalls();
                     loadTgId();
-                    setTimeout(handleHashChange, 500);
+                    setTimeout(() => {
+                        handleHashChange();
+                        // Проверяем, не зашли ли мы в приложение по клику на Push-уведомление
+                        if (typeof triggerPendingNotificationChat === 'function') {
+                            triggerPendingNotificationChat();
+                        }
+                    }, 500);
 
                 }).catch(err => {
                     console.error("Ошибка при проверке профиля:", err);
@@ -8541,18 +8547,46 @@
     </script>
     <!-- OneSignal Push Logic (Вставь это в самый низ перед </body>) -->
     <script>
-        // 1. Инициализация и сохранение ID пользователя
+        // Функция для красивого открытия чата с задержкой (Элитарный UX)
+        window.triggerPendingNotificationChat = function () {
+            const pendingFid = localStorage.getItem('pendingNotifChat');
+            if (!pendingFid) return;
+
+            // Если Firebase еще не прогрузил профиль, просто ждем
+            if (!currentUser) return;
+
+            // Очищаем, чтобы не открывалось дважды
+            localStorage.removeItem('pendingNotifChat');
+
+            // Если мы уже сидим в этом чате - ничего не делаем
+            if (currentFriendId === pendingFid && document.getElementById('mainChatArea').classList.contains('active')) {
+                return;
+            }
+
+            // 1. Сначала принудительно показываем главный экран (список друзей)
+            window.location.hash = '';
+            if (typeof performCloseUI === 'function') performCloseUI();
+
+            // 2. Делаем "дорогую" паузу в 400мс. Пользователь видит список чатов,
+            // и затем нужный диалог плавно выезжает сбоку.
+            setTimeout(() => {
+                window.location.hash = "#chat/" + pendingFid;
+                if (typeof handleHashChange === 'function') handleHashChange();
+            }, 400);
+        };
+
+        // Инициализация OneSignal
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(function (OneSignal) {
             OneSignal.init({
                 appId: "6af8818f-ba3a-40c4-b820-5235c1d73925", // Твой App ID
             });
+
             function savePlayerId() {
                 if (OneSignal.User.PushSubscription.optedIn) {
                     const oneSignalId = OneSignal.User.PushSubscription.id;
                     const user = firebase.auth().currentUser;
                     if (user && oneSignalId) {
-                        console.log("Сохраняем OneSignal ID:", oneSignalId);
                         db.collection('users').doc(user.uid).update({ oneSignalId: oneSignalId }).catch(e => { });
                     }
                 }
@@ -8560,14 +8594,14 @@
             OneSignal.User.PushSubscription.addEventListener("change", savePlayerId);
             firebase.auth().onAuthStateChanged(u => { if (u) setTimeout(savePlayerId, 3000); });
 
+            // Обработка клика по системному PUSH-уведомлению
             OneSignal.Notifications.addEventListener("click", async (event) => {
-                const action = event.result.actionId; // ID нажатой кнопки
-                const data = event.notification.additionalData; // Данные чата
+                const action = event.result.actionId;
+                const data = event.notification.additionalData;
 
                 if (!data || !data.chatId) return;
 
                 if (action === "read") {
-                    // Кнопка "Прочитать": отмечаем сообщения прочитанными в фоне
                     const user = firebase.auth().currentUser;
                     if (user) {
                         const snap = await db.collection('chats').doc(data.chatId).collection('msgs')
@@ -8578,19 +8612,17 @@
                         showToast("Сообщения прочитаны");
                     }
                 } else {
-                    // Клик по самому пушу или кнопке "Ответить" - открываем чат
+                    // Клик по самому пушу
                     if (data.senderId) {
-                        window.location.hash = "#chat/" + data.senderId;
-
-                        // ПРИНУДИТЕЛЬНО вызываем функцию открытия чата, 
-                        // так как при выходе из свернутого режима событие hashchange может не сработать
-                        if (typeof handleHashChange === 'function') {
-                            handleHashChange();
-                        }
+                        // Записываем ID собеседника в память
+                        localStorage.setItem('pendingNotifChat', data.senderId);
+                        // Запускаем механизм красивого открытия
+                        triggerPendingNotificationChat();
                     }
                 }
             });
         });
+    
 
         function closeLogoutModal() {
             // Закрываем модалку
