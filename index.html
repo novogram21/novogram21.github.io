@@ -5070,8 +5070,8 @@
             });
         }
 
-        function formatLastSeenRTDB(timestamp) {
-            if (!timestamp) return "был(а) недавно";
+        function formatLastSeenRTDB(timestamp, isProfile = false) {
+            if (!timestamp) return isProfile ? "был(а) недавно" : "недавно";
 
             // Используем серверное время, а не локальное!
             const exactNow = Date.now() + serverTimeOffset;
@@ -5084,25 +5084,48 @@
             const minutes = Math.floor(seconds / 60);
             const hours = Math.floor(minutes / 60);
 
-            if (seconds < 60) return "был(а) только что";
+            // Если это профиль — добавляем приставку, если чат — оставляем пустой
+            const prefix = isProfile ? "был(а) в сети " : "";
+
+            if (seconds < 60) return isProfile ? "был(а) только что" : "только что";
 
             if (minutes < 60) {
                 let suffix = "минут";
                 if (minutes % 10 === 1 && minutes % 100 !== 11) suffix = "минуту";
                 else if ([2, 3, 4].includes(minutes % 10) && ![12, 13, 14].includes(minutes % 100)) suffix = "минуты";
-                return `был(а) в сети ${minutes} ${suffix} назад`;
+                return `${prefix}${minutes} ${suffix} назад`;
             }
 
             if (hours < 24) {
                 let suffix = "часов";
                 if (hours % 10 === 1 && hours % 100 !== 11) suffix = "час";
                 else if ([2, 3, 4].includes(hours % 10) && ![12, 13, 14].includes(hours % 100)) suffix = "часа";
-                return `был(а) в сети ${hours} ${suffix} назад`;
+                return `${prefix}${hours} ${suffix} назад`;
             }
 
             const d = new Date(timestamp);
             const months = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
-            return `был(а) в сети ${d.getDate()} ${months[d.getMonth()]}`;
+            return `${prefix}${d.getDate()} ${months[d.getMonth()]}`;
+        }
+
+        function formatLastSeen(timestamp, isProfile = false) {
+            if (!timestamp) return isProfile ? "был(а) давно" : "давно";
+
+            const exactNow = Date.now() + serverTimeOffset;
+            let diff = exactNow - timestamp.toMillis();
+            if (diff < 0) diff = 0;
+
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+
+            const prefix = isProfile ? "был(а) в сети " : "";
+
+            if (seconds < 60) return isProfile ? "был(а) только что" : "только что";
+            if (minutes < 60) return `${prefix}${minutes} ${minutes % 10 === 1 && minutes % 100 !== 11 ? 'минуту' : ([2, 3, 4].includes(minutes % 10) && ![12, 13, 14].includes(minutes % 100) ? 'минуты' : 'минут')} назад`;
+            if (hours < 24) return `${prefix}${hours} ${hours % 10 === 1 && hours % 100 !== 11 ? 'час' : ([2, 3, 4].includes(hours % 10) && ![12, 13, 14].includes(hours % 100) ? 'часа' : 'часов')} назад`;
+
+            return isProfile ? "был(а) давно" : "давно";
         }
 
         function formatLastSeen(timestamp) {
@@ -7446,11 +7469,12 @@
                     profileStatusEl.innerText = 'в сети';
                     profileStatusEl.style.color = '#736AF0';
                 } else if (data && data.last_seen) {
-                    profileStatusEl.innerText = formatLastSeenRTDB(data.last_seen);
+                    // Передаем true, так как это профиль
+                    profileStatusEl.innerText = formatLastSeenRTDB(data.last_seen, true);
                     profileStatusEl.style.color = '#8e8e93';
                 } else {
-                    // Запасной вариант, если пользователь давно не заходил
-                    profileStatusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen) : 'был(а) недавно';
+                    // Передаем true, так как это профиль
+                    profileStatusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen, true) : 'был(а) недавно';
                     profileStatusEl.style.color = '#8e8e93';
                 }
             });
@@ -10679,27 +10703,28 @@
                 const statusEl = document.getElementById('chatStatus');
                 const profileStatusEl = document.getElementById('friendProfileStatus');
 
-                let newText = '';
-                let newColor = '';
-
                 if (data.state === 'online') {
-                    newText = 'в сети';
-                    newColor = '#736AF0'; // Фиолетовый
+                    // Пользователь онлайн
+                    if (statusEl && !statusEl.querySelector('.typing-text')) {
+                        statusEl.innerText = 'в сети';
+                        statusEl.style.color = '#736AF0';
+                    }
+                    if (profileStatusEl) {
+                        profileStatusEl.innerText = 'в сети';
+                        profileStatusEl.style.color = '#736AF0';
+                    }
                 } else {
-                    newText = formatLastSeenRTDB(data.last_seen);
-                    newColor = '#888'; // Серый
-                }
-
-                // 1. Обновляем шапку чата (если не идет процесс "печатает")
-                if (statusEl && !statusEl.querySelector('.typing-text')) {
-                    statusEl.innerText = newText;
-                    statusEl.style.color = newColor;
-                }
-
-                // 2. Обновляем профиль (ЖИВОЕ ОБНОВЛЕНИЕ!)
-                if (profileStatusEl) {
-                    profileStatusEl.innerText = newText;
-                    profileStatusEl.style.color = newColor;
+                    // Пользователь оффлайн
+                    if (statusEl && !statusEl.querySelector('.typing-text')) {
+                        // false = короткий формат для шапки (просто время)
+                        statusEl.innerText = formatLastSeenRTDB(data.last_seen, false);
+                        statusEl.style.color = '#888';
+                    }
+                    if (profileStatusEl) {
+                        // true = длинный формат для профиля (с "был(а) в сети")
+                        profileStatusEl.innerText = formatLastSeenRTDB(data.last_seen, true);
+                        profileStatusEl.style.color = '#888';
+                    }
                 }
             });
 
