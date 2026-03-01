@@ -7103,6 +7103,8 @@
 
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
+            const friendData = usersCache[currentFriendId] || {};
+            document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
 
             updateCallStatus("Соединение..."); // Шаг 1: Ищем собеседника
             playConnectingTone();
@@ -7186,7 +7188,10 @@
                     setTimeout(() => endCall(false), 2000);
                     return;
                 }
-
+                const callerId = callData.caller;
+                currentFriendId = callerId; // Важно: скрипт должен знать, с кем мы говорим
+                const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
+                document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
                 setupPeerConnection();
 
                 // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
@@ -7386,7 +7391,12 @@
 
                     const popup = document.getElementById('incomingPopup');
                     popup.style.display = 'flex';
-                    document.getElementById('callerName').innerText = data.callerName || "Входящий вызов";
+                    // --- НОВОЕ: Умное имя для всплывающей плашки ---
+                    const callerId = data.caller;
+                    // Пытаемся взять данные из кэша, если их нет — берем то, что прислал сервер
+                    const callerData = usersCache[callerId] || (data.callerName ? { name: data.callerName } : {});
+                    document.getElementById('callerName').innerText = getDisplayName(callerId, callerData);
+                    // -----------------------------------------------
 
                     document.getElementById('ringtone').play().catch((e) => console.log("Браузер заблокировал звук", e));
                 } else {
@@ -7508,6 +7518,12 @@
                 } else if (!wasCallConnected) {
                     if (isInitiator && !isRemote) {
                         sendMsg(`canceled|00:00`, false, 'call');
+
+                        // --- НОВОЕ: Удаляем вызов, чтобы он мгновенно пропал с экрана друга ---
+                        if (currentFriendId) {
+                            rtdb.ref('incoming_calls/' + currentFriendId).remove();
+                        }
+                        // -----------------------------------------------------------------------
                     } else {
                         sendMsg(`missed|00:00`, false, 'call');
                         if (currentFriendId) {
