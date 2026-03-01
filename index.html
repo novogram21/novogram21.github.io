@@ -6844,9 +6844,15 @@
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
                         isConnected = true; wasCallConnected = true;
-                        updateCallStatus("В разговоре"); stopAllTones(); startTimer(); startPing();
+
+                        // Прячем текст статуса и показываем чистый таймер
+                        document.getElementById('callStatusText').style.display = 'none';
+                        document.getElementById('callTimer').style.display = 'block';
+
+                        stopAllTones(); startTimer(); startPing();
                     }
-                } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                }
+                else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
                     endCall(false);
                 }
             };
@@ -7097,7 +7103,8 @@
 
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
-            updateCallStatus("Подготовка...");
+
+            updateCallStatus("Соединение..."); // Шаг 1: Ищем собеседника
             playConnectingTone();
 
             try {
@@ -7128,6 +7135,8 @@
                     status: 'ringing'
                 });
 
+                updateCallStatus("Звонок..."); // Шаг 2: Пошли гудки
+
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
@@ -7141,6 +7150,7 @@
 
                     if (pc && !pc.remoteDescription && data.answer) {
                         console.log("✅ Ответ получен, соединяем...");
+                        updateCallStatus("Обмен шифрованием..."); // Шаг 3: Собеседник взял трубку
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
@@ -7215,6 +7225,8 @@
                     answer: { type: answer.type, sdp: answer.sdp },
                     status: 'connected'
                 });
+
+                updateCallStatus("Обмен шифрованием..."); // Тот, кто берет трубку, тоже видит этот статус
 
             } catch (e) {
                 console.error("Ошибка при ответе:", e);
@@ -7512,7 +7524,12 @@
             if (localStream) localStream.getTracks().forEach(t => t.stop());
             if (callTimerInt) clearInterval(callTimerInt);
             if (pingInterval) clearInterval(pingInterval);
+
+            // Возвращаем текст и прячем таймер
             const statusText = document.getElementById('callStatusText');
+            statusText.style.display = 'block';
+            document.getElementById('callTimer').style.display = 'none';
+
             statusText.innerText = "ЗВОНОК ЗАВЕРШЕН"; statusText.style.color = "#ff4444"; statusText.style.fontWeight = "bold";
             playEndTone();
             const screen = document.getElementById('callScreen'); screen.style.pointerEvents = 'none';
