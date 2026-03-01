@@ -4045,6 +4045,65 @@
             color: #8e8e93;
             filter: grayscale(1); /* Делаем эмодзи строгими, серыми */
         }
+
+        /* --- ВСПЛЫВАЮЩЕЕ УВЕДОМЛЕНИЕ В ПРИЛОЖЕНИИ --- */
+        .in-app-notification {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(28, 28, 30, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 400px;
+            transition: top 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+            .in-app-notification.show {
+                top: calc(env(safe-area-inset-top) + 15px);
+            }
+
+        .in-app-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #444;
+        }
+
+        .in-app-text-block {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .in-app-name {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .in-app-msg {
+            font-size: 14px;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -4063,6 +4122,14 @@
 </head>
 
 <body>
+
+    <div id="inAppNotification" class="in-app-notification" onclick="openNotifChat()">
+        <img id="inAppAvatar" class="in-app-avatar" src="" alt="">
+        <div class="in-app-text-block">
+            <div id="inAppName" class="in-app-name">Имя</div>
+            <div id="inAppMsg" class="in-app-msg">Сообщение...</div>
+        </div>
+    </div>
     <div id="app-background"></div>
     <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
     <audio id="sound-in-chat" src="sound-in.mp3" preload="auto"></audio>
@@ -4909,13 +4976,13 @@
                 : `<div class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">${fullName.charAt(0).toUpperCase()}</div>`;
 
             div.innerHTML = `
-                                            ${avatarHtml}
-                                            <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                                            <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                                            <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                                            </div>
-                                            <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
-                                            `;
+                                                ${avatarHtml}
+                                                <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                                                <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                                                <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                                                </div>
+                                                <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
+                                                `;
 
             // Событие клика теперь надежно закреплено за узлом
             div.onclick = () => {
@@ -5028,7 +5095,6 @@
             const statusRef = rtdb.ref('/status/' + uid);
             const connectionRef = rtdb.ref('.info/connected');
 
-            // 1. Стандартная логика Firebase (работает при полном закрытии или обрыве интернета)
             connectionRef.on('value', (snap) => {
                 if (snap.val() === false) return;
 
@@ -5036,26 +5102,39 @@
                     state: 'offline',
                     last_seen: firebase.database.ServerValue.TIMESTAMP
                 }).then(() => {
-                    // Ставим онлайн только если приложение реально открыто на экране
-                    if (document.visibilityState === 'visible') {
-                        statusRef.set({
-                            state: 'online',
-                            last_seen: firebase.database.ServerValue.TIMESTAMP
-                        });
-                    }
+                    // 🔥 ИСПРАВЛЕНИЕ 1: Убираем проверку visibilityState для мобилок.
+                    // Раз есть успешный коннект с Firebase — значит юзер открыл приложение и он онлайн!
+                    statusRef.set({
+                        state: 'online',
+                        last_seen: firebase.database.ServerValue.TIMESTAMP
+                    });
                 });
             });
 
-            // 2. НОВОЕ: Отслеживаем сворачивание/переключение вкладок
+            // 🔥 ИСПРАВЛЕНИЕ 2: Железобетонный метод для телефонов.
+            // Если ОС "заморозила" события сворачивания/разворачивания (часто бывает на Android),
+            // то любой тап по экрану принудительно обновит ваш онлайн статус.
+            let touchOnlineThrottle = false;
+            document.addEventListener('touchstart', () => {
+                if (!touchOnlineThrottle && document.visibilityState !== 'hidden') {
+                    statusRef.set({
+                        state: 'online',
+                        last_seen: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    touchOnlineThrottle = true;
+                    // Блокируем частые запросы к БД. Следующий "тап-онлайн" уйдет только через 30 секунд.
+                    setTimeout(() => { touchOnlineThrottle = false; }, 30000);
+                }
+            }, { passive: true });
+
+            // Стандартные обработчики (оставляем, они нужны для ПК и iOS)
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
-                    // Пользователь вернулся в приложение/вкладку
                     statusRef.set({
                         state: 'online',
                         last_seen: firebase.database.ServerValue.TIMESTAMP
                     });
                 } else {
-                    // Пользователь свернул приложение или переключил вкладку
                     statusRef.set({
                         state: 'offline',
                         last_seen: firebase.database.ServerValue.TIMESTAMP
@@ -5063,7 +5142,6 @@
                 }
             });
 
-            // 3. Подстраховка для iOS Safari / старых мобильных браузеров
             window.addEventListener('pagehide', () => {
                 statusRef.set({
                     state: 'offline',
@@ -5623,16 +5701,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                            ${avatar}
-                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                            </div>
-                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                            </div>
-                                            `;
+                                                ${avatar}
+                                                <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                </div>
+                                                <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                </div>
+                                                `;
                         list.appendChild(div);
                     });
                 });
@@ -5685,8 +5763,32 @@
                         renderPreview();
 
                         // Слушаем событие: если ключ придет позже — текст обновится сам!
+                        // Слушаем событие: если ключ придет позже — текст обновится сам!
                         window.addEventListener('keyReady_' + chatId, renderPreview, { once: true });
                         // --------------------------------------
+
+                        // ---> ДОБАВЛЕН БЛОК IN-APP УВЕДОМЛЕНИЙ <---
+                        // Если это НЕ первая загрузка списка и сообщение от ДРУГОГО пользователя
+                        if (!isListInitialLoad && lastData.from !== currentUser.uid) {
+                            let pureText = decryptText(lastData.txt, chatId);
+                            const type = lastData.type || 'text';
+
+                            if (type === 'image') pureText = '📷 Фотография';
+                            if (type === 'file') pureText = '📄 Файл';
+                            if (type === 'call') pureText = '📞 Звонок';
+
+                            // Пытаемся получить аватарку друга из кэша
+                            const fAvatar = usersCache[fid] ? usersCache[fid].avatar : null;
+                            // Пытаемся получить имя друга (ищем элемент списка или берем дефолт)
+                            const fNameEl = document.querySelector(`#u-${fid} .user-name`);
+                            const fName = fNameEl ? fNameEl.innerText : 'Собеседник';
+
+                            // Вызываем функцию показа плашки (она уже есть у тебя в коде)
+                            if (typeof showInAppNotification === 'function') {
+                                showInAppNotification(fid, fName, fAvatar, pureText);
+                            }
+                        }
+                        // ---> КОНЕЦ БЛОКА УВЕДОМЛЕНИЙ <---
 
                         if (lastData.ts) timeToDisplay = lastData.ts.toMillis();
 
@@ -5871,19 +5973,19 @@
                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
             return `
-                                            ${avatarHtml}
-                                            <div class="user-name">${fName}</div>
-                                            <div class="last-msg-row">
-                                            <span class="last-msg" id="last-${chatId}">...</span>
-                                            </div>
-                                            <div class="meta-column">
-                                            <span class="last-msg-date" id="date-${chatId}"></span>
-                                            <div class="meta-bottom-row">
-                                            <span id="status-${chatId}" class="list-ticks"></span>
-                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                            </div>
-                                            </div>
-                                            `;
+                                                ${avatarHtml}
+                                                <div class="user-name">${fName}</div>
+                                                <div class="last-msg-row">
+                                                <span class="last-msg" id="last-${chatId}">...</span>
+                                                </div>
+                                                <div class="meta-column">
+                                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                                <div class="meta-bottom-row">
+                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                </div>
+                                                </div>
+                                                `;
         }
 
         function loadData() {
@@ -6020,19 +6122,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                            ${avatarHtml}
-                                            <div class="user-name">${fName}</div>
-                                            <div class="last-msg-row">
-                                            <span class="last-msg" id="last-${chatId}">...</span>
-                                            </div>
-                                            <div class="meta-column">
-                                            <span class="last-msg-date" id="date-${chatId}"></span>
-                                            <div class="meta-bottom-row">
-                                            <span id="status-${chatId}" class="list-ticks"></span>
-                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                            </div>
-                                            </div>
-                                            `;
+                                                ${avatarHtml}
+                                                <div class="user-name">${fName}</div>
+                                                <div class="last-msg-row">
+                                                <span class="last-msg" id="last-${chatId}">...</span>
+                                                </div>
+                                                <div class="meta-column">
+                                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                                <div class="meta-bottom-row">
+                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                </div>
+                                                </div>
+                                                `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -6393,10 +6495,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                            <div class="msg-reply-name">${m.replyTo.name}</div>
-                                            <div class="msg-reply-text">${m.replyTo.text}</div>
-                                            </div>`;
+                                                <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                <div class="msg-reply-text">${m.replyTo.text}</div>
+                                                </div>`;
             }
 
             // Основной контент
@@ -6443,18 +6545,18 @@
 
                 // ВАЖНО: Добавлено style="color: currentColor;" к SVG и убран onclick из верстки, чтобы не было конфликтов
                 contentHtml += `
-                                            <div class="chat-call-card">
-                                            <div class="call-icon-wrapper">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                                            </svg>
-                                            </div>
-                                            <div class="call-info">
-                                            <div class="call-title">${titleText}</div>
-                                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                                            </div>
-                                            </div>
-                                            `;
+                                                <div class="chat-call-card">
+                                                <div class="call-icon-wrapper">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                                </svg>
+                                                </div>
+                                                <div class="call-info">
+                                                <div class="call-title">${titleText}</div>
+                                                <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                                                </div>
+                                                </div>
+                                                `;
             }
             else {
                 // Добавили класс "chat-link" и убрали target="_blank"
@@ -6479,11 +6581,11 @@
                 }
 
                 let metaHtml = `
-                                            <span class="msg-meta" style="${metaStyle}">
-                                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                            <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                            </span>`;
+                                                <span class="msg-meta" style="${metaStyle}">
+                                                ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                                                <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                                </span>`;
 
                 if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                 else contentHtml += metaHtml;
@@ -6692,6 +6794,46 @@
         let editMessageId = null;
         let replyMessageData = null; // { id, name, text }
 
+
+        // --- ЛОГИКА ВНУТРИИГРОВЫХ УВЕДОМЛЕНИЙ ---
+        let currentNotifFriendId = null;
+        let inAppNotifTimer = null;
+
+        function showInAppNotification(fid, fName, fAvatar, text) {
+            // Если мы уже сидим в чате с этим человеком, не показываем плашку
+            if (currentFriendId === fid && document.visibilityState === 'visible') return;
+
+            currentNotifFriendId = fid;
+            document.getElementById('inAppName').innerText = fName;
+            document.getElementById('inAppMsg').innerText = text;
+
+            const avatarEl = document.getElementById('inAppAvatar');
+            if (fAvatar) {
+                avatarEl.src = fAvatar;
+            } else {
+                avatarEl.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23444"/><text x="50%" y="50%" fill="white" font-size="18" text-anchor="middle" dy=".3em">👤</text></svg>';
+            }
+
+            const notif = document.getElementById('inAppNotification');
+            notif.classList.add('show');
+
+            // Звук сообщения
+            try { playNotificationSound('in-chat'); } catch (e) { }
+
+            // Прячем через 4 секунды
+            if (inAppNotifTimer) clearTimeout(inAppNotifTimer);
+            inAppNotifTimer = setTimeout(() => {
+                notif.classList.remove('show');
+            }, 4000);
+        }
+
+        function openNotifChat() {
+            document.getElementById('inAppNotification').classList.remove('show');
+            if (currentNotifFriendId) {
+                window.location.hash = "#chat/" + currentNotifFriendId;
+                handleHashChange();
+            }
+        }
 
         function openActionSheet(msgId, isMine) {
             selectedMsgId = msgId;
@@ -8437,7 +8579,15 @@
                     }
                 } else {
                     // Клик по самому пушу или кнопке "Ответить" - открываем чат
-                    window.location.hash = "#chat/" + data.senderId;
+                    if (data.senderId) {
+                        window.location.hash = "#chat/" + data.senderId;
+
+                        // ПРИНУДИТЕЛЬНО вызываем функцию открытия чата, 
+                        // так как при выходе из свернутого режима событие hashchange может не сработать
+                        if (typeof handleHashChange === 'function') {
+                            handleHashChange();
+                        }
+                    }
                 }
             });
         });
@@ -8737,24 +8887,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                            <div class="upload-spinner"></div>
-                                            </div>
-                                            `;
+                                                <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                <div class="upload-spinner"></div>
+                                                </div>
+                                                `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                            <div class="chat-file-card" style="opacity: 0.7;">
-                                            <div class="file-icon">📄</div>
-                                            <div class="file-info">
-                                            <div class="file-name">${file.name}</div>
-                                            <div class="file-action">Загрузка...</div>
-                                            </div>
-                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                            </div>
-                                            `;
+                                                <div class="chat-file-card" style="opacity: 0.7;">
+                                                <div class="file-icon">📄</div>
+                                                <div class="file-info">
+                                                <div class="file-name">${file.name}</div>
+                                                <div class="file-action">Загрузка...</div>
+                                                </div>
+                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                </div>
+                                                `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -9828,14 +9978,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                                        <div class="search-msg-content">
-                                                            <div class="search-msg-header">
-                                                                <span class="search-msg-name">${res.name}</span>
-                                                                <span class="search-msg-time">${res.time}</span>
+                                                            <div class="search-msg-content">
+                                                                <div class="search-msg-header">
+                                                                    <span class="search-msg-name">${res.name}</span>
+                                                                    <span class="search-msg-time">${res.time}</span>
+                                                                </div>
+                                                                <div class="search-msg-text">${res.text}</div>
                                                             </div>
-                                                            <div class="search-msg-text">${res.text}</div>
-                                                        </div>
-                                                    `;
+                                                        `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
