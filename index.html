@@ -6870,7 +6870,6 @@
 
             // СОЗДАЕМ ТРАНСИВЕРЫ (Слоты)
             // Аудио всегда работает, видео по умолчанию "inactive" (выключено и не светится)
-            pc.addTransceiver('audio', { direction: 'sendrecv' });
             pc.addTransceiver('video', { direction: 'inactive' });
 
             pc.oniceconnectionstatechange = () => {
@@ -6895,18 +6894,18 @@
                 console.log("🎥 Получен поток:", e.track.kind);
                 const remoteVid = document.getElementById('remoteVideo');
 
-                // Если поток пришел в массиве (стандартное поведение)
+                // Если поток пришел цельным объектом — используем его
                 if (e.streams && e.streams[0]) {
                     remoteVid.srcObject = e.streams[0];
                 } else {
-                    // Если потока нет (бывает при использовании addTransceiver), создаем его вручную
+                    // Если браузер прислал голый трек (особенность некоторых версий Safari) — собираем поток вручную
                     if (!remoteVid.srcObject) {
                         remoteVid.srcObject = new MediaStream();
                     }
                     remoteVid.srcObject.addTrack(e.track);
                 }
 
-                remoteVid.play().catch(() => { });
+                remoteVid.play().catch(err => console.log("Ошибка воспроизведения:", err));
             };
 
             pc.onicecandidate = e => {
