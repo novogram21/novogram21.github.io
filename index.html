@@ -1656,17 +1656,19 @@
 
             .chat-area {
                 display: flex !important;
-                width: 100%;
+                width: 100vw !important;
                 position: fixed;
                 top: 0;
                 left: 0;
-                height: 100%;
+                height: 100dvh !important;
                 z-index: 100;
                 /* Смягчили фон для мобильной версии */
                 background-color: #121316 !important;
-                transform: translateX(100%);
+                transform: translateX(100vw);
                 visibility: hidden;
                 transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.35s;
+                will-change: transform; 
+                backface-visibility: hidden;
             }
 
                 /* Копируем ваши красивые эмодзи-обои прямо на непрозрачный фон чата */
@@ -1698,7 +1700,7 @@
                 }
 
                 .chat-area.active {
-                    transform: translateX(0);
+                    transform: translateX(0) !important;
                     visibility: visible;
                 }
 
