@@ -7134,6 +7134,8 @@
                     if (data.status === 'rejected') {
                         updateCallStatus("Занято");
                         setTimeout(() => endCall(false, true), 1500);
+                    } else if (data.status === 'ended') { // <--- ДОБАВИТЬ ЭТО
+                        endCall(false, true);             // <--- ДОБАВИТЬ ЭТО
                     }
 
                     if (pc && !pc.remoteDescription && data.answer) {
@@ -7179,6 +7181,11 @@
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
+
+                    if (data.status === 'ended') {        // <--- ДОБАВИТЬ ЭТО
+                        endCall(false, true);             // <--- ДОБАВИТЬ ЭТО
+                        return;                           // <--- ДОБАВИТЬ ЭТО
+                    }
 
                     // Если пришел сигнал на обновление потока
                     if (data.renegotiate && !amICaller) {
@@ -7508,7 +7515,7 @@
             playEndTone();
             const screen = document.getElementById('callScreen'); screen.style.pointerEvents = 'none';
             document.getElementById('incomingPopup').style.display = 'none';
-            if (isInitiator && currentCallId) { db.collection('calls').doc(currentCallId).delete().catch(() => { }); }
+            if (isInitiator && currentCallId) { rtdb.ref('call_sessions/' + currentCallId).update({ status: 'ended' }).catch(() => { }); }
             pc = null; localStream = null; candidateQueue = []; isConnected = false; currentCallId = null; wasCallConnected = false; amICaller = false;
             callStartTime = 0;
             if (callTimerInt) clearInterval(callTimerInt);
