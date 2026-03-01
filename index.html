@@ -6894,10 +6894,19 @@
             pc.ontrack = e => {
                 console.log("🎥 Получен поток:", e.track.kind);
                 const remoteVid = document.getElementById('remoteVideo');
-                if (e.streams[0]) {
+
+                // Если поток пришел в массиве (стандартное поведение)
+                if (e.streams && e.streams[0]) {
                     remoteVid.srcObject = e.streams[0];
-                    remoteVid.play().catch(() => { });
+                } else {
+                    // Если потока нет (бывает при использовании addTransceiver), создаем его вручную
+                    if (!remoteVid.srcObject) {
+                        remoteVid.srcObject = new MediaStream();
+                    }
+                    remoteVid.srcObject.addTrack(e.track);
                 }
+
+                remoteVid.play().catch(() => { });
             };
 
             pc.onicecandidate = e => {
