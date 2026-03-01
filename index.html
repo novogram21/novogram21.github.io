@@ -4647,6 +4647,15 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // --- АНТИ-ZAPRET НАСТРОЙКИ ---
+        // Заставляем Firestore использовать старые-добрые HTTP-запросы
+        // вместо WebSockets и стримов, которые ломаются об прокси и DPI
+        db.settings({
+            experimentalForceLongPolling: true,
+            useFetchStreams: false
+        });
+
         const rtdb = firebase.database();
 
         // --- ИДЕАЛЬНАЯ СИНХРОНИЗАЦИЯ ВРЕМЕНИ ---
@@ -5161,40 +5170,75 @@
 
         // --- AUTH ---
         // 1. Обработка входа/регистрации
+        // 1. Обработка входа/регистрации
+        // 1. Обработка входа/регистрации (С защитой от зависания сети)
         function authAction() {
             const e = document.getElementById('email').value;
             const p = document.getElementById('pass').value;
             if (!e || !p) return;
-            // 1. Показываем юзеру, что процесс пошел
-            const btn = document.querySelector('#stepEmail button'); // Находим кнопку
+
+            const btn = document.querySelector('#stepEmail button');
             const originalText = btn.innerText;
             btn.innerText = "Загрузка...";
-            btn.disabled = true; // Блокируем, чтобы не нажал дважды
+            btn.disabled = true;
             btn.style.opacity = "0.7";
-            auth.signInWithEmailAndPassword(e, p).catch(err => {
-                // Если пользователя нет, пробуем создать
-                if (err.code.includes('not-found') || err.code.includes('wrong') || err.code.includes('invalid')) {
-                    auth.createUserWithEmailAndPassword(e, p).then(cred => {
-                        db.collection('users').doc(cred.user.uid).set({
-                            email: e,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        // Регистрация успешна, onAuthStateChanged перехватит управление
-                    }).catch(regErr => {
-                        // Ошибка регистрации
-                        document.getElementById('authError').innerText = regErr.message;
+
+            // Создаем таймер: если через 8 секунд ответа нет, выкидываем ошибку
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("timeout_error")), 8000)
+            );
+
+            // Promise.race выполнит то, что случится быстрее: либо логин, либо наш таймер
+            Promise.race([
+                auth.signInWithEmailAndPassword(e, p),
+                timeoutPromise
+            ])
+                .then(() => {
+                    btn.innerText = "Успешно!";
+                    // onAuthStateChanged сам скроет окно
+                })
+                .catch(err => {
+                    // Если сработал наш таймаут (сеть зависла из-за zapret)
+                    if (err.message === "timeout_error") {
+                        document.getElementById('authError').innerText = "Сеть заблокировала запрос. Попробуйте мобильный интернет.";
                         btn.innerText = originalText;
                         btn.disabled = false;
                         btn.style.opacity = "1";
-                    });
-                } else {
-                    // Ошибка входа
-                    document.getElementById('authError').innerText = err.message;
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                    btn.style.opacity = "1";
-                }
-            });
+                        return;
+                    }
+
+                    // Если пользователя нет, пробуем создать
+                    if (err.code && (err.code.includes('not-found') || err.code.includes('wrong') || err.code.includes('invalid'))) {
+
+                        // Регистрацию тоже оборачиваем в таймер
+                        Promise.race([
+                            auth.createUserWithEmailAndPassword(e, p),
+                            timeoutPromise
+                        ])
+                            .then(cred => {
+                                db.collection('users').doc(cred.user.uid).set({
+                                    email: e,
+                                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                                btn.innerText = "Создаем...";
+                            }).catch(regErr => {
+                                if (regErr.message === "timeout_error") {
+                                    document.getElementById('authError').innerText = "Ошибка сети при регистрации. Проверьте подключение.";
+                                } else {
+                                    document.getElementById('authError').innerText = regErr.message;
+                                }
+                                btn.innerText = originalText;
+                                btn.disabled = false;
+                                btn.style.opacity = "1";
+                            });
+                    } else {
+                        // Обычная ошибка входа (неверный пароль и т.д.)
+                        document.getElementById('authError').innerText = err.message || "Ошибка входа";
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                    }
+                });
         }
         // --- 1. ОПТИМИСТИЧНЫЙ ВХОД (Вставить ПЕРЕД auth.onAuthStateChanged) ---
         // Проверяем, входил ли юзер в прошлый раз
@@ -5207,12 +5251,6 @@
         auth.onAuthStateChanged(u => {
             if (u) {
                 currentUser = u;
-                managePresence(u.uid); // Запускаем онлайн
-                listenToAllStatuses(); // Слушаем чужой онлайн
-                listenAllUnreadRTDB(); // Слушаем счетчики сообщений
-                currentUser = u;
-
-
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('current_user_uid', u.uid);
 
@@ -5223,62 +5261,79 @@
                     }
                 } catch (e) { }
 
-                // ЗАПУСКАЕМ ДАННЫЕ СРАЗУ
-                loadTurnServers();
-                loadData();
-                listenForIncomingCalls();
-
-                // Сохраняем email в кэш профиля (частично)
-                let currentCache = JSON.parse(localStorage.getItem('user_profile_cache') || '{}');
-                currentCache.email = u.email;
-                localStorage.setItem('user_profile_cache', JSON.stringify(currentCache));
-
                 const savedToken = localStorage.getItem('fcm_token');
                 if (savedToken) {
                     saveTokenToBackend(u.uid, savedToken);
                 }
 
-                loadTgId();
-                setTimeout(handleHashChange, 500);
-
+                // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: СНАЧАЛА ЗАГРУЖАЕМ ПРОФИЛЬ И ПРЯЧЕМ ОКНО, 
+                // И ТОЛЬКО ПОТОМ ДЕЛАЕМ HARD RESET СЕТИ В loadData()! 🔥
                 db.collection('users').doc(u.uid).get().then(doc => {
                     if (doc.exists) {
                         const d = doc.data();
-
-                        // !!! ВАЖНО: СОХРАНЯЕМ ПОЛНЫЙ ПРОФИЛЬ В КЭШ ДЛЯ СЛЕДУЮЩЕГО ЗАПУСКА !!!
-                        d.email = u.email; // Добавляем email в объект
+                        d.email = u.email;
                         localStorage.setItem('user_profile_cache', JSON.stringify(d));
-                        // -------------------------------------------------------------------
 
                         const myAvatarSmall = document.getElementById('myAvatarSmall');
                         if (myAvatarSmall && d.avatar) {
                             myAvatarSmall.innerHTML = `<img src="${d.avatar}" alt="avatar">`;
                         }
 
+                        // Прячем экран авторизации, если регистрация завершена (есть username)
                         if (d.username) {
                             document.getElementById('authScreen').classList.add('hidden');
                             document.getElementById('profileEmail').innerText = u.email;
                         } else {
-                            // Логика если нет юзернейма
                             document.getElementById('stepEmail').style.display = 'none';
                             document.getElementById('stepName').style.display = 'block';
                             document.getElementById('stepUsername').style.display = 'none';
                             document.getElementById('authScreen').classList.remove('hidden');
                         }
                     }
+
+                    // Восстанавливаем кнопку (на всякий случай)
+                    const btn = document.querySelector('#stepEmail button');
+                    if (btn) {
+                        btn.innerText = "Далее";
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                    }
+
+                    // ТЕПЕРЬ, КОГДА ОКНО СПРЯТАНО, ЗАПУСКАЕМ ТЯЖЕЛЫЕ ФУНКЦИИ И СБРОС СЕТИ
+                    managePresence(u.uid);
+                    listenToAllStatuses();
+                    listenAllUnreadRTDB();
+                    loadTurnServers();
+                    loadData(); // <-- Сброс сети произойдет здесь, но UI уже разблокирован
+                    listenForIncomingCalls();
+                    loadTgId();
+                    setTimeout(handleHashChange, 500);
+
+                }).catch(err => {
+                    console.error("Ошибка при проверке профиля:", err);
+                    // Экстренный фоллбэк: если сеть упала слишком рано, прячем окно принудительно
+                    document.getElementById('authScreen').classList.add('hidden');
+                    loadData();
                 });
+
             } else {
                 localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('current_user_uid'); // Чистим ID при выходе
-                // Не удаляем кэш профиля полностью, чтобы при перевходе аватарка мелькнула сразу,
-                // но лучше удалить, если это чужой телефон. Оставим пока так для скорости.
+                localStorage.removeItem('current_user_uid');
 
-                if (wasLoggedIn) {
+                if (typeof wasLoggedIn !== 'undefined' && wasLoggedIn) {
                     alert("Сессия истекла. Войдите снова.");
                 }
                 document.getElementById('authScreen').classList.remove('hidden');
                 document.getElementById('stepEmail').style.display = 'block';
-                if (lastSeenInterval) clearInterval(lastSeenInterval);
+                if (typeof lastSeenInterval !== 'undefined' && lastSeenInterval) clearInterval(lastSeenInterval);
+
+                // Сбрасываем кнопку авторизации при выходе
+                const btn = document.querySelector('#stepEmail button');
+                if (btn) {
+                    btn.innerText = "Далее";
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }
             }
         });
 
@@ -7032,6 +7087,8 @@
                     setLocalMirror(currentFacingMode);
                 }
 
+                setTimeout(forceEarpiece, 500);
+
             } catch (e) {
                 console.error("🚨 Ошибка медиа:", e);
                 throw e;
@@ -7039,18 +7096,30 @@
         }
 
         // Базовый конфиг (пока грузятся мощные серверы, используем дефолтные от Google)
-        // Базовый конфиг (пока не загрузится Google Script)
+        // Запасной конфиг с ПРЯМЫМИ IP-АДРЕСАМИ (чтобы обойти ошибку DNS -105 на мобильном интернете)
         let dynamicIceServers = {
-            iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }]
+            iceServers: [
+                // Прямые IP-адреса серверов Google (им не нужен DNS-поиск)
+                { urls: 'stun:142.250.82.127:19302' },
+                { urls: 'stun:74.125.137.127:19302' },
+                { urls: "turn:global.relay.metered.ca:80", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" }
+            ]
         };
 
-        // Функция тихой загрузки серверов
-        async function loadTurnServers() {
+        // Функция загрузки серверов с защитой от "Hard Reset"
+        async function loadTurnServers(retryCount = 0) {
             try {
-                console.log("📡 Запрашиваем TURN сервера через Google Script...");
+                console.log(`📡 Запрашиваем TURN сервера... (Попытка ${retryCount + 1})`);
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 секунды на ответ
+
                 const response = await fetch(TURN_SCRIPT_URL, {
                     method: "POST",
                     redirect: "follow",
+                    mode: "cors",
+                    cache: "no-store",
+                    signal: controller.signal,
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({
                         action: "getTurn",
@@ -7058,13 +7127,23 @@
                     })
                 });
 
+                clearTimeout(timeoutId);
+
                 const data = await response.json();
                 if (data.result === "success" && data.config) {
                     dynamicIceServers = data.config;
                     console.log("✅ TURN сервера успешно загружены!");
                 }
             } catch (e) {
-                console.error("❌ Не удалось загрузить TURN сервера:", e);
+                console.error(`❌ Ошибка загрузки TURN: ${e.message}`);
+
+                // Спасительная логика: Если C# сейчас ресетит сеть, даем ей время ожить
+                if (retryCount < 3) {
+                    console.log("⏳ Сеть недоступна (возможно из-за Hard Reset). Ждем 2.5 секунды...");
+                    setTimeout(() => loadTurnServers(retryCount + 1), 2500);
+                } else {
+                    console.log("🛡️ Лимит попыток исчерпан. Используем резервные сервера с прямыми IP.");
+                }
             }
         }
 
@@ -7146,9 +7225,13 @@
 
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
+
+            isEarpiece = true;
+            if (window.mauiInterop) window.mauiInterop.postMessage("audio_ear");
+
             const friendData = usersCache[currentFriendId] || {};
             document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
-
+            forceEarpiece();
             updateCallStatus("Соединение..."); // Шаг 1: Ищем собеседника
             playConnectingTone();
 
@@ -7211,8 +7294,13 @@
             document.getElementById('incomingPopup').style.display = 'none';
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
+            forceEarpiece();
+            isEarpiece = true;
+            if (window.mauiInterop) window.mauiInterop.postMessage("audio_ear");
+
             updateCallStatus("Соединение...");
             updateCallControlsVisibility();
+            initAudioMode();
             if (!currentCallId) return;
 
             isConnected = false;
@@ -9892,7 +9980,26 @@
             showToast(toEarpiece ? "Звук: Динамик уха" : "Звук: Громкая связь");
         }
 
-        let isEarpiece = false;
+        let isEarpiece = true; // По умолчанию включено ухо
+
+        // Вызываем эту функцию при начале КАЖДОГО звонка, чтобы синхронизировать интерфейс и Android
+        function initAudioMode() {
+            isEarpiece = true;
+            const btn = document.getElementById('btnSpeaker');
+            const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+
+            if (btn) {
+                btn.innerHTML = iconEar;
+                btn.classList.add('muted-state'); // Белый фон (означает, что динамик приложен к уху)
+            }
+
+            // Шлем команду в C# переключить на ухо при старте звонка
+            if (window.mauiInterop && window.mauiInterop.postMessage) {
+                window.mauiInterop.postMessage("audio_ear");
+            } else if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage("audio_ear");
+            }
+        }
 
         // 1. Проверка среды при старте звонка
         function updateSpeakerButtonVisibility() {
@@ -9904,31 +10011,40 @@
             }
         }
 
+        function forceEarpiece() {
+            isEarpiece = true;
+            const btn = document.getElementById('btnSpeaker');
+            if (btn) {
+                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+                btn.classList.add('muted-state');
+            }
+            if (window.mauiInterop) window.mauiInterop.postMessage("audio_ear");
+            else if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage("audio_ear");
+        }
+
         // 2. Функция переключения
         function toggleSpeaker() {
             isEarpiece = !isEarpiece;
             const btn = document.getElementById('btnSpeaker');
 
-            // Красивые SVG-иконки под новый стиль
             const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
             const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
 
             if (isEarpiece) {
-                // Звук тихо ("В ухо") -> подсвечиваем кнопку белым
                 btn.innerHTML = iconEar;
                 btn.classList.add('muted-state');
             } else {
-                // Громкая связь -> обычный темный фон
                 btn.innerHTML = iconLoud;
                 btn.classList.remove('muted-state');
             }
 
-            // Передаем команду в C# (MAUI)
-            if (window.chrome && window.chrome.webview) {
-                window.chrome.webview.postMessage(JSON.stringify({
-                    action: "setAudioMode",
-                    earpiece: isEarpiece
-                }));
+            // Отправляем строго ту текстовую команду, которую ожидает твой C#
+            const command = isEarpiece ? "audio_ear" : "audio_loud";
+
+            if (window.mauiInterop && window.mauiInterop.postMessage) {
+                window.mauiInterop.postMessage(command);
+            } else if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(command);
             }
         }
 
