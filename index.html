@@ -11207,23 +11207,6 @@
             document.getElementById('callScreen').style.display = 'flex';
         }
 
-        window.forceAnswerNativeCall = function (callerId) {
-            console.log("Принят звонок с экрана блокировки:", callerId);
-
-            // Переходим в чат с этим пользователем
-            window.location.hash = "#chat/" + callerId;
-            handleHashChange();
-
-            // Эмулируем, что мы приняли звонок
-            currentFriendId = callerId;
-            currentCallId = [currentUser.uid, callerId].sort().join('_'); // Надо получить sessionTs из базы, но для начала сойдет
-
-            // Вызываем твою существующую функцию
-            setTimeout(() => {
-                answerCall();
-            }, 1000); // Даем время WebView прогрузиться
-        };
-
     </script>
 
     <div id="birthModal" class="modal-overlay" style="display:none" onclick="closeBirthModal()">
