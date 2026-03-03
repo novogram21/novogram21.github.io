@@ -1667,7 +1667,7 @@
                 transform: translateX(100vw);
                 visibility: hidden;
                 transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.35s;
-                will-change: transform; 
+                will-change: transform;
                 backface-visibility: hidden;
             }
 
@@ -4986,13 +4986,13 @@
                 : `<div class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">${fullName.charAt(0).toUpperCase()}</div>`;
 
             div.innerHTML = `
-                                                    ${avatarHtml}
-                                                    <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                                                    <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                                                    <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                                                    </div>
-                                                    <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
-                                                    `;
+                                                        ${avatarHtml}
+                                                        <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                                                        <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                                                        <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                                                        </div>
+                                                        <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
+                                                        `;
 
             // Событие клика теперь надежно закреплено за узлом
             div.onclick = () => {
@@ -5717,16 +5717,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                    ${avatar}
-                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                    ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                    <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                    </div>
-                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                    <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                    <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                    </div>
-                                                    `;
+                                                        ${avatar}
+                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                        </div>
+                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                        </div>
+                                                        `;
                         list.appendChild(div);
                     });
                 });
@@ -5994,19 +5994,19 @@
                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
             return `
-                                                    ${avatarHtml}
-                                                    <div class="user-name">${fName}</div>
-                                                    <div class="last-msg-row">
-                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                    </div>
-                                                    <div class="meta-column">
-                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                    <div class="meta-bottom-row">
-                                                    <span id="status-${chatId}" class="list-ticks"></span>
-                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                    </div>
-                                                    </div>
-                                                    `;
+                                                        ${avatarHtml}
+                                                        <div class="user-name">${fName}</div>
+                                                        <div class="last-msg-row">
+                                                        <span class="last-msg" id="last-${chatId}">...</span>
+                                                        </div>
+                                                        <div class="meta-column">
+                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                        <div class="meta-bottom-row">
+                                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                        </div>
+                                                        </div>
+                                                        `;
         }
 
         function loadData() {
@@ -6143,19 +6143,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                                    ${avatarHtml}
-                                                    <div class="user-name">${fName}</div>
-                                                    <div class="last-msg-row">
-                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                    </div>
-                                                    <div class="meta-column">
-                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                    <div class="meta-bottom-row">
-                                                    <span id="status-${chatId}" class="list-ticks"></span>
-                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                    </div>
-                                                    </div>
-                                                    `;
+                                                        ${avatarHtml}
+                                                        <div class="user-name">${fName}</div>
+                                                        <div class="last-msg-row">
+                                                        <span class="last-msg" id="last-${chatId}">...</span>
+                                                        </div>
+                                                        <div class="meta-column">
+                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                        <div class="meta-bottom-row">
+                                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                        </div>
+                                                        </div>
+                                                        `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -6516,10 +6516,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                                    <div class="msg-reply-name">${m.replyTo.name}</div>
-                                                    <div class="msg-reply-text">${m.replyTo.text}</div>
-                                                    </div>`;
+                                                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                        <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                        <div class="msg-reply-text">${m.replyTo.text}</div>
+                                                        </div>`;
             }
 
             // Основной контент
@@ -6566,18 +6566,18 @@
 
                 // ВАЖНО: Добавлено style="color: currentColor;" к SVG и убран onclick из верстки, чтобы не было конфликтов
                 contentHtml += `
-                                                    <div class="chat-call-card">
-                                                    <div class="call-icon-wrapper">
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                                                    </svg>
-                                                    </div>
-                                                    <div class="call-info">
-                                                    <div class="call-title">${titleText}</div>
-                                                    <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                                                    </div>
-                                                    </div>
-                                                    `;
+                                                        <div class="chat-call-card">
+                                                        <div class="call-icon-wrapper">
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                                        </svg>
+                                                        </div>
+                                                        <div class="call-info">
+                                                        <div class="call-title">${titleText}</div>
+                                                        <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                                                        </div>
+                                                        </div>
+                                                        `;
             }
             else {
                 // Добавили класс "chat-link" и убрали target="_blank"
@@ -6602,11 +6602,11 @@
                 }
 
                 let metaHtml = `
-                                                    <span class="msg-meta" style="${metaStyle}">
-                                                    ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                                    <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                                    ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                                    </span>`;
+                                                        <span class="msg-meta" style="${metaStyle}">
+                                                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                                                        <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                                                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                                        </span>`;
 
                 if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                 else contentHtml += metaHtml;
@@ -7083,16 +7083,23 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-            console.log("[WebRTC: Init] 🛠️ Создаем RTCPeerConnection...");
+            console.log("🛠️ Создаем RTCPeerConnection...");
             pc = new RTCPeerConnection(dynamicIceServers);
 
+            // СОЗДАЕМ ТРАНСИВЕРЫ (Слоты)
+            // Аудио всегда работает, видео по умолчанию "inactive" (выключено и не светится)
+            pc.addTransceiver('video', { direction: 'sendrecv' });
+
             pc.oniceconnectionstatechange = () => {
-                console.log("[WebRTC: ICE] 📡 Статус ICE:", pc.iceConnectionState);
+                console.log("📡 [ICE State]:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
                         isConnected = true; wasCallConnected = true;
+
+                        // Прячем текст статуса и показываем чистый таймер
                         document.getElementById('callStatusText').style.display = 'none';
                         document.getElementById('callTimer').style.display = 'block';
+
                         stopAllTones(); startTimer(); startPing();
                     }
                 }
@@ -7102,39 +7109,21 @@
             };
 
             pc.ontrack = e => {
-                console.log(`[WebRTC: Track] 🎥 Получен трек от друга: ${e.track.kind}`);
+                console.log("🎥 Получен поток:", e.track.kind);
                 const remoteVid = document.getElementById('remoteVideo');
 
-                // 1. Всегда используем единый поток (MediaStream)
-                let stream = remoteVid.srcObject;
-                if (!stream) {
-                    stream = new MediaStream();
-                    remoteVid.srcObject = stream;
+                // Если поток пришел цельным объектом — используем его
+                if (e.streams && e.streams[0]) {
+                    remoteVid.srcObject = e.streams[0];
+                } else {
+                    // Если браузер прислал голый трек (особенность некоторых версий Safari) — собираем поток вручную
+                    if (!remoteVid.srcObject) {
+                        remoteVid.srcObject = new MediaStream();
+                    }
+                    remoteVid.srcObject.addTrack(e.track);
                 }
 
-                // 2. Удаляем старые зависшие треки того же типа
-                const existingTracks = stream.getTracks().filter(t => t.kind === e.track.kind);
-                existingTracks.forEach(t => stream.removeTrack(t));
-
-                // 3. Вставляем новый живой трек
-                stream.addTrack(e.track);
-
-                // Функция "пинка" плеера (пробивает черный экран)
-                const kickPlayer = () => {
-                    console.log(`[WebRTC: Player] 🔄 Перезапуск плеера...`);
-                    remoteVid.srcObject = null;
-                    remoteVid.srcObject = stream;
-                    remoteVid.load(); // Принудительная перезагрузка тега
-                    remoteVid.play().catch(err => console.warn(err));
-                };
-
-                // Если браузер сам понял, что пошло видео - перезапускаем
-                e.track.onunmute = () => {
-                    console.log(`[WebRTC: Track] 🟢 Трек проснулся (UNMUTE): ${e.track.kind}`);
-                    setTimeout(kickPlayer, 150);
-                };
-
-                kickPlayer();
+                remoteVid.play().catch(err => console.log("Ошибка воспроизведения:", err));
             };
 
             pc.onicecandidate = e => {
@@ -7229,9 +7218,14 @@
             }
         }
         async function getMedia(requestVideo = false) {
-            console.log(`[WebRTC: Media] 🎤 Запрос локального медиа (видео=${requestVideo})...`);
             try {
-                const constraints = { audio: true, video: false };
+                // 1. Сначала всегда запрашиваем только аудио, чтобы звонок начался
+                const constraints = {
+                    audio: true,
+                    video: false
+                };
+
+                // Если мы явно хотим начать с видео (например, видеозвонок), меняем настройки
                 if (requestVideo) {
                     constraints.video = {
                         facingMode: { ideal: currentFacingMode },
@@ -7241,34 +7235,14 @@
                 }
 
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                console.log(`[WebRTC: Media] Поток получен. Аудио: ${localStream.getAudioTracks().length}, Видео: ${localStream.getVideoTracks().length}`);
 
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
-                const transceivers = pc.getTransceivers();
-                console.log(`[WebRTC: Media] Найдено трансиверов: ${transceivers.length}`);
+                // Добавляем треки в PeerConnection
+                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-                const audioTc = transceivers.find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'audio');
-                const videoTc = transceivers.find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video');
-
-                const audioTrack = localStream.getAudioTracks()[0];
-                const videoTrack = localStream.getVideoTracks()[0];
-
-                if (audioTc && audioTrack) {
-                    console.log(`[WebRTC: Media] Вставляем микрофон в аудио-трансивер`);
-                    await audioTc.sender.replaceTrack(audioTrack);
-                } else {
-                    console.warn(`[WebRTC: Media] ⚠️ Аудио трансивер не найден!`);
-                }
-
-                if (videoTc) {
-                    console.log(`[WebRTC: Media] Вставляем трек в видео-трансивер (трек: ${videoTrack ? 'ЕСТЬ' : 'ПУСТО'})`);
-                    await videoTc.sender.replaceTrack(videoTrack || null);
-                } else {
-                    console.warn(`[WebRTC: Media] ⚠️ Видео трансивер не найден! (ЭТО ПРИЧИНА ОШИБКИ, ЕСЛИ ОНА ЕСТЬ)`);
-                }
-
+                // Если видео не запрашивали, кнопка камеры должна быть в состоянии "выкл"
                 if (!requestVideo) {
                     updateCamBtnUI(false);
                 } else {
@@ -7279,7 +7253,7 @@
                 setTimeout(forceEarpiece, 500);
 
             } catch (e) {
-                console.error("[WebRTC: Media] ❌ Ошибка медиа:", e);
+                console.error("🚨 Ошибка медиа:", e);
                 throw e;
             }
         }
@@ -7421,40 +7395,17 @@
             const friendData = usersCache[currentFriendId] || {};
             document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
             forceEarpiece();
-            updateCallStatus("Соединение...");
+            updateCallStatus("Соединение..."); // Шаг 1: Ищем собеседника
             playConnectingTone();
 
             try {
                 setupPeerConnection();
 
-                // Открываем пустые трубы
-                pc.addTransceiver('audio', { direction: 'sendrecv' });
-                pc.addTransceiver('video', { direction: 'sendrecv' });
-
-                // --- МАГИЯ СИГНАЛА КАМЕРЫ ---
-                sessionRef.child('cam_' + currentFriendId).on('value', snap => {
-                    const isCamOn = snap.val();
-                    if (isCamOn) {
-                        console.log(`[WebRTC: Signal] Друг включил камеру! Будим плеер...`);
-                        const remoteVid = document.getElementById('remoteVideo');
-                        setTimeout(() => {
-                            if (remoteVid.srcObject) {
-                                const stream = remoteVid.srcObject;
-                                remoteVid.srcObject = null;
-                                remoteVid.srcObject = stream;
-                                remoteVid.load();
-                                remoteVid.play().catch(e => { });
-                            }
-                        }, 300); // Даем 300мс на то, чтобы кадры долетели по сети
-                    }
-                });
-                // -----------------------------
-
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                await getMedia(false);
+                await getMedia(false); // Начинаем без камеры
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
@@ -7475,7 +7426,7 @@
                     status: 'ringing'
                 });
 
-                updateCallStatus("Звонок...");
+                updateCallStatus("Звонок..."); // Шаг 2: Пошли гудки
 
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
@@ -7484,18 +7435,20 @@
                     if (data.status === 'rejected') {
                         updateCallStatus("Занято");
                         setTimeout(() => endCall(false, true), 1500);
-                    } else if (data.status === 'ended') {
-                        endCall(false, true);
+                    } else if (data.status === 'ended') { // <--- ДОБАВИТЬ ЭТО
+                        endCall(false, true);             // <--- ДОБАВИТЬ ЭТО
                     }
 
                     if (pc && !pc.remoteDescription && data.answer) {
-                        updateCallStatus("Обмен шифрованием...");
+                        console.log("✅ Ответ получен, соединяем...");
+                        updateCallStatus("Обмен шифрованием..."); // Шаг 3: Собеседник взял трубку
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
                 });
 
             } catch (err) {
+                console.error("Ошибка начала звонка:", err);
                 endCall(true);
             }
         }
@@ -7530,37 +7483,37 @@
                     return;
                 }
                 const callerId = callData.caller;
-                currentFriendId = callerId;
+                currentFriendId = callerId; // Важно: скрипт должен знать, с кем мы говорим
                 const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
                 document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
-
                 setupPeerConnection();
 
-                // --- МАГИЯ СИГНАЛА КАМЕРЫ ---
-                sessionRef.child('cam_' + currentFriendId).on('value', snap => {
-                    const isCamOn = snap.val();
-                    if (isCamOn) {
-                        console.log(`[WebRTC: Signal] Друг включил камеру! Будим плеер...`);
-                        const remoteVid = document.getElementById('remoteVideo');
-                        setTimeout(() => {
-                            if (remoteVid.srcObject) {
-                                const stream = remoteVid.srcObject;
-                                remoteVid.srcObject = null;
-                                remoteVid.srcObject = stream;
-                                remoteVid.load();
-                                remoteVid.play().catch(e => { });
-                            }
-                        }, 300);
-                    }
-                });
-                // -----------------------------
-
+                // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
+
                     if (data.status === 'ended') {
                         endCall(false, true);
                         return;
+                    }
+
+                    // Если пришел сигнал на обновление потока
+                    if (data.renegotiate && !amICaller) {
+                        console.log("🔄 Обновляем видео-поток по просьбе собеседника...");
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+                        // --- ИСПРАВЛЕНИЕ: Держим канал открытым при пересогласовании ---
+                        pc.getTransceivers().forEach(t => {
+                            if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
+                                t.direction = 'sendrecv';
+                            }
+                        });
+                        // ----------------------------------------------------------------
+
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
                     }
                 });
 
@@ -7568,10 +7521,19 @@
                     addCandidateSafely(snap.val());
                 });
 
+                await getMedia(false);
+
                 await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                 await flushCandidateQueue();
 
-                await getMedia(false);
+                // --- ИСПРАВЛЕНИЕ (ГЛАВНОЕ): Принудительно открываем канал отправки видео ---
+                // Иначе браузер, видя выключенную камеру, заблокирует отправку видео (recvonly)
+                pc.getTransceivers().forEach(t => {
+                    if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
+                        t.direction = 'sendrecv';
+                    }
+                });
+                // ---------------------------------------------------------------------------
 
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
@@ -7581,7 +7543,7 @@
                     status: 'connected'
                 });
 
-                updateCallStatus("Обмен шифрованием...");
+                updateCallStatus("Обмен шифрованием..."); // Тот, кто берет трубку, тоже видит этот статус
 
             } catch (e) {
                 console.error("Ошибка при ответе:", e);
@@ -7610,13 +7572,13 @@
         async function toggleCamera() {
             if (!pc) return;
 
-            const videoTc = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video');
-            if (!videoTc) return;
+            // Надежно находим наш видеоканал
+            const videoTransceiver = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video');
+            if (!videoTransceiver) return;
 
-            const btnCam = document.getElementById('btnCam');
-            const isCamCurrentlyOff = btnCam.classList.contains('muted-state');
+            const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
 
-            if (isCamCurrentlyOff) {
+            if (!currentTrack) {
                 // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
@@ -7625,45 +7587,31 @@
                     const newTrack = stream.getVideoTracks()[0];
 
                     if (!localStream) localStream = new MediaStream();
-
-                    const oldTrack = localStream.getVideoTracks()[0];
-                    if (oldTrack) {
-                        oldTrack.stop();
-                        localStream.removeTrack(oldTrack);
-                    }
-
                     localStream.addTrack(newTrack);
                     document.getElementById('localVideo').srcObject = localStream;
 
-                    await videoTc.sender.replaceTrack(newTrack);
-
-                    // МАГИЯ: Даем сигнал другу "ЭЙ, Я ВКЛЮЧИЛ КАМЕРУ!"
-                    rtdb.ref(`call_sessions/${currentCallId}/cam_${currentUser.uid}`).set(true);
+                    // Мгновенно отправляем видео собеседнику
+                    await videoTransceiver.sender.replaceTrack(newTrack);
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
                 } catch (e) { console.error("Ошибка камеры:", e); }
             } else {
                 // --- ВЫКЛЮЧАЕМ КАМЕРУ ---
-                const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
-                if (currentTrack) {
-                    currentTrack.stop();
-                    localStream.removeTrack(currentTrack);
-                }
+                currentTrack.stop();
+                localStream.removeTrack(currentTrack);
 
-                await videoTc.sender.replaceTrack(null);
+                // Убираем видео, собеседник увидит черный экран с аватаркой
+                await videoTransceiver.sender.replaceTrack(null);
 
-                // Сигнал другу "Я выключил"
-                rtdb.ref(`call_sessions/${currentCallId}/cam_${currentUser.uid}`).set(false);
-
-                document.getElementById('localVideo').srcObject = localStream;
                 updateCamBtnUI(false);
+                document.getElementById('localVideo').srcObject = localStream;
             }
         }
 
-        
 
-        
+
+
         function updateCamBtnUI(enabled) {
             const btn = document.getElementById('btnCam');
             const iconOn = document.getElementById('iconCamOn');
@@ -8984,24 +8932,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                    <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                    <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                    <div class="upload-spinner"></div>
-                                                    </div>
-                                                    `;
+                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                        <div class="upload-spinner"></div>
+                                                        </div>
+                                                        `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                    <div class="chat-file-card" style="opacity: 0.7;">
-                                                    <div class="file-icon">📄</div>
-                                                    <div class="file-info">
-                                                    <div class="file-name">${file.name}</div>
-                                                    <div class="file-action">Загрузка...</div>
-                                                    </div>
-                                                    <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                    </div>
-                                                    `;
+                                                        <div class="chat-file-card" style="opacity: 0.7;">
+                                                        <div class="file-icon">📄</div>
+                                                        <div class="file-info">
+                                                        <div class="file-name">${file.name}</div>
+                                                        <div class="file-action">Загрузка...</div>
+                                                        </div>
+                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                        </div>
+                                                        `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -10089,14 +10037,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                                                <div class="search-msg-content">
-                                                                    <div class="search-msg-header">
-                                                                        <span class="search-msg-name">${res.name}</span>
-                                                                        <span class="search-msg-time">${res.time}</span>
+                                                                    <div class="search-msg-content">
+                                                                        <div class="search-msg-header">
+                                                                            <span class="search-msg-name">${res.name}</span>
+                                                                            <span class="search-msg-time">${res.time}</span>
+                                                                        </div>
+                                                                        <div class="search-msg-text">${res.text}</div>
                                                                     </div>
-                                                                    <div class="search-msg-text">${res.text}</div>
-                                                                </div>
-                                                            `;
+                                                                `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -10523,7 +10471,7 @@
             swipeStartY = touch.clientY;
 
             // 🔥 ИСПРАВЛЕНИЕ: Если свайп начинается от левого края экрана (меньше 40px),
-            // мы полностью отключаем наш скрипт. Это позволит родному жесту 
+            // мы полностью отключаем наш скрипт. Это позволит родному жесту
             // "Назад" на iPhone работать идеально плавно и без лагов.
             if (swipeStartX < 40) {
                 swipeTarget = null;
