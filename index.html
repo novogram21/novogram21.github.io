@@ -7081,25 +7081,25 @@
             tick();
             callTimerInt = setInterval(tick, 1000);
         }
+        let screenStream = null;
+
         function setupPeerConnection() {
             candidateQueue = [];
             console.log("🛠️ Создаем RTCPeerConnection...");
             pc = new RTCPeerConnection(dynamicIceServers);
 
-            // СОЗДАЕМ ТРАНСИВЕРЫ (Слоты)
-            // Аудио всегда работает, видео по умолчанию "inactive" (выключено и не светится)
-            pc.addTransceiver('video', { direction: 'inactive' });
+            // 🔥 ГЛАВНЫЙ СЕКРЕТ: Сразу создаем 2 канала (Аудио и Видео)
+            // Даже если камера выключена, мы пускаем туда "пустоту", чтобы не делать пересогласование
+            pc.addTransceiver('audio', { direction: 'sendrecv' });
+            pc.addTransceiver('video', { direction: 'sendrecv' });
 
             pc.oniceconnectionstatechange = () => {
                 console.log("📡 [ICE State]:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
                         isConnected = true; wasCallConnected = true;
-
-                        // Прячем текст статуса и показываем чистый таймер
                         document.getElementById('callStatusText').style.display = 'none';
                         document.getElementById('callTimer').style.display = 'block';
-
                         stopAllTones(); startTimer(); startPing();
                     }
                 }
@@ -7112,14 +7112,12 @@
                 console.log("🎥 Получен поток:", e.track.kind);
                 const remoteVid = document.getElementById('remoteVideo');
 
-                // Если поток пришел цельным объектом — используем его
-                if (e.streams && e.streams[0]) {
-                    remoteVid.srcObject = e.streams[0];
-                } else {
-                    // Если браузер прислал голый трек (особенность некоторых версий Safari) — собираем поток вручную
-                    if (!remoteVid.srcObject) {
-                        remoteVid.srcObject = new MediaStream();
-                    }
+                if (!remoteVid.srcObject) {
+                    remoteVid.srcObject = new MediaStream();
+                }
+
+                // Добавляем трек аккуратно, чтобы не было дублей
+                if (!remoteVid.srcObject.getTracks().find(t => t.kind === e.track.kind)) {
                     remoteVid.srcObject.addTrack(e.track);
                 }
 
@@ -7219,49 +7217,49 @@
         }
         async function getMedia(requestVideo = false) {
             try {
-                // 🔥 ЗАЩИТА 1: Проверяем, поддерживает ли браузер/WebView звонки 
-                // (работает только на HTTPS или в приложениях)
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error("Браузер блокирует камеру/микрофон (требуется HTTPS)");
+                    throw new Error("Браузер блокирует микрофон (требуется HTTPS или приложение)");
                 }
 
-                // 1. Сначала всегда запрашиваем только аудио, чтобы звонок начался
-                const constraints = {
-                    audio: true,
-                    video: false
-                };
-
-                // Если мы явно хотим начать с видео, меняем настройки
+                const constraints = { audio: true, video: false };
                 if (requestVideo) {
                     constraints.video = {
                         facingMode: { ideal: currentFacingMode },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        width: { ideal: 1280 }, height: { ideal: 720 }
                     };
                 }
 
-                // Пробуем получить поток
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
-
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
-                // Добавляем треки в PeerConnection
-                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+                // 🔥 ВМЕСТО addTrack МЫ ВСТАВЛЯЕМ ПОТОК В УЖЕ ЗАРАНЕЕ СОЗДАННЫЕ СЛОТЫ
+                const transceivers = pc.getTransceivers();
+                const audioTransceiver = transceivers.find(t => t.receiver.track.kind === 'audio');
+                const videoTransceiver = transceivers.find(t => t.receiver.track.kind === 'video');
 
-                // Если видео не запрашивали, кнопка камеры должна быть "выкл"
-                if (!requestVideo) {
-                    updateCamBtnUI(false);
-                } else {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTransceiver && audioTrack) {
+                    await audioTransceiver.sender.replaceTrack(audioTrack);
+                }
+
+                if (requestVideo) {
+                    const videoTrack = localStream.getVideoTracks()[0];
+                    if (videoTransceiver && videoTrack) {
+                        await videoTransceiver.sender.replaceTrack(videoTrack);
+                    }
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
+                } else {
+                    if (videoTransceiver) await videoTransceiver.sender.replaceTrack(null);
+                    updateCamBtnUI(false);
                 }
 
                 setTimeout(forceEarpiece, 500);
 
             } catch (e) {
                 console.error("🚨 Ошибка медиа:", e);
-                throw e; // Пробрасываем ошибку дальше в startCall
+                throw e;
             }
         }
 
@@ -7319,63 +7317,46 @@
 
         async function switchCamera() {
             if (!pc || !localStream) return;
+            const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
+            if (!videoTransceiver) return;
 
-            // 1. Находим отправителя видео (Sender)
-            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-            if (!sender) return;
-
-            // Если был шаринг экрана — выключаем его правильно
-            if (sender.track && sender.track.label && sender.track.label.toLowerCase().includes('screen')) {
-                stopScreen(sender);
-            }
-
-            // 2. Находим старый видео-трек
             const oldVideoTrack = localStream.getVideoTracks()[0];
-
-            // Запоминаем состояние (включено видео или выключено кнопкой)
             const wasEnabled = oldVideoTrack ? oldVideoTrack.enabled : true;
-
-            // 3. Определяем следующую камеру
             const nextFacing = (currentFacingMode === 'user') ? 'environment' : 'user';
 
-            // 4. ВАЖНО: Останавливаем ТОЛЬКО видео. Аудио не трогаем!
             if (oldVideoTrack) oldVideoTrack.stop();
 
-            // 5. Получаем новый видео-поток (audio: false, так как микрофон у нас уже есть)
             let newStream;
             try {
-                newStream = await getStreamForFacing(nextFacing, false);
+                newStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: nextFacing }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
             } catch (e) {
-                console.error(e);
                 alert("Не удалось переключить камеру");
                 return;
             }
 
             const newVideoTrack = newStream.getVideoTracks()[0];
-            newVideoTrack.enabled = wasEnabled; // Восстанавливаем состояние (если было выключено)
+            newVideoTrack.enabled = wasEnabled;
 
-            // 6. Заменяем видео-трек в соединении (собеседник увидит новую камеру)
             try {
-                await sender.replaceTrack(newVideoTrack);
+                await videoTransceiver.sender.replaceTrack(newVideoTrack);
             } catch (e) {
                 console.error("Ошибка замены трека:", e);
             }
 
-            // 7. Пересобираем локальный поток: БЕРЕМ СТАРЫЙ АУДИО + НОВОЕ ВИДЕО
-            const audioTrack = localStream.getAudioTracks()[0]; // Живой аудио-трек
-            localStream = new MediaStream(); // Новый объект потока
+            const audioTrack = localStream.getAudioTracks()[0];
+            localStream = new MediaStream();
 
             if (audioTrack) {
-                localStream.addTrack(audioTrack); // Возвращаем живой микрофон
+                localStream.addTrack(audioTrack);
             }
-            localStream.addTrack(newVideoTrack);  // Добавляем новую камеру
+            localStream.addTrack(newVideoTrack);
 
-            // 8. Обновляем <video> элемент на экране
             const videoEl = document.getElementById('localVideo');
             videoEl.srcObject = localStream;
-            videoEl.muted = true; // Себя мы не слышим
+            videoEl.muted = true;
 
-            // 9. Обновляем переменные
             currentFacingMode = nextFacing;
             setLocalMirror(currentFacingMode);
         }
@@ -7579,7 +7560,6 @@
             const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
 
             if (!currentTrack) {
-                // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -7591,27 +7571,19 @@
                     document.getElementById('localVideo').srcObject = localStream;
 
                     await videoTransceiver.sender.replaceTrack(newTrack);
-                    videoTransceiver.direction = 'sendrecv';
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
-
-                    // Сообщаем другу, что мы добавили видео (Renegotiation)
-                    handleRenegotiation();
                 } catch (e) { console.error("Ошибка камеры:", e); }
             } else {
-                // --- ВЫКЛЮЧАЕМ КАМЕРУ ПОЛНОСТЬЮ ---
-                currentTrack.stop(); // ГАСИМ ИНДИКАТОР (отключаем питание)
+                currentTrack.stop();
                 localStream.removeTrack(currentTrack);
 
+                // Отправляем другу черный экран
                 await videoTransceiver.sender.replaceTrack(null);
-                videoTransceiver.direction = 'inactive'; // Перестаем слать данные
 
                 updateCamBtnUI(false);
                 document.getElementById('localVideo').srcObject = localStream;
-
-                // Сообщаем другу, что видео пропало
-                handleRenegotiation();
             }
         }
 
@@ -7667,34 +7639,71 @@
             if (!pc) return;
 
             try {
-                // 1. Получаем поток экрана от системы
                 screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 const screenTrack = screenStream.getVideoTracks()[0];
 
-                // 2. Находим отправителя видео в соединении с другом
-                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
+                if (videoTransceiver) {
+                    // Моментально пускаем экран в трубу связи
+                    await videoTransceiver.sender.replaceTrack(screenTrack);
 
-                if (sender) {
-                    // 3. Отправляем трек экрана собеседнику!
-                    await sender.replaceTrack(screenTrack);
-
-                    // 4. Показываем экран в нашем маленьком окошке (чтобы мы видели, что транслируем)
                     document.getElementById('localVideo').srcObject = screenStream;
-
-                    // Убираем отзеркаливание, чтобы текст на экране не был задом наперед
                     document.getElementById('localVideo').classList.remove('mirror');
 
-                    // 5. Меняем дизайн кнопки
                     const btn = document.getElementById('btnScr');
                     btn.classList.add('btn-screen-on');
 
-                    // 6. Если пользователь нажмет "Остановить доступ" в системной панели браузера
-                    screenTrack.onended = () => {
-                        stopScreen(sender);
-                    };
+                    screenTrack.onended = () => stopScreen();
                 }
             } catch (e) {
-                console.error("Ошибка шаринга экрана:", e);
+                console.log("Демонстрация отменена:", e);
+            }
+        }
+
+        async function stopScreen() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+
+            const btn = document.getElementById('btnScr');
+            if (btn) btn.classList.remove('btn-screen-on');
+
+            // Восстанавливаем камеру
+            try {
+                const newCamStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+
+                const newCamTrack = newCamStream.getVideoTracks()[0];
+
+                if (localStream) {
+                    const oldTrack = localStream.getVideoTracks()[0];
+                    if (oldTrack) {
+                        localStream.removeTrack(oldTrack);
+                        oldTrack.stop();
+                    }
+                    localStream.addTrack(newCamTrack);
+                } else {
+                    localStream = newCamStream;
+                }
+
+                const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
+                if (videoTransceiver) {
+                    await videoTransceiver.sender.replaceTrack(newCamTrack);
+                }
+
+                document.getElementById('localVideo').srcObject = localStream;
+                if (currentFacingMode === 'user') {
+                    document.getElementById('localVideo').classList.add('mirror');
+                }
+                updateCamBtnUI(true);
+
+            } catch (e) {
+                console.error("Камера недоступна после экрана:", e);
+                const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
+                if (videoTransceiver) await videoTransceiver.sender.replaceTrack(null);
+                updateCamBtnUI(false);
             }
         }
 
