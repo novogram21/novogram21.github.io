@@ -7219,13 +7219,19 @@
         }
         async function getMedia(requestVideo = false) {
             try {
+                // 🔥 ЗАЩИТА 1: Проверяем, поддерживает ли браузер/WebView звонки 
+                // (работает только на HTTPS или в приложениях)
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error("Браузер блокирует камеру/микрофон (требуется HTTPS)");
+                }
+
                 // 1. Сначала всегда запрашиваем только аудио, чтобы звонок начался
                 const constraints = {
                     audio: true,
                     video: false
                 };
 
-                // Если мы явно хотим начать с видео (например, видеозвонок), меняем настройки
+                // Если мы явно хотим начать с видео, меняем настройки
                 if (requestVideo) {
                     constraints.video = {
                         facingMode: { ideal: currentFacingMode },
@@ -7234,6 +7240,7 @@
                     };
                 }
 
+                // Пробуем получить поток
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
                 document.getElementById('localVideo').srcObject = localStream;
@@ -7242,7 +7249,7 @@
                 // Добавляем треки в PeerConnection
                 localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-                // Если видео не запрашивали, кнопка камеры должна быть в состоянии "выкл"
+                // Если видео не запрашивали, кнопка камеры должна быть "выкл"
                 if (!requestVideo) {
                     updateCamBtnUI(false);
                 } else {
@@ -7254,7 +7261,7 @@
 
             } catch (e) {
                 console.error("🚨 Ошибка медиа:", e);
-                throw e;
+                throw e; // Пробрасываем ошибку дальше в startCall
             }
         }
 
@@ -7405,7 +7412,8 @@
                     addCandidateSafely(snap.val());
                 });
 
-                await getMedia(false); // Начинаем без камеры
+                // 🔥 ПЫТАЕМСЯ ВКЛЮЧИТЬ МИКРОФОН 🔥
+                await getMedia(false);
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
@@ -7435,13 +7443,13 @@
                     if (data.status === 'rejected') {
                         updateCallStatus("Занято");
                         setTimeout(() => endCall(false, true), 1500);
-                    } else if (data.status === 'ended') { // <--- ДОБАВИТЬ ЭТО
-                        endCall(false, true);             // <--- ДОБАВИТЬ ЭТО
+                    } else if (data.status === 'ended') {
+                        endCall(false, true);
                     }
 
                     if (pc && !pc.remoteDescription && data.answer) {
                         console.log("✅ Ответ получен, соединяем...");
-                        updateCallStatus("Обмен шифрованием..."); // Шаг 3: Собеседник взял трубку
+                        updateCallStatus("Обмен шифрованием...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
@@ -7449,7 +7457,19 @@
 
             } catch (err) {
                 console.error("Ошибка начала звонка:", err);
-                endCall(true);
+
+                // 🔥 ПОКАЗЫВАЕМ ПРИЧИНУ СБРОСА ЗВОНКА ПОЛЬЗОВАТЕЛЮ 🔥
+                let errMsg = err.message || err.name || "Неизвестная ошибка";
+
+                if (err.name === 'NotAllowedError' || errMsg.toLowerCase().includes('permission')) {
+                    alert("⚠️ Нет доступа к микрофону! Разрешите микрофон в настройках приложения/браузера.");
+                } else if (err.name === 'NotFoundError') {
+                    alert("⚠️ Микрофон не найден на вашем устройстве.");
+                } else {
+                    alert("❌ Звонок сброшен из-за системной ошибки:\n" + errMsg);
+                }
+
+                endCall(true); // Завершаем звонок
             }
         }
         async function answerCall() {
