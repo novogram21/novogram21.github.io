@@ -7083,19 +7083,14 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-            console.log("🛠️ Создаем RTCPeerConnection (ПРЕМИУМ РЕЖИМ)...");
+            console.log("[WebRTC: Init] 🛠️ Создаем RTCPeerConnection...");
             pc = new RTCPeerConnection(dynamicIceServers);
 
-            // ПРОФЕССИОНАЛЬНЫЙ ПОДХОД: Резервируем каналы СРАЗУ.
-            // Даже если звонок аудио, мы создаем пустой видеоканал (sendrecv).
-            // Это позволяет в любой момент включить камеру без обрыва связи и лагов.
-            pc.addTransceiver('audio', { direction: 'sendrecv' });
-            pc.addTransceiver('video', { direction: 'sendrecv' });
-
             pc.oniceconnectionstatechange = () => {
-                console.log("📡 [ICE State]:", pc.iceConnectionState);
+                console.log("[WebRTC: ICE] 📡 Статус ICE изменился на:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
+                        console.log("[WebRTC: ICE] ✅ Соединение установлено!");
                         isConnected = true; wasCallConnected = true;
                         document.getElementById('callStatusText').style.display = 'none';
                         document.getElementById('callTimer').style.display = 'block';
@@ -7103,29 +7098,34 @@
                     }
                 }
                 else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                    console.log("[WebRTC: ICE] ❌ Соединение разорвано/ошибка.");
                     endCall(false);
                 }
             };
 
             pc.ontrack = e => {
-                console.log("🎥 Получен поток:", e.track.kind);
+                console.log(`[WebRTC: Track] 🎥 Получен удаленный трек: ${e.track.kind}, id: ${e.track.id}`);
                 const remoteVid = document.getElementById('remoteVideo');
 
-                // Создаем контейнер для потока, если его еще нет
                 if (!remoteVid.srcObject) {
+                    console.log("[WebRTC: Track] Создаем новый MediaStream для входящего медиа");
                     remoteVid.srcObject = new MediaStream();
                 }
 
-                // Добавляем трек в видео-плеер
-                if (e.track.kind === 'video' || e.track.kind === 'audio') {
-                    remoteVid.srcObject.addTrack(e.track);
-                }
+                remoteVid.srcObject.addTrack(e.track);
 
-                remoteVid.play().catch(err => console.log("Ошибка автовоспроизведения:", err));
+                e.track.onunmute = () => {
+                    console.log(`[WebRTC: Track] 🔄 Трек активирован собеседником: ${e.track.kind}`);
+                    // "Пинок" плеера для мобилок
+                    if (remoteVid.srcObject) remoteVid.srcObject = remoteVid.srcObject;
+                };
+
+                remoteVid.play().catch(err => console.error("[WebRTC: Track] Ошибка автовоспроизведения:", err));
             };
 
             pc.onicecandidate = e => {
                 if (e.candidate && currentCallId) {
+                    console.log(`[WebRTC: ICE] 🧊 Отправляем кандидата: ${e.candidate.protocol}`);
                     const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
                     const path = amICaller ? 'offerCandidates' : 'answerCandidates';
                     sessionRef.child(path).push(e.candidate.toJSON());
@@ -7216,6 +7216,7 @@
             }
         }
         async function getMedia(requestVideo = false) {
+            console.log(`[WebRTC: Media] 🎤 Запрос локального медиа (видео=${requestVideo})...`);
             try {
                 const constraints = { audio: true, video: false };
                 if (requestVideo) {
@@ -7227,23 +7228,32 @@
                 }
 
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log(`[WebRTC: Media] Поток получен. Аудио: ${localStream.getAudioTracks().length}, Видео: ${localStream.getVideoTracks().length}`);
+
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
-                // Находим наши зарезервированные каналы
-                const audioTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'audio');
-                const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
+                const transceivers = pc.getTransceivers();
+                console.log(`[WebRTC: Media] Найдено трансиверов: ${transceivers.length}`);
 
-                // Привязываем реальный микрофон к аудиоканалу
+                const audioTc = transceivers.find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'audio');
+                const videoTc = transceivers.find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video');
+
                 const audioTrack = localStream.getAudioTracks()[0];
-                if (audioTrack && audioTransceiver) {
-                    await audioTransceiver.sender.replaceTrack(audioTrack);
+                const videoTrack = localStream.getVideoTracks()[0];
+
+                if (audioTc && audioTrack) {
+                    console.log(`[WebRTC: Media] Вставляем микрофон в аудио-трансивер`);
+                    await audioTc.sender.replaceTrack(audioTrack);
+                } else {
+                    console.warn(`[WebRTC: Media] ⚠️ Аудио трансивер не найден!`);
                 }
 
-                // Привязываем реальную камеру к видеоканалу (если она включена)
-                const videoTrack = localStream.getVideoTracks()[0];
-                if (videoTrack && videoTransceiver) {
-                    await videoTransceiver.sender.replaceTrack(videoTrack);
+                if (videoTc) {
+                    console.log(`[WebRTC: Media] Вставляем трек в видео-трансивер (трек: ${videoTrack ? 'ЕСТЬ' : 'ПУСТО'})`);
+                    await videoTc.sender.replaceTrack(videoTrack || null);
+                } else {
+                    console.warn(`[WebRTC: Media] ⚠️ Видео трансивер не найден! (ЭТО ПРИЧИНА ОШИБКИ, ЕСЛИ ОНА ЕСТЬ)`);
                 }
 
                 if (!requestVideo) {
@@ -7256,7 +7266,7 @@
                 setTimeout(forceEarpiece, 500);
 
             } catch (e) {
-                console.error("🚨 Ошибка медиа:", e);
+                console.error("[WebRTC: Media] ❌ Ошибка медиа:", e);
                 throw e;
             }
         }
@@ -7377,6 +7387,7 @@
         }
         async function startCall() {
             if (!currentFriendId || !currentUser) return;
+            console.log("[WebRTC: Caller] 📞 Начинаем исходящий звонок...");
             updateCallControlsVisibility();
 
             amICaller = true;
@@ -7398,18 +7409,24 @@
             const friendData = usersCache[currentFriendId] || {};
             document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
             forceEarpiece();
-            updateCallStatus("Соединение..."); // Шаг 1: Ищем собеседника
+            updateCallStatus("Соединение...");
             playConnectingTone();
 
             try {
                 setupPeerConnection();
 
+                console.log("[WebRTC: Caller] 🧱 Резервируем пустые трансиверы аудио и видео...");
+                pc.addTransceiver('audio', { direction: 'sendrecv' });
+                pc.addTransceiver('video', { direction: 'sendrecv' });
+
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                await getMedia(false); // Начинаем без камеры
+                console.log("[WebRTC: Caller] Запрашиваем локальное медиа...");
+                await getMedia(false);
 
+                console.log("[WebRTC: Caller] Создаем Offer...");
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
@@ -7429,7 +7446,7 @@
                     status: 'ringing'
                 });
 
-                updateCallStatus("Звонок..."); // Шаг 2: Пошли гудки
+                updateCallStatus("Звонок...");
 
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
@@ -7438,24 +7455,25 @@
                     if (data.status === 'rejected') {
                         updateCallStatus("Занято");
                         setTimeout(() => endCall(false, true), 1500);
-                    } else if (data.status === 'ended') { // <--- ДОБАВИТЬ ЭТО
-                        endCall(false, true);             // <--- ДОБАВИТЬ ЭТО
+                    } else if (data.status === 'ended') {
+                        endCall(false, true);
                     }
 
                     if (pc && !pc.remoteDescription && data.answer) {
-                        console.log("✅ Ответ получен, соединяем...");
-                        updateCallStatus("Обмен шифрованием..."); // Шаг 3: Собеседник взял трубку
+                        console.log("[WebRTC: Caller] ✅ Получен Answer от собеседника, сохраняем...");
+                        updateCallStatus("Обмен шифрованием...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
                 });
 
             } catch (err) {
-                console.error("Ошибка начала звонка:", err);
+                console.error("[WebRTC: Caller] ❌ Ошибка начала звонка:", err);
                 endCall(true);
             }
         }
         async function answerCall() {
+            console.log("[WebRTC: Receiver] 📲 Принимаем входящий звонок...");
             document.getElementById('ringtone').pause();
             document.getElementById('incomingPopup').style.display = 'none';
             document.getElementById('callScreen').style.display = 'flex';
@@ -7490,7 +7508,6 @@
                 const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
                 document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
 
-                // 1. Создаем коннект и резервируем трансиверы
                 setupPeerConnection();
 
                 sessionRef.on('value', async snap => {
@@ -7506,12 +7523,14 @@
                     addCandidateSafely(snap.val());
                 });
 
-                // 2. Подключаем аудио в трансиверы
-                await getMedia(false);
-
+                console.log("[WebRTC: Receiver] Применяем RemoteDescription (Offer) для открытия каналов...");
                 await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                 await flushCandidateQueue();
 
+                console.log("[WebRTC: Receiver] Теперь запрашиваем микрофон и кладем в открытые каналы...");
+                await getMedia(false);
+
+                console.log("[WebRTC: Receiver] Создаем Answer...");
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
 
@@ -7523,7 +7542,7 @@
                 updateCallStatus("Обмен шифрованием...");
 
             } catch (e) {
-                console.error("Ошибка при ответе:", e);
+                console.error("[WebRTC: Receiver] ❌ Ошибка при ответе:", e);
                 endCall(true);
             }
         }
@@ -7547,28 +7566,38 @@
             }
         }
         async function toggleCamera() {
-            if (!pc) return;
+            console.log("[WebRTC: Camera] 📹 Нажата кнопка камеры");
+            if (!pc) {
+                console.error("[WebRTC: Camera] Нет активного подключения!");
+                return;
+            }
 
-            // Ищем наш зарезервированный видео-канал
-            const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
-            if (!videoTransceiver) return;
+            const videoTc = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video');
+            if (!videoTc) {
+                console.error("[WebRTC: Camera] ❌ КРИТИЧЕСКАЯ ОШИБКА: Видео-трансивер отсутствует. Камеру включить невозможно.");
+                alert("Ошибка связи: видеоканал не был создан.");
+                return;
+            }
 
             const btnCam = document.getElementById('btnCam');
             const isCamCurrentlyOff = btnCam.classList.contains('muted-state');
+            console.log(`[WebRTC: Camera] Сейчас камера: ${isCamCurrentlyOff ? 'ВЫКЛЮЧЕНА' : 'ВКЛЮЧЕНА'}`);
 
             if (isCamCurrentlyOff) {
                 // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
+                    console.log("[WebRTC: Camera] Запрашиваем доступ к объективу...");
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
                     });
                     const newTrack = stream.getVideoTracks()[0];
+                    console.log(`[WebRTC: Camera] Доступ получен: ${newTrack.label}`);
 
                     if (!localStream) localStream = new MediaStream();
 
-                    // Удаляем старый видео-трек из потока
                     const oldTrack = localStream.getVideoTracks()[0];
                     if (oldTrack) {
+                        console.log("[WebRTC: Camera] Удаляем старый видео-трек");
                         oldTrack.stop();
                         localStream.removeTrack(oldTrack);
                     }
@@ -7576,25 +7605,30 @@
                     localStream.addTrack(newTrack);
                     document.getElementById('localVideo').srcObject = localStream;
 
-                    // Моментально отправляем видео в наш открытый канал
-                    await videoTransceiver.sender.replaceTrack(newTrack);
+                    console.log("[WebRTC: Camera] Отправляем видео собеседнику (replaceTrack)...");
+                    await videoTc.sender.replaceTrack(newTrack);
+                    console.log("[WebRTC: Camera] ✅ Видео успешно отправлено!");
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
-                } catch (e) { console.error("Ошибка камеры:", e); }
+                } catch (e) {
+                    console.error("[WebRTC: Camera] ❌ Ошибка включения камеры:", e);
+                }
             } else {
                 // --- ВЫКЛЮЧАЕМ КАМЕРУ ---
+                console.log("[WebRTC: Camera] Выключаем камеру...");
                 const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
                 if (currentTrack) {
                     currentTrack.stop();
                     localStream.removeTrack(currentTrack);
                 }
 
-                // Передаем "пустоту" в канал. У собеседника картинка просто замрет или погаснет, а соединение останется стабильным!
-                await videoTransceiver.sender.replaceTrack(null);
+                console.log("[WebRTC: Camera] Отправляем пустоту (null) собеседнику...");
+                await videoTc.sender.replaceTrack(null);
 
                 document.getElementById('localVideo').srcObject = localStream;
                 updateCamBtnUI(false);
+                console.log("[WebRTC: Camera] ✅ Камера выключена.");
             }
         }
 
