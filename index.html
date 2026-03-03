@@ -22,10 +22,10 @@
         }
 
         html {
-        background-color: #17181c !important;
-        overscroll-behavior: none;
-        height: 100%;
-}
+            /* Тот самый цвет, чтобы системная зона слилась с приложением */
+            background-color: #121316 !important;
+        }
+
         /* --- ЗАПРЕТ КОПИРОВАНИЯ И ВЫДЕЛЕНИЯ --- */
         body {
             -webkit-user-select: none; /* Safari */
@@ -38,15 +38,20 @@
             margin: 0;
             display: flex;
             /* --- ПРАВИЛЬНАЯ ФИКСАЦИЯ ДЛЯ iOS PWA --- */
-            position: fixed;
+            position: relative;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            height: 100%;
+            height: 100dvh;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box; /* чтобы padding не ломал height */
             width: 100%;
+            /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
+            /* Подстраховка для Safari */
+            min-height: -webkit-fill-available;
             overflow: hidden;
-            overscroll-behavior: none;
+            overscroll-behavior-y: none;
         }
 
             /* Фикс чёрной полосы под Home Indicator на iPhone в PWA */
@@ -7634,23 +7639,103 @@
                 iconOff.style.display = 'block';
             }
         }
+        let screenStream = null; // Глобальная переменная для хранения потока экрана
+
         async function toggleScreen() {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             if (isIOS) { alert("Демонстрация экрана не поддерживается на iPhone."); return; }
-            if (!localStream) return;
+            if (!pc) return;
+
             try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                const screenTrack = stream.getVideoTracks()[0];
-                const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                // 1. Получаем поток экрана от системы
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const screenTrack = screenStream.getVideoTracks()[0];
+
+                // 2. Находим отправителя видео в соединении с другом
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+
                 if (sender) {
-                    sender.replaceTrack(screenTrack);
-                    document.getElementById('localVideo').srcObject = stream;
-                    const btn = document.getElementById('btnScr'); const lbl = document.getElementById('lblScr');
-                    btn.classList.add('btn-screen-on'); lbl.innerText = 'Ост. стрим';
-                    screenTrack.onended = () => stopScreen(sender);
+                    // 3. Отправляем трек экрана собеседнику!
+                    await sender.replaceTrack(screenTrack);
+
+                    // 4. Показываем экран в нашем маленьком окошке (чтобы мы видели, что транслируем)
+                    document.getElementById('localVideo').srcObject = screenStream;
+
+                    // Убираем отзеркаливание, чтобы текст на экране не был задом наперед
+                    document.getElementById('localVideo').classList.remove('mirror');
+
+                    // 5. Меняем дизайн кнопки
+                    const btn = document.getElementById('btnScr');
+                    btn.classList.add('btn-screen-on');
+
+                    // 6. Если пользователь нажмет "Остановить доступ" в системной панели браузера
+                    screenTrack.onended = () => {
+                        stopScreen(sender);
+                    };
                 }
-            } catch (e) { console.log(e); }
+            } catch (e) {
+                console.error("Ошибка шаринга экрана:", e);
+            }
         }
+
+        async function stopScreen(sender) {
+            // 1. Убиваем поток экрана, чтобы пропала плашка "Идет доступ к экрану"
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+
+            // 2. Возвращаем кнопку в нормальное состояние
+            const btn = document.getElementById('btnScr');
+            if (btn) btn.classList.remove('btn-screen-on');
+
+            // 3. Пытаемся заново получить камеру (так как старая могла уснуть)
+            try {
+                const newCamStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+
+                const newCamTrack = newCamStream.getVideoTracks()[0];
+
+                // 4. Обновляем наш локальный поток
+                if (localStream) {
+                    // Удаляем старый видео трек, если он был
+                    const oldTrack = localStream.getVideoTracks()[0];
+                    if (oldTrack) {
+                        localStream.removeTrack(oldTrack);
+                        oldTrack.stop();
+                    }
+                    localStream.addTrack(newCamTrack);
+                } else {
+                    localStream = newCamStream;
+                }
+
+                // 5. Отправляем камеру собеседнику
+                if (sender) {
+                    await sender.replaceTrack(newCamTrack);
+                } else {
+                    const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (videoSender) await videoSender.replaceTrack(newCamTrack);
+                }
+
+                // 6. Показываем камеру в нашем маленьком окошке
+                document.getElementById('localVideo').srcObject = localStream;
+
+                // Возвращаем отзеркаливание, если это фронталка
+                if (currentFacingMode === 'user') {
+                    document.getElementById('localVideo').classList.add('mirror');
+                }
+
+                updateCamBtnUI(true);
+
+            } catch (e) {
+                console.error("Не удалось восстановить камеру после демонстрации экрана:", e);
+                // Если камеру не дали, просто отключаем передачу видео
+                if (sender) await sender.replaceTrack(null);
+                updateCamBtnUI(false);
+            }
+        }
+
         function stopScreen(sender) {
             const camTrack = localStream.getVideoTracks()[0];
             sender.replaceTrack(camTrack);
