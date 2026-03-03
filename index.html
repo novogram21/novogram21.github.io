@@ -7223,19 +7223,13 @@
                 };
 
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-                // МАГИЯ: Если звонок начался без видео, суем в поток пустышку, чтобы канал не закрылся
-                if (!requestVideo) {
-                    localStream.addTrack(getEmptyVideoTrack());
-                }
-
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
+                // 2. ВСТАВЛЯЕМ ТРЕКИ В ГОТОВЫЕ КАНАЛЫ (Никаких pc.addTrack!)
                 const audioTrack = localStream.getAudioTracks()[0];
                 const videoTrack = localStream.getVideoTracks()[0];
 
-                // Находим забронированные слоты
                 const audioSender = pc.getTransceivers().find(t => t.receiver.track.kind === 'audio').sender;
                 const videoSender = pc.getTransceivers().find(t => t.receiver.track.kind === 'video').sender;
 
@@ -7311,34 +7305,45 @@
         async function switchCamera() {
             if (!pc || !localStream) return;
 
-            const isCamOn = !document.getElementById('btnCam').classList.contains('muted-state');
-            if (!isCamOn) return; // Не переключаем, если камера сейчас выключена
+            const videoSender = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video').sender;
+            if (!videoSender) return;
 
-            const videoSender = pc.getTransceivers().find(t => t.receiver.track.kind === 'video').sender;
+            const oldVideoTrack = localStream.getVideoTracks()[0];
+            const wasEnabled = oldVideoTrack ? oldVideoTrack.enabled : true;
             const nextFacing = (currentFacingMode === 'user') ? 'environment' : 'user';
 
+            if (oldVideoTrack) oldVideoTrack.stop();
+
+            let newStream;
             try {
-                const newStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: nextFacing }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                });
-                const newVideoTrack = newStream.getVideoTracks()[0];
-
-                const oldTrack = localStream.getVideoTracks()[0];
-                if (oldTrack) {
-                    oldTrack.stop();
-                    localStream.removeTrack(oldTrack);
-                }
-
-                localStream.addTrack(newVideoTrack);
-                document.getElementById('localVideo').srcObject = localStream;
-
-                await videoSender.replaceTrack(newVideoTrack);
-
-                currentFacingMode = nextFacing;
-                setLocalMirror(currentFacingMode);
+                newStream = await getStreamForFacing(nextFacing, false);
             } catch (e) {
-                console.error("Ошибка смены камеры", e);
+                console.error(e);
+                alert("Не удалось переключить камеру");
+                return;
             }
+
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            newVideoTrack.enabled = wasEnabled;
+
+            try {
+                await videoSender.replaceTrack(newVideoTrack);
+            } catch (e) {
+                console.error("Ошибка замены трека:", e);
+            }
+
+            const audioTrack = localStream.getAudioTracks()[0];
+            localStream = new MediaStream();
+
+            if (audioTrack) localStream.addTrack(audioTrack);
+            localStream.addTrack(newVideoTrack);
+
+            const videoEl = document.getElementById('localVideo');
+            videoEl.srcObject = localStream;
+            videoEl.muted = true;
+
+            currentFacingMode = nextFacing;
+            setLocalMirror(currentFacingMode);
         }
         async function startCall() {
             if (!currentFriendId || !currentUser) return;
@@ -7520,49 +7525,42 @@
             }
         }
         async function toggleCamera() {
-            if (!pc || !localStream) return;
+            if (!pc) return;
 
-            const videoSender = pc.getTransceivers().find(t => t.receiver.track.kind === 'video').sender;
-            const isCamOn = !document.getElementById('btnCam').classList.contains('muted-state');
+            // Надежно находим забронированный канал видео
+            const videoSender = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video').sender;
+            if (!videoSender) return;
 
-            if (!isCamOn) {
-                // --- ВКЛЮЧАЕМ РЕАЛЬНУЮ КАМЕРУ ---
+            const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
+
+            if (!currentTrack) {
+                // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
                     });
-                    const realVideoTrack = stream.getVideoTracks()[0];
+                    const newTrack = stream.getVideoTracks()[0];
 
-                    // Удаляем старый трек (пустышку)
-                    const oldTrack = localStream.getVideoTracks()[0];
-                    if (oldTrack) {
-                        oldTrack.stop();
-                        localStream.removeTrack(oldTrack);
-                    }
-
-                    localStream.addTrack(realVideoTrack);
+                    if (!localStream) localStream = new MediaStream();
+                    localStream.addTrack(newTrack);
                     document.getElementById('localVideo').srcObject = localStream;
 
-                    // Мгновенно закидываем реальное видео в трубу
-                    await videoSender.replaceTrack(realVideoTrack);
+                    // Мгновенно отправляем видео
+                    await videoSender.replaceTrack(newTrack);
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
                 } catch (e) { console.error("Ошибка камеры:", e); }
             } else {
-                // --- ВЫКЛЮЧАЕМ КАМЕРУ (ВОЗВРАЩАЕМ ПУСТЫШКУ) ---
-                const realVideoTrack = localStream.getVideoTracks()[0];
-                if (realVideoTrack) {
-                    realVideoTrack.stop();
-                    localStream.removeTrack(realVideoTrack);
-                }
+                // --- ВЫКЛЮЧАЕМ КАМЕРУ ---
+                currentTrack.stop();
+                localStream.removeTrack(currentTrack);
 
-                const emptyTrack = getEmptyVideoTrack();
-                localStream.addTrack(emptyTrack);
-                document.getElementById('localVideo').srcObject = localStream;
+                // Пускаем пустоту в канал
+                await videoSender.replaceTrack(null);
 
-                await videoSender.replaceTrack(emptyTrack);
                 updateCamBtnUI(false);
+                document.getElementById('localVideo').srcObject = localStream;
             }
         }
 
@@ -7587,39 +7585,38 @@
         async function toggleScreen() {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             if (isIOS) { alert("Демонстрация экрана не поддерживается на iPhone."); return; }
-            if (!pc || !localStream) return;
+            if (!localStream) return;
 
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 const screenTrack = stream.getVideoTracks()[0];
 
-                const videoSender = pc.getTransceivers().find(t => t.receiver.track.kind === 'video').sender;
+                const videoSender = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video').sender;
 
-                const oldTrack = localStream.getVideoTracks()[0];
-                if (oldTrack) {
-                    oldTrack.stop();
-                    localStream.removeTrack(oldTrack);
+                if (videoSender) {
+                    await videoSender.replaceTrack(screenTrack);
+                    document.getElementById('localVideo').srcObject = stream;
+
+                    const btn = document.getElementById('btnScr');
+                    const lbl = document.getElementById('lblScr'); // Опционально, если у тебя есть подпись к кнопке
+                    if (btn) btn.classList.add('btn-screen-on');
+                    if (lbl) lbl.innerText = 'Ост. стрим';
+
+                    screenTrack.onended = () => stopScreen(videoSender);
                 }
+            } catch (e) { console.log("Стрим отменен", e); }
+        }
 
-                localStream.addTrack(screenTrack);
-                document.getElementById('localVideo').srcObject = localStream;
-                await videoSender.replaceTrack(screenTrack);
+        function stopScreen(sender) {
+            const camTrack = localStream ? localStream.getVideoTracks()[0] : null;
+            sender.replaceTrack(camTrack || null);
 
-                const btn = document.getElementById('btnScr');
-                if (btn) btn.classList.add('btn-screen-on');
+            document.getElementById('localVideo').srcObject = localStream;
 
-                // Если юзер закрыл доступ через плашку браузера
-                screenTrack.onended = () => {
-                    const emptyTrack = getEmptyVideoTrack();
-                    localStream.removeTrack(screenTrack);
-                    localStream.addTrack(emptyTrack);
-                    document.getElementById('localVideo').srcObject = localStream;
-                    videoSender.replaceTrack(emptyTrack);
-
-                    if (btn) btn.classList.remove('btn-screen-on');
-                    updateCamBtnUI(false);
-                };
-            } catch (e) { console.log("Отмена демонстрации:", e); }
+            const btn = document.getElementById('btnScr');
+            const lbl = document.getElementById('lblScr');
+            if (btn) btn.classList.remove('btn-screen-on');
+            if (lbl) lbl.innerText = 'Экран';
         }
         function listenForIncomingCalls() {
             if (!currentUser) return;
@@ -11125,16 +11122,7 @@
             document.getElementById('callScreen').style.display = 'flex';
         }
 
-        function getEmptyVideoTrack() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 2;
-            canvas.height = 2;
-            canvas.getContext('2d').fillRect(0, 0, 2, 2); // Рисуем черный квадрат
-            const stream = canvas.captureStream(1); // 1 кадр в секунду (минимальная нагрузка)
-            const track = stream.getVideoTracks()[0];
-            track.enabled = false; // Полностью глушим пиксели, чтобы не тратить трафик
-            return track;
-        }
+
 
     </script>
 
