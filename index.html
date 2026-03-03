@@ -7110,20 +7110,43 @@
 
             pc.ontrack = e => {
                 console.log("🎥 Получен поток:", e.track.kind);
-                const remoteVid = document.getElementById('remoteVideo');
 
-                // Если поток пришел цельным объектом — используем его
-                if (e.streams && e.streams[0]) {
-                    remoteVid.srcObject = e.streams[0];
-                } else {
-                    // Если браузер прислал голый трек (особенность некоторых версий Safari) — собираем поток вручную
+                // --- РАЗДЕЛЯЕМ ЗВУК И ВИДЕО ---
+
+                // 1. Обработка ЗВУКА (в скрытый независимый тег)
+                if (e.track.kind === 'audio') {
+                    // Создаем невидимый аудиоплеер, если его еще нет
+                    let remoteAudio = document.getElementById('remoteAudio');
+                    if (!remoteAudio) {
+                        remoteAudio = document.createElement('audio');
+                        remoteAudio.id = 'remoteAudio';
+                        remoteAudio.autoplay = true;
+                        remoteAudio.playsInline = true;
+                        remoteAudio.style.display = 'none'; // Полностью скрыт
+                        document.body.appendChild(remoteAudio);
+                    }
+
+                    if (!remoteAudio.srcObject) {
+                        remoteAudio.srcObject = new MediaStream();
+                    }
+                    remoteAudio.srcObject.addTrack(e.track);
+                    remoteAudio.play().catch(err => console.log("Ошибка аудио:", err));
+                }
+                // 2. Обработка ВИДЕО (в видимый тег на экране)
+                else if (e.track.kind === 'video') {
+                    const remoteVid = document.getElementById('remoteVideo');
                     if (!remoteVid.srcObject) {
                         remoteVid.srcObject = new MediaStream();
                     }
                     remoteVid.srcObject.addTrack(e.track);
-                }
 
-                remoteVid.play().catch(err => console.log("Ошибка воспроизведения:", err));
+                    // "Пинок" плеера, если браузер вдруг задумается
+                    e.track.onunmute = () => {
+                        if (remoteVid.srcObject) remoteVid.srcObject = remoteVid.srcObject;
+                    };
+
+                    remoteVid.play().catch(err => console.log("Ошибка видео:", err));
+                }
             };
 
             pc.onicecandidate = e => {
@@ -7389,8 +7412,12 @@
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
 
+            
             isEarpiece = true;
-            if (window.mauiInterop) window.mauiInterop.postMessage("audio_ear");
+            if (window.mauiInterop) {
+                window.mauiInterop.postMessage("audio_ear");
+                window.mauiInterop.postMessage("enable_proximity"); // Включаем датчик
+            }
 
             const friendData = usersCache[currentFriendId] || {};
             document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
@@ -7459,7 +7486,10 @@
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             forceEarpiece();
             isEarpiece = true;
-            if (window.mauiInterop) window.mauiInterop.postMessage("audio_ear");
+            if (window.mauiInterop) {
+                window.mauiInterop.postMessage("audio_ear");
+                window.mauiInterop.postMessage("enable_proximity"); // Включаем датчик
+            }
 
             updateCallStatus("Соединение...");
             updateCallControlsVisibility();
@@ -7593,6 +7623,8 @@
                     // Мгновенно отправляем видео собеседнику
                     await videoTransceiver.sender.replaceTrack(newTrack);
 
+
+                    if (window.mauiInterop) window.mauiInterop.postMessage("disable_proximity"); // Выключаем датчик для видео
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
                 } catch (e) { console.error("Ошибка камеры:", e); }
@@ -7807,10 +7839,12 @@
                 document.getElementById('incomingPopup').style.display = 'none';
             }
         }
-        function endCallUser() {
-            endCall(true, false);
-        }
         function endCall(isInitiator = true, isRemote = false) {
+            // Выключаем датчик при завершении звонка
+            if (window.mauiInterop) {
+                window.mauiInterop.postMessage("disable_proximity");
+            }
+
             // 1. Блок логики: Уведомления и чат
             try {
                 const ringtone = document.getElementById('ringtone');
@@ -7856,6 +7890,13 @@
                 if (localStream) localStream.getTracks().forEach(t => t.stop());
                 if (callTimerInt) clearInterval(callTimerInt);
                 if (pingInterval) clearInterval(pingInterval);
+
+                // Останавливаем невидимый аудио-плеер
+                const remoteAudio = document.getElementById('remoteAudio');
+                if (remoteAudio) {
+                    remoteAudio.pause();
+                    remoteAudio.srcObject = null;
+                }
 
                 const statusText = document.getElementById('callStatusText');
                 if (statusText) {
@@ -10234,30 +10275,31 @@
         }
 
         // 2. Функция переключения
-        function toggleSpeaker() {
-            isEarpiece = !isEarpiece;
-            const btn = document.getElementById('btnSpeaker');
+            function toggleSpeaker() {
+                isEarpiece = !isEarpiece;
+                const btn = document.getElementById('btnSpeaker');
 
-            const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
-            const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+                const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+                const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
 
-            if (isEarpiece) {
-                btn.innerHTML = iconEar;
-                btn.classList.add('muted-state');
-            } else {
-                btn.innerHTML = iconLoud;
-                btn.classList.remove('muted-state');
+                if (isEarpiece) {
+                    btn.innerHTML = iconEar;
+                    btn.classList.add('muted-state');
+
+                    if (window.mauiInterop) {
+                        window.mauiInterop.postMessage("audio_ear");
+                        window.mauiInterop.postMessage("enable_proximity"); // Вернули к уху - включили датчик
+                    }
+                } else {
+                    btn.innerHTML = iconLoud;
+                    btn.classList.remove('muted-state');
+
+                    if (window.mauiInterop) {
+                        window.mauiInterop.postMessage("audio_loud");
+                        window.mauiInterop.postMessage("disable_proximity"); // Громкая связь - выключили датчик
+                    }
+                }
             }
-
-            // Отправляем строго ту текстовую команду, которую ожидает твой C#
-            const command = isEarpiece ? "audio_ear" : "audio_loud";
-
-            if (window.mauiInterop && window.mauiInterop.postMessage) {
-                window.mauiInterop.postMessage(command);
-            } else if (window.chrome && window.chrome.webview) {
-                window.chrome.webview.postMessage(command);
-            }
-        }
 
         // 3. Вызови проверку кнопок в момент открытия экрана звонка
         // Добавь это внутрь функции startCall() и answerCall()
