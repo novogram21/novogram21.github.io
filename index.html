@@ -22,10 +22,10 @@
         }
 
         html {
-            /* Тот самый цвет, чтобы системная зона слилась с приложением */
-            background-color: #121316 !important;
-        }
-
+        background-color: #17181c !important;
+        overscroll-behavior: none;
+        height: 100%;
+}
         /* --- ЗАПРЕТ КОПИРОВАНИЯ И ВЫДЕЛЕНИЯ --- */
         body {
             -webkit-user-select: none; /* Safari */
@@ -38,20 +38,15 @@
             margin: 0;
             display: flex;
             /* --- ПРАВИЛЬНАЯ ФИКСАЦИЯ ДЛЯ iOS PWA --- */
-            position: relative;
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            height: 100dvh;
-            padding-bottom: env(safe-area-inset-bottom);
-            box-sizing: border-box; /* чтобы padding не ломал height */
+            height: 100%;
             width: 100%;
-            /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
-            /* Подстраховка для Safari */
-            min-height: -webkit-fill-available;
             overflow: hidden;
-            overscroll-behavior-y: none;
+            overscroll-behavior: none;
         }
 
             /* Фикс чёрной полосы под Home Indicator на iPhone в PWA */
