@@ -7493,20 +7493,29 @@
                     const data = snap.val();
                     if (!data) return;
 
-                    if (data.status === 'ended') {        // <--- ДОБАВИТЬ ЭТО
-                        endCall(false, true);             // <--- ДОБАВИТЬ ЭТО
-                        return;                           // <--- ДОБАВИТЬ ЭТО
+                    if (data.status === 'ended') {
+                        endCall(false, true);
+                        return;
                     }
 
                     // Если пришел сигнал на обновление потока
                     if (data.renegotiate && !amICaller) {
                         console.log("🔄 Обновляем видео-поток по просьбе собеседника...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+                        // --- ИСПРАВЛЕНИЕ: Держим канал открытым при пересогласовании ---
+                        pc.getTransceivers().forEach(t => {
+                            if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
+                                t.direction = 'sendrecv';
+                            }
+                        });
+                        // ----------------------------------------------------------------
+
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
                         sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
                     }
-                });;
+                });
 
                 sessionRef.child('offerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
@@ -7516,6 +7525,15 @@
 
                 await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                 await flushCandidateQueue();
+
+                // --- ИСПРАВЛЕНИЕ (ГЛАВНОЕ): Принудительно открываем канал отправки видео ---
+                // Иначе браузер, видя выключенную камеру, заблокирует отправку видео (recvonly)
+                pc.getTransceivers().forEach(t => {
+                    if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
+                        t.direction = 'sendrecv';
+                    }
+                });
+                // ---------------------------------------------------------------------------
 
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
