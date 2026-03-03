@@ -7083,11 +7083,13 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-            console.log("🛠️ Создаем RTCPeerConnection...");
+            console.log("🛠️ Создаем RTCPeerConnection (ПРЕМИУМ РЕЖИМ)...");
             pc = new RTCPeerConnection(dynamicIceServers);
 
-            // СОЗДАЕМ ТРАНСИВЕРЫ (Слоты)
-            // Аудио всегда работает, видео по умолчанию "inactive" (выключено и не светится)
+            // ПРОФЕССИОНАЛЬНЫЙ ПОДХОД: Резервируем каналы СРАЗУ.
+            // Даже если звонок аудио, мы создаем пустой видеоканал (sendrecv).
+            // Это позволяет в любой момент включить камеру без обрыва связи и лагов.
+            pc.addTransceiver('audio', { direction: 'sendrecv' });
             pc.addTransceiver('video', { direction: 'sendrecv' });
 
             pc.oniceconnectionstatechange = () => {
@@ -7095,11 +7097,8 @@
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
                         isConnected = true; wasCallConnected = true;
-
-                        // Прячем текст статуса и показываем чистый таймер
                         document.getElementById('callStatusText').style.display = 'none';
                         document.getElementById('callTimer').style.display = 'block';
-
                         stopAllTones(); startTimer(); startPing();
                     }
                 }
@@ -7112,18 +7111,17 @@
                 console.log("🎥 Получен поток:", e.track.kind);
                 const remoteVid = document.getElementById('remoteVideo');
 
-                // Если поток пришел цельным объектом — используем его
-                if (e.streams && e.streams[0]) {
-                    remoteVid.srcObject = e.streams[0];
-                } else {
-                    // Если браузер прислал голый трек (особенность некоторых версий Safari) — собираем поток вручную
-                    if (!remoteVid.srcObject) {
-                        remoteVid.srcObject = new MediaStream();
-                    }
+                // Создаем контейнер для потока, если его еще нет
+                if (!remoteVid.srcObject) {
+                    remoteVid.srcObject = new MediaStream();
+                }
+
+                // Добавляем трек в видео-плеер
+                if (e.track.kind === 'video' || e.track.kind === 'audio') {
                     remoteVid.srcObject.addTrack(e.track);
                 }
 
-                remoteVid.play().catch(err => console.log("Ошибка воспроизведения:", err));
+                remoteVid.play().catch(err => console.log("Ошибка автовоспроизведения:", err));
             };
 
             pc.onicecandidate = e => {
@@ -7219,13 +7217,7 @@
         }
         async function getMedia(requestVideo = false) {
             try {
-                // 1. Сначала всегда запрашиваем только аудио, чтобы звонок начался
-                const constraints = {
-                    audio: true,
-                    video: false
-                };
-
-                // Если мы явно хотим начать с видео (например, видеозвонок), меняем настройки
+                const constraints = { audio: true, video: false };
                 if (requestVideo) {
                     constraints.video = {
                         facingMode: { ideal: currentFacingMode },
@@ -7235,14 +7227,25 @@
                 }
 
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
-
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
-                // Добавляем треки в PeerConnection
-                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+                // Находим наши зарезервированные каналы
+                const audioTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'audio');
+                const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
 
-                // Если видео не запрашивали, кнопка камеры должна быть в состоянии "выкл"
+                // Привязываем реальный микрофон к аудиоканалу
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack && audioTransceiver) {
+                    await audioTransceiver.sender.replaceTrack(audioTrack);
+                }
+
+                // Привязываем реальную камеру к видеоканалу (если она включена)
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack && videoTransceiver) {
+                    await videoTransceiver.sender.replaceTrack(videoTrack);
+                }
+
                 if (!requestVideo) {
                     updateCamBtnUI(false);
                 } else {
@@ -7483,37 +7486,19 @@
                     return;
                 }
                 const callerId = callData.caller;
-                currentFriendId = callerId; // Важно: скрипт должен знать, с кем мы говорим
+                currentFriendId = callerId;
                 const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
                 document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
+
+                // 1. Создаем коннект и резервируем трансиверы
                 setupPeerConnection();
 
-                // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
-
                     if (data.status === 'ended') {
                         endCall(false, true);
                         return;
-                    }
-
-                    // Если пришел сигнал на обновление потока
-                    if (data.renegotiate && !amICaller) {
-                        console.log("🔄 Обновляем видео-поток по просьбе собеседника...");
-                        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-
-                        // --- ИСПРАВЛЕНИЕ: Держим канал открытым при пересогласовании ---
-                        pc.getTransceivers().forEach(t => {
-                            if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
-                                t.direction = 'sendrecv';
-                            }
-                        });
-                        // ----------------------------------------------------------------
-
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-                        sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
                     }
                 });
 
@@ -7521,19 +7506,11 @@
                     addCandidateSafely(snap.val());
                 });
 
+                // 2. Подключаем аудио в трансиверы
                 await getMedia(false);
 
                 await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                 await flushCandidateQueue();
-
-                // --- ИСПРАВЛЕНИЕ (ГЛАВНОЕ): Принудительно открываем канал отправки видео ---
-                // Иначе браузер, видя выключенную камеру, заблокирует отправку видео (recvonly)
-                pc.getTransceivers().forEach(t => {
-                    if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
-                        t.direction = 'sendrecv';
-                    }
-                });
-                // ---------------------------------------------------------------------------
 
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
@@ -7543,7 +7520,7 @@
                     status: 'connected'
                 });
 
-                updateCallStatus("Обмен шифрованием..."); // Тот, кто берет трубку, тоже видит этот статус
+                updateCallStatus("Обмен шифрованием...");
 
             } catch (e) {
                 console.error("Ошибка при ответе:", e);
@@ -7572,13 +7549,14 @@
         async function toggleCamera() {
             if (!pc) return;
 
-            // Надежно находим наш видеоканал
-            const videoTransceiver = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video');
+            // Ищем наш зарезервированный видео-канал
+            const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
             if (!videoTransceiver) return;
 
-            const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
+            const btnCam = document.getElementById('btnCam');
+            const isCamCurrentlyOff = btnCam.classList.contains('muted-state');
 
-            if (!currentTrack) {
+            if (isCamCurrentlyOff) {
                 // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
@@ -7587,10 +7565,18 @@
                     const newTrack = stream.getVideoTracks()[0];
 
                     if (!localStream) localStream = new MediaStream();
+
+                    // Удаляем старый видео-трек из потока
+                    const oldTrack = localStream.getVideoTracks()[0];
+                    if (oldTrack) {
+                        oldTrack.stop();
+                        localStream.removeTrack(oldTrack);
+                    }
+
                     localStream.addTrack(newTrack);
                     document.getElementById('localVideo').srcObject = localStream;
 
-                    // Мгновенно отправляем видео собеседнику
+                    // Моментально отправляем видео в наш открытый канал
                     await videoTransceiver.sender.replaceTrack(newTrack);
 
                     updateCamBtnUI(true);
@@ -7598,14 +7584,17 @@
                 } catch (e) { console.error("Ошибка камеры:", e); }
             } else {
                 // --- ВЫКЛЮЧАЕМ КАМЕРУ ---
-                currentTrack.stop();
-                localStream.removeTrack(currentTrack);
+                const currentTrack = localStream ? localStream.getVideoTracks()[0] : null;
+                if (currentTrack) {
+                    currentTrack.stop();
+                    localStream.removeTrack(currentTrack);
+                }
 
-                // Убираем видео, собеседник увидит черный экран с аватаркой
+                // Передаем "пустоту" в канал. У собеседника картинка просто замрет или погаснет, а соединение останется стабильным!
                 await videoTransceiver.sender.replaceTrack(null);
 
-                updateCamBtnUI(false);
                 document.getElementById('localVideo').srcObject = localStream;
+                updateCamBtnUI(false);
             }
         }
 
