@@ -4235,6 +4235,13 @@
                 background: linear-gradient(to right, #736AF0 var(--val, 0%), transparent var(--val, 0%));
             }
 
+        /* Анимация пульсации для играющего трека в чате */
+        .chat-music-card.playing-pulse {
+            border-color: #736AF0;
+            box-shadow: 0 0 15px rgba(115, 106, 240, 0.3);
+            background: rgba(115, 106, 240, 0.1);
+        }
+
         /* КАРТОЧКА МУЗЫКИ В ЧАТЕ */
         .chat-music-card {
             display: flex;
@@ -4363,11 +4370,20 @@
                 <div id="gmpArtist" class="gmp-artist">Исполнитель</div>
             </div>
             <div class="gmp-controls">
-                <button class="gmp-btn" onclick="togglePlayPause()">
-                    <svg id="gmpPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                    <svg id="gmpPauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                <button class="gmp-btn" onclick="playPrevTrack()">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
                 </button>
-                <button class="gmp-btn" onclick="closeMusicPlayer()">
+
+                <button class="gmp-btn" onclick="togglePlayPause()" style="width: 46px; height: 46px; background: #736AF0; border-radius: 50%; margin: 0 5px; box-shadow: 0 4px 15px rgba(115, 106, 240, 0.4);">
+                    <svg id="gmpPlayIcon" viewBox="0 0 24 24" fill="white" style="margin-left: 2px;"><path d="M8 5v14l11-7z" /></svg>
+                    <svg id="gmpPauseIcon" viewBox="0 0 24 24" fill="white" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                </button>
+
+                <button class="gmp-btn" onclick="playNextTrack()">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+                </button>
+
+                <button class="gmp-btn" onclick="closeMusicPlayer()" style="margin-left: 10px; color: #888;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -6892,20 +6908,21 @@
                 const trackTitle = parts[1] || 'Неизвестный трек';
                 const coverUrl = parts[2] || 'https://placehold.co/100x100?text=♫';
 
-                // Безопасное экранирование кавычек для передачи в функцию
-                const safeTitle = trackTitle.replace(/'/g, "\\'");
+                // Безопасное экранирование для HTML атрибутов
+                const safeTitle = trackTitle.replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
                 contentHtml += `
-                        <div class="chat-music-card" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${coverUrl}')">
-                            <div class="chat-music-play">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
-                            <div style="flex:1; overflow:hidden;">
-                                <div style="color:white; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${trackTitle}</div>
-                                <div style="color:rgba(255,255,255,0.6); font-size:12px;">Аудиозапись</div>
-                            </div>
+                    <div class="chat-music-card" data-vid="${videoId}" data-title="${safeTitle}" data-cover="${coverUrl}" onclick="playChatTrack(this)">
+                        <div class="chat-music-play">
+                            <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                         </div>
-                    `;
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="color:white; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${trackTitle}</div>
+                            <div style="color:rgba(255,255,255,0.6); font-size:12px;">Аудиозапись</div>
+                        </div>
+                    </div>
+                `;
             }
             else {
                 // Добавили класс "chat-link" и убрали target="_blank"
@@ -11584,32 +11601,66 @@
 
 
 
+        let activeMusicCard = null; // Запоминаем, какая карточка в чате сейчас играет
+
         function onPlayerStateChange(event) {
-
             const playIcon = document.getElementById('gmpPlayIcon');
-
             const pauseIcon = document.getElementById('gmpPauseIcon');
 
-
-
+            // Если музыка ИГРАЕТ
             if (event.data === YT.PlayerState.PLAYING) {
-
                 playIcon.style.display = 'none';
-
                 pauseIcon.style.display = 'block';
-
                 startProgressTimer();
 
-            } else {
-
+                // Меняем иконку в самом чате
+                if (activeMusicCard) {
+                    activeMusicCard.querySelector('.icon-play').style.display = 'none';
+                    activeMusicCard.querySelector('.icon-pause').style.display = 'block';
+                    activeMusicCard.classList.add('playing-pulse');
+                }
+            }
+            // Если ПАУЗА, ОСТАНОВЛЕНО или ЗАГРУЗКА
+            else {
                 playIcon.style.display = 'block';
-
                 pauseIcon.style.display = 'none';
-
                 stopProgressTimer();
 
+                // Сбрасываем иконку в чате на Play
+                if (activeMusicCard) {
+                    activeMusicCard.querySelector('.icon-play').style.display = 'block';
+                    activeMusicCard.querySelector('.icon-pause').style.display = 'none';
+                    activeMusicCard.classList.remove('playing-pulse');
+                }
             }
 
+            // АВТО-ПЕРЕКЛЮЧЕНИЕ: Если песня закончилась, включаем следующую!
+            if (event.data === YT.PlayerState.ENDED) {
+                playNextTrack();
+            }
+        }
+
+        function playChatTrack(cardEl) {
+            const vid = cardEl.getAttribute('data-vid');
+            const title = cardEl.getAttribute('data-title');
+            const cover = cardEl.getAttribute('data-cover');
+
+            // Если кликнули на тот же трек, который уже выбран - просто ставим паузу/плей
+            if (currentTrackId === vid) {
+                togglePlayPause();
+                return;
+            }
+
+            // Если до этого играл другой трек, сбрасываем его визуально
+            if (activeMusicCard) {
+                activeMusicCard.querySelector('.icon-play').style.display = 'block';
+                activeMusicCard.querySelector('.icon-pause').style.display = 'none';
+                activeMusicCard.classList.remove('playing-pulse');
+            }
+
+            // Запоминаем новую карточку и запускаем
+            activeMusicCard = cardEl;
+            playMusicTrack(vid, title, cover);
         }
 
 
@@ -11617,61 +11668,70 @@
         // Управление плеером
 
         function playMusicTrack(videoId, title, coverUrl) {
-
             if (!ytPlayer) return;
 
-
-
             const playerUI = document.getElementById('globalMusicPlayer');
-
             document.getElementById('gmpTitle').innerText = title;
-
-            document.getElementById('gmpArtist').innerText = "Novogram Music";
-
             document.getElementById('gmpCover').src = coverUrl;
-
-
 
             playerUI.classList.add('active'); // Показываем плеер
 
-
-
-            if (currentTrackId !== videoId) {
-
-                ytPlayer.loadVideoById(videoId);
-
-                currentTrackId = videoId;
-
-            } else {
-
-                ytPlayer.playVideo();
-
-            }
-
+            ytPlayer.loadVideoById(videoId);
+            currentTrackId = videoId;
         }
 
 
 
         function togglePlayPause() {
-
-            if (!ytPlayer) return;
-
+            if (!ytPlayer || !ytPlayer.getPlayerState) return;
             const state = ytPlayer.getPlayerState();
-
             if (state === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
-
             else ytPlayer.playVideo();
+        }
 
+        function playNextTrack() {
+            if (!activeMusicCard) return;
+            // Собираем все треки, которые сейчас есть на экране чата
+            const allTracks = Array.from(document.querySelectorAll('.chat-music-card'));
+            const currentIndex = allTracks.indexOf(activeMusicCard);
+
+            // Идем "вниз" по чату (следующее отправленное сообщение)
+            if (currentIndex >= 0 && currentIndex < allTracks.length - 1) {
+                playChatTrack(allTracks[currentIndex + 1]);
+            } else {
+                showToast("Это последний трек в чате");
+                // Останавливаем плеер
+                if (ytPlayer) ytPlayer.pauseVideo();
+            }
+        }
+
+        function playPrevTrack() {
+            if (!activeMusicCard) return;
+            const allTracks = Array.from(document.querySelectorAll('.chat-music-card'));
+            const currentIndex = allTracks.indexOf(activeMusicCard);
+
+            // Идем "вверх" по чату
+            if (currentIndex > 0) {
+                playChatTrack(allTracks[currentIndex - 1]);
+            } else {
+                // Если это первый трек, просто начинаем его заново
+                if (ytPlayer) ytPlayer.seekTo(0);
+            }
         }
 
 
-
         function closeMusicPlayer() {
-
             if (ytPlayer) ytPlayer.pauseVideo();
-
             document.getElementById('globalMusicPlayer').classList.remove('active');
 
+            // Сбрасываем выделение в чате
+            if (activeMusicCard) {
+                activeMusicCard.querySelector('.icon-play').style.display = 'block';
+                activeMusicCard.querySelector('.icon-pause').style.display = 'none';
+                activeMusicCard.classList.remove('playing-pulse');
+                activeMusicCard = null;
+            }
+            currentTrackId = null;
         }
 
 
@@ -11679,17 +11739,11 @@
         // Перемотка
 
         function seekMusic(val) {
-
             if (!ytPlayer || !ytPlayer.getDuration) return;
-
             const duration = ytPlayer.getDuration();
-
             const seekTo = (val / 100) * duration;
-
             ytPlayer.seekTo(seekTo, true);
-
             updateSliderColor(val);
-
         }
 
 
