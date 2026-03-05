@@ -4494,11 +4494,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pwacompat" crossorigin="anonymous" async></script>
     <script src="titleNotifier.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    
 
 </head>
 
@@ -5694,8 +5691,6 @@
             if (!timestamp) return isProfile ? "был(а) давно" : "давно";
 
             let tsMillis = 0;
-
-            // Универсальная и безопасная проверка формата даты
             if (typeof timestamp.toMillis === 'function') {
                 tsMillis = timestamp.toMillis();
             } else if (timestamp.seconds) {
@@ -5717,14 +5712,12 @@
             const prefix = isProfile ? "был(а) в сети " : "";
 
             if (seconds < 60) return isProfile ? "был(а) только что" : "только что";
-
             if (minutes < 60) {
                 let mText = 'минут';
                 if (minutes % 10 === 1 && minutes % 100 !== 11) mText = 'минуту';
                 else if ([2, 3, 4].includes(minutes % 10) && ![12, 13, 14].includes(minutes % 100)) mText = 'минуты';
                 return `${prefix}${minutes} ${mText} назад`;
             }
-
             if (hours < 24) {
                 let hText = 'часов';
                 if (hours % 10 === 1 && hours % 100 !== 11) hText = 'час';
