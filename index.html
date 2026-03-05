@@ -7506,40 +7506,36 @@
 
         
         function closeAllSheets(fromPopState = false) {
-            // Логика кнопки "Назад"
+            // 1. Логика истории для кнопки "Назад" (сохраняем из первой версии)
             if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 const steps = -sheetHistoryStack;
                 sheetHistoryStack = 0;
                 history.go(steps);
             }
 
-            // ЗАКРЫВАЕМ ВСЕ ШТОРКИ (ВКЛЮЧАЯ СКРЕПКУ И МУЗЫКУ)
+            // 2. Закрываем ВООБЩЕ ВСЕ шторки (объединенный список)
             document.getElementById('actionSheet')?.classList.remove('open');
             document.getElementById('deleteSheet')?.classList.remove('open');
             document.getElementById('profileSheet')?.classList.remove('open');
             document.getElementById('editProfileSheet')?.classList.remove('open');
             document.getElementById('friendProfileSheet')?.classList.remove('open');
             document.getElementById('generalSettingsSheet')?.classList.remove('open');
-            document.getElementById('editContactSheet')?.classList.remove('open');
+            document.getElementById('attachmentSheet')?.classList.remove('open'); // Вот эта строка починит скрепку!
 
-            // ВОТ ЭТИ ДВЕ СТРОЧКИ ИСПРАВЛЯЮТ БАГ:
-            document.getElementById('attachmentSheet')?.classList.remove('open');
-            document.getElementById('musicSearchSheet')?.classList.remove('open');
-
-            // Закрываем контекстное меню
+            // 3. Закрываем контекстное меню
             const menu = document.getElementById('contextMenu');
             if (menu) {
                 menu.classList.remove('active');
                 setTimeout(() => menu.style.display = 'none', 200);
             }
 
-            // Отключаем размытие фона и снятие выделения с сообщений
+            // 4. Отключаем размытие фона и выделение сообщений
             document.body.classList.remove('chat-blur-active');
             document.querySelectorAll('.msg-highlighted').forEach(el => {
                 el.classList.remove('msg-highlighted');
             });
 
-            // Прячем темный фон
+            // 5. Убираем черный фон (overlay)
             setTimeout(() => {
                 const overlay = document.getElementById('overlaySheet');
                 if (overlay) {
