@@ -5154,7 +5154,7 @@
         </div>
     </div>
     <script>
-
+        const MUSIC_PROXY_URL = "https://script.google.com/macros/s/AKfycbw-6CAZGllbz9_rYxr_UX7oUGpiTed7ONhsR3GlXvH-HEQX9A8G6ozW_ocvEE2IHtfR/exec";
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4AnViDZV8N6X-Tk9XFG2LQwTUVb2TWWR3RcoCNhkRmOM5XLug9UBi1Ky-_j2sQB5u/exec";
         const TRANSLATE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwONUKG_V_R6rdKui4SfEbNQEwfWOGiwu0rMpRl669REYvFG0Qd2kHcWYGSehe5vWbr/exec";
         const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc";
@@ -11699,32 +11699,62 @@
 
         // --- YOUTUBE MUSIC ENGINE ---
 
-        const YT_API_KEY = "AIzaSyA-n-kDNX_kVKSeNPzoNMUG84X3H4mlqV8"; //
-        let ytPlayer = null;
+        const audioPlayer = new Audio();
         let currentTrackId = null;
-        let progressInterval = null;
-        let activeMusicCard = null; // Запоминаем текущую карточку в чате
-        let isUserSeeking = false; // Флаг, чтобы ползунок не дергался при ручной перемотке
+        let activeMusicCard = null;
+        let isPreviewMode = false;
+        let isUserSeeking = false;
 
-        // Инициализация API
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        // Зеркала серверов (на случай, если один упадет)
+        const INVIDIOUS_INSTANCES = [
+            "https://inv.tux.pizza",
+            "https://invidious.jing.rocks",
+            "https://yt.artemislena.eu"
+        ];
+        let currentProxyIndex = 0;
 
-        function onYouTubeIframeAPIReady() {
-            ytPlayer = new YT.Player('yt-hidden-container', {
-                height: '1', width: '1',
-                videoId: '',
-                playerVars: { 'playsinline': 1, 'controls': 0, 'disablekb': 1, 'fs': 0, 'rel': 0 },
-                events: {
-                    'onStateChange': onPlayerStateChange,
-                    'onReady': () => console.log("🎵 Музыкальный движок готов")
+        // Обновление UI каждую секунду, пока играет трек
+        audioPlayer.addEventListener('timeupdate', () => {
+            if (isUserSeeking || isNaN(audioPlayer.duration)) return;
+
+            const current = audioPlayer.currentTime;
+            const duration = audioPlayer.duration;
+            const percent = (current / duration) * 100;
+
+            if (isPreviewMode) {
+                const slider = document.getElementById('preview-slider-' + currentTrackId);
+                const timeLabel = document.getElementById('preview-time-' + currentTrackId);
+                if (slider) {
+                    slider.value = percent;
+                    slider.style.setProperty('--val', `${percent}%`);
                 }
-            });
-        }
+                if (timeLabel) timeLabel.innerText = formatMusicTime(current);
+            } else {
+                const slider = document.getElementById('gmpProgress');
+                if (slider) {
+                    slider.value = percent;
+                    slider.style.setProperty('--val', `${percent}%`);
+                }
+                document.getElementById('gmpCurrentTime').innerText = formatMusicTime(current);
+                document.getElementById('gmpTotalTime').innerText = formatMusicTime(duration);
+            }
+        });
 
-        // Форматирование секунд в 0:00
+        // Когда трек заканчивается
+        audioPlayer.addEventListener('ended', () => {
+            if (!isPreviewMode) playNextTrack();
+        });
+
+        // Если трек не грузится (ошибка сервера), пробуем следующее зеркало
+        audioPlayer.addEventListener('error', () => {
+            console.warn("Ошибка зеркала, пробуем следующее...");
+            currentProxyIndex = (currentProxyIndex + 1) % INVIDIOUS_INSTANCES.length;
+            if (currentTrackId) {
+                audioPlayer.src = `${INVIDIOUS_INSTANCES[currentProxyIndex]}/latest_version?id=${currentTrackId}&itag=140`;
+                audioPlayer.play();
+            }
+        });
+
         function formatMusicTime(timeInSeconds) {
             if (!timeInSeconds || isNaN(timeInSeconds)) return "0:00";
             const minutes = Math.floor(timeInSeconds / 60);
@@ -11809,44 +11839,73 @@
             playMusicTrack(vid, title, cover); // Эта функция вызовет плеер
         };
 
-        // Запуск трека
         function playMusicTrack(videoId, title, coverUrl) {
-            if (!ytPlayer || !ytPlayer.loadVideoById) {
-                showToast("Плеер инициализируется, подождите...");
-                return;
-            }
-
             window.isMusicLoading = true;
             const playerUI = document.getElementById('globalMusicPlayer');
+            const spinner = document.getElementById('gmpSpinner');
 
-            // Заполняем данные
             document.getElementById('gmpTitle').innerText = title;
             document.getElementById('gmpCover').src = coverUrl;
             document.getElementById('gmpCurrentTime').innerText = "0:00";
             document.getElementById('gmpTotalTime').innerText = "0:00";
             updateSliderColor(0);
 
-            // ИСПРАВЛЕНИЕ: Гарантированное появление плеера
-            playerUI.style.display = 'flex'; // Подстраховка
-            setTimeout(() => {
-                playerUI.classList.add('active');
-            }, 10);
+            playerUI.style.display = 'flex';
+            setTimeout(() => playerUI.classList.add('active'), 10);
 
-            ytPlayer.loadVideoById(videoId);
             currentTrackId = videoId;
+            spinner.style.display = 'block'; // Показываем загрузку
 
-            setTimeout(() => { window.isMusicLoading = false; }, 1000);
+            // Формируем прямую ссылку на аудиофайл (m4a)
+            audioPlayer.src = `${INVIDIOUS_INSTANCES[currentProxyIndex]}/latest_version?id=${videoId}&itag=140`;
+
+            audioPlayer.play().then(() => {
+                window.isMusicLoading = false;
+                spinner.style.display = 'none';
+                updatePlayPauseUI(true);
+            }).catch(e => {
+                spinner.style.display = 'none';
+                window.isMusicLoading = false;
+            });
         }
 
         function togglePlayPause() {
-            if (!ytPlayer || !ytPlayer.getPlayerState) return;
-            const state = ytPlayer.getPlayerState();
-            if (state === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
-            else ytPlayer.playVideo();
+            if (!currentTrackId) return;
+
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                updatePlayPauseUI(true);
+            } else {
+                audioPlayer.pause();
+                updatePlayPauseUI(false);
+            }
+        }
+
+        function updatePlayPauseUI(isPlaying) {
+            if (isPreviewMode) {
+                const overlay = document.getElementById('preview-overlay-' + currentTrackId);
+                if (overlay) {
+                    overlay.querySelector('.p-play').style.display = isPlaying ? 'none' : 'block';
+                    overlay.querySelector('.p-pause').style.display = isPlaying ? 'block' : 'none';
+                }
+            } else {
+                document.getElementById('gmpPlayIcon').style.display = isPlaying ? 'none' : 'block';
+                document.getElementById('gmpPauseIcon').style.display = isPlaying ? 'block' : 'none';
+
+                if (activeMusicCard) {
+                    activeMusicCard.querySelector('.icon-play').style.display = isPlaying ? 'none' : 'block';
+                    activeMusicCard.querySelector('.icon-pause').style.display = isPlaying ? 'block' : 'none';
+                    if (isPlaying) {
+                        activeMusicCard.classList.add('playing-pulse');
+                    } else {
+                        activeMusicCard.classList.remove('playing-pulse');
+                    }
+                }
+            }
         }
 
         function closeMusicPlayer() {
-            if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+            audioPlayer.pause();
             const playerUI = document.getElementById('globalMusicPlayer');
             playerUI.classList.remove('active');
 
@@ -11857,7 +11916,6 @@
                 activeMusicCard = null;
             }
             currentTrackId = null;
-            stopProgressTimer();
         }
 
         // --- СЛЕДУЮЩИЙ / ПРЕДЫДУЩИЙ ТРЕК ---
@@ -11888,18 +11946,23 @@
             }
         }
 
-        // --- ЛОГИКА ПОЛЗУНКА И ВРЕМЕНИ ---
         function seekMusic(val) {
-            if (!ytPlayer || !ytPlayer.getDuration) return;
-            isUserSeeking = true; // Блокируем автообновление ползунка таймером
-            const duration = ytPlayer.getDuration();
+            if (!currentTrackId || isNaN(audioPlayer.duration)) return;
+            isUserSeeking = true;
+
+            const duration = audioPlayer.duration;
             const seekTo = (val / 100) * duration;
 
-            document.getElementById('gmpCurrentTime').innerText = formatMusicTime(seekTo);
+            audioPlayer.currentTime = seekTo;
+
+            if (isPreviewMode) {
+                const timeLabel = document.getElementById('preview-time-' + currentTrackId);
+                if (timeLabel) timeLabel.innerText = formatMusicTime(seekTo);
+            } else {
+                document.getElementById('gmpCurrentTime').innerText = formatMusicTime(seekTo);
+            }
+
             updateSliderColor(val);
-
-            ytPlayer.seekTo(seekTo, true);
-
             setTimeout(() => { isUserSeeking = false; }, 200);
         }
 
@@ -11986,13 +12049,15 @@
             resultsBox.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;"><div class="upload-spinner" style="position:relative; transform:none; left:auto; top:auto; margin: 0 auto;"></div> Ищем треки...</div>';
 
             try {
-                // Запрашиваем 25 результатов, так как мы будем жестко их фильтровать
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=25&key=${YT_API_KEY}`;
+                // ОБРАЩАЕМСЯ К ТВОЕМУ НОВОМУ СКРИПТУ ВМЕСТО YOUTUBE
+                const res = await fetch(MUSIC_PROXY_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "search_music", query: query })
+                });
 
-                const res = await fetch(url);
                 const data = await res.json();
 
-                if (!data.items || data.items.length === 0) {
+                if (data.status !== "success" || !data.items || data.items.length === 0) {
                     resultsBox.innerHTML = '<div style="text-align:center; color:#888;">Ничего не найдено</div>';
                     return;
                 }
@@ -12091,20 +12156,17 @@
 
         let isPreviewMode = false; // Флаг: мы слушаем в чате (false) или предпрослушиваем в поиске (true)
 
-        // НОВАЯ ФУНКЦИЯ ДЛЯ КЛИКА В ОКНЕ ПОИСКА
         function togglePreview(videoId) {
-            // Если кликнули на тот же трек
             if (currentTrackId === videoId && isPreviewMode) {
                 togglePlayPause();
                 return;
             }
 
-            // Если играл другой трек в предпросмотре - сбрасываем его интерфейс
             if (currentTrackId && isPreviewMode) {
+                // Сброс старого превью
                 const oldArtist = document.getElementById('preview-artist-' + currentTrackId);
                 const oldTimeline = document.getElementById('preview-timeline-' + currentTrackId);
                 const oldOverlay = document.getElementById('preview-overlay-' + currentTrackId);
-
                 if (oldArtist) oldArtist.style.display = 'block';
                 if (oldTimeline) oldTimeline.style.display = 'none';
                 if (oldOverlay) {
@@ -12113,17 +12175,16 @@
                 }
             }
 
-            // Переключаем движок в режим превью (Глобальный плеер не покажется)
             isPreviewMode = true;
             currentTrackId = videoId;
 
-            // Сразу меняем UI нового трека
             const newArtist = document.getElementById('preview-artist-' + videoId);
             const newTimeline = document.getElementById('preview-timeline-' + videoId);
             if (newArtist) newArtist.style.display = 'none';
             if (newTimeline) newTimeline.style.display = 'flex';
 
-            ytPlayer.loadVideoById(videoId);
+            audioPlayer.src = `${INVIDIOUS_INSTANCES[currentProxyIndex]}/latest_version?id=${videoId}&itag=140`;
+            audioPlayer.play().then(() => updatePlayPauseUI(true));
         }
 
         // Отправка музыки в чат
