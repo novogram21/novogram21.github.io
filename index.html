@@ -3147,7 +3147,25 @@
             line-height: 1.4;
         }
 
+        .attach-cancel-btn {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            color: #8e8e93;
+            font-size: 16px;
+            font-weight: 500;
+            /* Важно: padding-bottom включает безопасную зону системной полоски iOS/Android */
+            padding: 16px 16px calc(16px + env(safe-area-inset-bottom)) 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
 
+            .attach-cancel-btn:active {
+                background: rgba(255,255,255,0.08); /* Подсветка при нажатии */
+            }
 
         /* Чекбокс */
         .checkbox-container {
@@ -4824,9 +4842,9 @@
             </div>
         </div>
 
-        <div onclick="closeAllSheets()" style="padding: 16px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); color: #8e8e93; font-size: 16px; font-weight: 500; cursor: pointer;">
+        <button class="attach-cancel-btn" onclick="closeAllSheets()">
             Отмена
-        </div>
+        </button>
     </div>
 
     <!-- Шторка удаления -->
