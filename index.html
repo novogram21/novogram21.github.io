@@ -11913,9 +11913,8 @@
             resultsBox.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;"><div class="upload-spinner" style="position:relative; transform:none; left:auto; top:auto; margin: 0 auto;"></div> Ищем треки...</div>';
 
             try {
-                // МАГИЯ ЗДЕСЬ: videoCategoryId=10 означает строго категорию "Музыка"
-                // Запрашиваем 15 результатов, так как часть можем отсеять фильтром ниже
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=15&key=${YT_API_KEY}`;
+                // Запрашиваем 25 результатов, так как мы будем жестко их фильтровать
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=25&key=${YT_API_KEY}`;
 
                 const res = await fetch(url);
                 const data = await res.json();
@@ -11928,40 +11927,86 @@
                 resultsBox.innerHTML = '';
                 let addedCount = 0;
 
-                data.items.forEach(item => {
-                    const videoId = item.id.videoId;
-                    // Очищаем названия от спецсимволов HTML
-                    const title = item.snippet.title.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-                    const artist = item.snippet.channelTitle.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-                    const cover = item.snippet.thumbnails.default.url;
+                // ШАГ 1. СТРОГИЙ ФИЛЬТР YOUTUBE MUSIC
+                // Ищем только чистые аудио треки (Topic/Тема), VEVO, или официальные аудио
+                let filteredItems = data.items.filter(item => {
+                    const cTitle = item.snippet.channelTitle.toLowerCase();
+                    const vTitle = item.snippet.title.toLowerCase();
 
-                    // ЖЕСТКИЙ ФИЛЬТР: Отсекаем мусор, который иногда пролезает даже в категорию "Музыка"
-                    const lowerTitle = title.toLowerCase();
-                    if (lowerTitle.includes('#shorts') || lowerTitle.includes('tiktok') || lowerTitle.includes('reaction') || lowerTitle.includes('реакция')) {
-                        return; // Пропускаем этот цикл (не добавляем в список)
+                    // Жестко отсекаем лайвы (если юзер сам не написал слово live), шортсы, ремиксы и караоке
+                    if ((vTitle.includes('live') && !query.toLowerCase().includes('live')) ||
+                        vTitle.includes('karaoke') ||
+                        vTitle.includes('8d') ||
+                        vTitle.includes('#shorts') ||
+                        vTitle.includes('reaction') ||
+                        vTitle.includes('реакция') ||
+                        vTitle.includes('tiktok')) {
+                        return false;
                     }
+
+                    // Это 100% официальный музыкальный трек, если выполняется одно из условий:
+                    return cTitle.includes('- topic') ||
+                        cTitle.includes('- тема') ||
+                        cTitle.includes('vevo') ||
+                        vTitle.includes('official audio') ||
+                        vTitle.includes('official lyric');
+                });
+
+                // ШАГ 2. МЯГКИЙ ФИЛЬТР (Фоллбэк)
+                // Если строгий фильтр убил вообще ВСЕ результаты (например, это независимый инди-артист), 
+                // берем исходные данные, но просто отсекаем откровенный мусор.
+                if (filteredItems.length === 0) {
+                    filteredItems = data.items.filter(item => {
+                        const vTitle = item.snippet.title.toLowerCase();
+                        return !vTitle.includes('#shorts') &&
+                            !vTitle.includes('reaction') &&
+                            !vTitle.includes('реакция') &&
+                            !vTitle.includes('tiktok');
+                    });
+                }
+
+                // ШАГ 3. КРАСИВАЯ ОТРИСОВКА (ТОП-10 ИЗ ОЧИЩЕННОГО СПИСКА)
+                filteredItems.slice(0, 10).forEach(item => {
+                    const videoId = item.id.videoId;
+                    let title = item.snippet.title.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                    let artist = item.snippet.channelTitle.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                    const cover = item.snippet.thumbnails.default.url;
 
                     addedCount++;
 
-                    // Безопасное форматирование для передачи в onClick
+                    // ОЧИСТКА НАЗВАНИЙ ДЛЯ ПРЕМИУМ-ВНЕШНОСТИ:
+                    // Убираем " - Topic", "VEVO" из имени исполнителя
+                    artist = artist.replace(/ - Topic/ig, '')
+                        .replace(/ - Тема/ig, '')
+                        .replace(/VEVO/ig, '');
+
+                    // Убираем "(Official Audio)", "(Lyric Video)" и прочий мусор из названия песни
+                    title = title.replace(/\(Official Audio\)/ig, '')
+                        .replace(/\[Official Audio\]/ig, '')
+                        .replace(/\(Official Video\)/ig, '')
+                        .replace(/\[Official Video\]/ig, '')
+                        .replace(/\(Lyric Video\)/ig, '')
+                        .replace(/\(Official Music Video\)/ig, '')
+                        .trim();
+
+                    // Экранируем кавычки для подстановки в HTML
                     const safeTitle = title.replace(/'/g, "\\'");
 
                     const div = document.createElement('div');
                     div.className = 'search-track-item';
                     div.innerHTML = `
-                <img src="${cover}" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${cover}')">
-                <div style="flex:1; overflow:hidden;" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${cover}')">
-                    <div style="color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
-                    <div style="color:#8e8e93; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${artist.replace(' - Topic', '')}</div>
-                </div>
-                <button class="search-track-btn" onclick="sendMusicToChat('${videoId}', '${safeTitle}', '${cover}')">В чат</button>
-            `;
+                        <img src="${cover}" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${cover}')">
+                        <div style="flex:1; overflow:hidden;" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${cover}')">
+                            <div style="color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
+                            <div style="color:#8e8e93; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${artist}</div>
+                        </div>
+                        <button class="search-track-btn" onclick="sendMusicToChat('${videoId}', '${safeTitle}', '${cover}')">В чат</button>
+                    `;
                     resultsBox.appendChild(div);
                 });
 
-                // Если все найденные видео оказались шортсами и отсеялись
                 if (addedCount === 0) {
-                    resultsBox.innerHTML = '<div style="text-align:center; color:#888;">Ничего подходящего не найдено</div>';
+                    resultsBox.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;">Треки не найдены. Попробуйте уточнить запрос.</div>';
                 }
 
             } catch (e) {
