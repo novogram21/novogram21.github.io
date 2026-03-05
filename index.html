@@ -11906,85 +11906,68 @@
 
 
         async function searchMusic() {
-
             const query = document.getElementById('musicSearchInput').value.trim();
-
             const resultsBox = document.getElementById('musicSearchResults');
-
             if (!query) return;
 
-
-
-            resultsBox.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;"><div class="upload-spinner" style="position:relative; transform:none; left:auto; top:auto; margin: 0 auto;"></div> Ищем...</div>';
-
-
+            resultsBox.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;"><div class="upload-spinner" style="position:relative; transform:none; left:auto; top:auto; margin: 0 auto;"></div> Ищем треки...</div>';
 
             try {
-
-                // Ищем только аудио/музыку
-
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' audio')}&type=video&maxResults=10&key=${YT_API_KEY}`;
+                // МАГИЯ ЗДЕСЬ: videoCategoryId=10 означает строго категорию "Музыка"
+                // Запрашиваем 15 результатов, так как часть можем отсеять фильтром ниже
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=15&key=${YT_API_KEY}`;
 
                 const res = await fetch(url);
-
                 const data = await res.json();
 
-
-
                 if (!data.items || data.items.length === 0) {
-
                     resultsBox.innerHTML = '<div style="text-align:center; color:#888;">Ничего не найдено</div>';
-
                     return;
-
                 }
 
-
-
                 resultsBox.innerHTML = '';
+                let addedCount = 0;
 
                 data.items.forEach(item => {
-
                     const videoId = item.id.videoId;
-
+                    // Очищаем названия от спецсимволов HTML
                     const title = item.snippet.title.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-
+                    const artist = item.snippet.channelTitle.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
                     const cover = item.snippet.thumbnails.default.url;
 
+                    // ЖЕСТКИЙ ФИЛЬТР: Отсекаем мусор, который иногда пролезает даже в категорию "Музыка"
+                    const lowerTitle = title.toLowerCase();
+                    if (lowerTitle.includes('#shorts') || lowerTitle.includes('tiktok') || lowerTitle.includes('reaction') || lowerTitle.includes('реакция')) {
+                        return; // Пропускаем этот цикл (не добавляем в список)
+                    }
 
+                    addedCount++;
+
+                    // Безопасное форматирование для передачи в onClick
+                    const safeTitle = title.replace(/'/g, "\\'");
 
                     const div = document.createElement('div');
-
                     div.className = 'search-track-item';
-
                     div.innerHTML = `
-
-                        <img src="${cover}" onclick="playMusicTrack('${videoId}', '${title.replace(/'/g, "\\'")}', '${cover}')">
-
-                        <div style="flex:1; overflow:hidden;" onclick="playMusicTrack('${videoId}', '${title.replace(/'/g, "\\'")}', '${cover}')">
-
-                            <div style="color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
-
-                            <div style="color:#888; font-size:12px;">YouTube Music</div>
-
-                        </div>
-
-                        <button class="search-track-btn" onclick="sendMusicToChat('${videoId}', '${title.replace(/'/g, "\\'")}', '${cover}')">В чат</button>
-
-                    `;
-
+                <img src="${cover}" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${cover}')">
+                <div style="flex:1; overflow:hidden;" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${cover}')">
+                    <div style="color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
+                    <div style="color:#8e8e93; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${artist.replace(' - Topic', '')}</div>
+                </div>
+                <button class="search-track-btn" onclick="sendMusicToChat('${videoId}', '${safeTitle}', '${cover}')">В чат</button>
+            `;
                     resultsBox.appendChild(div);
-
                 });
 
-
+                // Если все найденные видео оказались шортсами и отсеялись
+                if (addedCount === 0) {
+                    resultsBox.innerHTML = '<div style="text-align:center; color:#888;">Ничего подходящего не найдено</div>';
+                }
 
             } catch (e) {
-
+                console.error("Ошибка поиска YouTube:", e);
                 resultsBox.innerHTML = '<div style="text-align:center; color:#ff4444;">Ошибка поиска. Проверьте API ключ.</div>';
-
             }
-
         }
 
 
