@@ -11643,8 +11643,6 @@
         // --- YOUTUBE MUSIC ENGINE ---
 
         const YT_API_KEY = "AIzaSyA-n-kDNX_kVKSeNPzoNMUG84X3H4mlqV8"; //
-        const YT_API_KEY = "ТВОЙ_YOUTUBE_API_КЛЮЧ"; // ОСТАВЬ СВОЙ КЛЮЧ ЗДЕСЬ
-
         let ytPlayer = null;
         let currentTrackId = null;
         let progressInterval = null;
@@ -11656,8 +11654,6 @@
         tag.src = "https://www.youtube.com/iframe_api";
         const firstScriptTag = document.getElementsByTagName('script')[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-
 
         function onYouTubeIframeAPIReady() {
             ytPlayer = new YT.Player('yt-hidden-container', {
@@ -11699,9 +11695,13 @@
                 pauseIcon.style.display = 'block';
                 startProgressTimer();
 
-                // Обновляем длительность трека
-                const duration = ytPlayer.getDuration();
-                document.getElementById('gmpTotalTime').innerText = formatMusicTime(duration);
+                // ИСПРАВЛЕНИЕ: Обновляем длительность только когда трек ТОЧНО начал играть
+                setTimeout(() => {
+                    const duration = ytPlayer.getDuration();
+                    if (duration > 0) {
+                        document.getElementById('gmpTotalTime').innerText = formatMusicTime(duration);
+                    }
+                }, 500);
 
                 if (activeMusicCard) {
                     activeMusicCard.querySelector('.icon-play').style.display = 'none';
@@ -11729,7 +11729,10 @@
         }
 
         // Клик по треку в чате
-        function playChatTrack(cardEl) {
+        window.playChatTrack = function (cardEl) {
+            // Защита от случайных двойных кликов
+            if (window.isMusicLoading) return;
+
             const vid = cardEl.getAttribute('data-vid');
             const title = cardEl.getAttribute('data-title');
             const cover = cardEl.getAttribute('data-cover');
@@ -11749,7 +11752,7 @@
 
             activeMusicCard = cardEl;
             playMusicTrack(vid, title, cover);
-        }
+        };
 
         // Запуск трека
         function playMusicTrack(videoId, title, coverUrl) {
@@ -11758,19 +11761,26 @@
                 return;
             }
 
+            window.isMusicLoading = true;
             const playerUI = document.getElementById('globalMusicPlayer');
+
+            // Заполняем данные
             document.getElementById('gmpTitle').innerText = title;
             document.getElementById('gmpCover').src = coverUrl;
+            document.getElementById('gmpCurrentTime').innerText = "0:00";
+            document.getElementById('gmpTotalTime').innerText = "0:00";
+            updateSliderColor(0);
 
-            playerUI.classList.add('active');
+            // ИСПРАВЛЕНИЕ: Гарантированное появление плеера
+            playerUI.style.display = 'flex'; // Подстраховка
+            setTimeout(() => {
+                playerUI.classList.add('active');
+            }, 10);
 
             ytPlayer.loadVideoById(videoId);
             currentTrackId = videoId;
 
-            // Сброс таймеров визуально до загрузки
-            document.getElementById('gmpCurrentTime').innerText = "0:00";
-            document.getElementById('gmpTotalTime').innerText = "0:00";
-            updateSliderColor(0);
+            setTimeout(() => { window.isMusicLoading = false; }, 1000);
         }
 
         function togglePlayPause() {
@@ -11782,7 +11792,8 @@
 
         function closeMusicPlayer() {
             if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
-            document.getElementById('globalMusicPlayer').classList.remove('active');
+            const playerUI = document.getElementById('globalMusicPlayer');
+            playerUI.classList.remove('active');
 
             if (activeMusicCard) {
                 activeMusicCard.querySelector('.icon-play').style.display = 'block';
@@ -11863,7 +11874,7 @@
 
         function updateSliderColor(val) {
             const slider = document.getElementById('gmpProgress');
-            slider.style.setProperty('--val', `${val}%`);
+            if (slider) slider.style.setProperty('--val', `${val}%`);
         }
 
 
