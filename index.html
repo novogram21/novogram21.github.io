@@ -7504,70 +7504,47 @@
 
 
 
-        // Загрузка данных в поля при открытии профиля
-
+        
         function closeAllSheets(fromPopState = false) {
-            // Если кликнули по фону, а открыто сразу 2 или 3 окна (например, профиль -> настройки),
-            // откатываем историю сразу на нужное количество шагов назад.
+            // Логика кнопки "Назад"
             if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 const steps = -sheetHistoryStack;
                 sheetHistoryStack = 0;
                 history.go(steps);
             }
 
-            document.getElementById('actionSheet')?.classList.remove('open');
-            document.getElementById('deleteSheet')?.classList.remove('open');
-            document.getElementById('profileSheet')?.classList.remove('open');
-            document.getElementById('editProfileSheet')?.classList.remove('open');
-            document.getElementById('generalSettingsSheet')?.classList.remove('open');
-            document.getElementById('attachmentSheet')?.classList.remove('open');
-
-            const menu = document.getElementById('contextMenu');
-            if (menu) {
-                menu.classList.remove('active');
-                setTimeout(() => menu.style.display = 'none', 200);
-            }
-
-            // --- ОТКЛЮЧАЕМ РАЗМЫТИЕ ФОНА И ВЫДЕЛЕНИЕ ---
-            document.body.classList.remove('chat-blur-active');
-            document.querySelectorAll('.msg-highlighted').forEach(el => {
-                el.classList.remove('msg-highlighted');
-            });
-
-            setTimeout(() => {
-                const overlay = document.getElementById('overlaySheet');
-                if (overlay) {
-                    overlay.style.display = 'none';
-                    overlay.style.background = 'rgba(0,0,0,0.5)'; // Возвращаем стандартный цвет
-                }
-            }, 300);
-
-            selectedMsgId = null;
-        }
-        function closeAllSheets() {
+            // ЗАКРЫВАЕМ ВСЕ ШТОРКИ (ВКЛЮЧАЯ СКРЕПКУ И МУЗЫКУ)
             document.getElementById('actionSheet')?.classList.remove('open');
             document.getElementById('deleteSheet')?.classList.remove('open');
             document.getElementById('profileSheet')?.classList.remove('open');
             document.getElementById('editProfileSheet')?.classList.remove('open');
             document.getElementById('friendProfileSheet')?.classList.remove('open');
+            document.getElementById('generalSettingsSheet')?.classList.remove('open');
+            document.getElementById('editContactSheet')?.classList.remove('open');
 
+            // ВОТ ЭТИ ДВЕ СТРОЧКИ ИСПРАВЛЯЮТ БАГ:
+            document.getElementById('attachmentSheet')?.classList.remove('open');
+            document.getElementById('musicSearchSheet')?.classList.remove('open');
+
+            // Закрываем контекстное меню
             const menu = document.getElementById('contextMenu');
             if (menu) {
                 menu.classList.remove('active');
                 setTimeout(() => menu.style.display = 'none', 200);
             }
 
-            // --- ОТКЛЮЧАЕМ РАЗМЫТИЕ ФОНА И ВЫДЕЛЕНИЕ ---
+            // Отключаем размытие фона и снятие выделения с сообщений
             document.body.classList.remove('chat-blur-active');
             document.querySelectorAll('.msg-highlighted').forEach(el => {
                 el.classList.remove('msg-highlighted');
             });
 
+            // Прячем темный фон
             setTimeout(() => {
                 const overlay = document.getElementById('overlaySheet');
                 if (overlay) {
                     overlay.style.display = 'none';
-                    overlay.style.background = 'rgba(0,0,0,0.5)'; // Возвращаем стандартный цвет для других шторок
+                    overlay.style.background = 'rgba(0,0,0,0.5)'; // Возвращаем стандартный цвет
                 }
             }, 300);
 
