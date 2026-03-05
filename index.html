@@ -4105,6 +4105,232 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+
+        /* ГЛОБАЛЬНЫЙ ПЛЕЕР ВНИЗУ */
+        .global-music-player {
+            position: fixed;
+            bottom: calc(env(safe-area-inset-bottom) + 70px); /* Над полем ввода чата */
+            left: 50%;
+            transform: translateX(-50%) translateY(150%);
+            width: 95%;
+            max-width: 450px;
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            z-index: 4500;
+            overflow: hidden;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+            .global-music-player.active {
+                transform: translateX(-50%) translateY(0);
+            }
+
+        .gmp-content {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            gap: 12px;
+        }
+
+        .gmp-cover {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #333;
+        }
+
+        .gmp-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .gmp-title {
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .gmp-artist {
+            color: #8e8e93;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .gmp-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .gmp-btn {
+            background: none;
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+            .gmp-btn:active {
+                background: rgba(255,255,255,0.1);
+            }
+
+            .gmp-btn svg {
+                width: 24px;
+                height: 24px;
+            }
+
+        /* КРАСИВЫЙ ПОЛЗУНОК ПЕРЕМОТКИ (КАК В iOS) */
+        .gmp-progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .gmp-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            position: absolute;
+            top: 0;
+            left: 0;
+            margin: 0;
+            padding: 0;
+            cursor: pointer;
+        }
+
+            .gmp-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 12px;
+                height: 12px;
+                background: #736AF0; /* Твой фирменный цвет */
+                border-radius: 50%;
+                box-shadow: 0 0 5px rgba(0,0,0,0.5);
+                margin-top: -4px;
+            }
+
+            .gmp-slider::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 4px;
+                background: linear-gradient(to right, #736AF0 var(--val, 0%), transparent var(--val, 0%));
+            }
+
+        /* КАРТОЧКА МУЗЫКИ В ЧАТЕ */
+        .chat-music-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 12px 8px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 240px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .chat-music-play {
+            width: 40px;
+            height: 40px;
+            background: #736AF0;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            flex-shrink: 0;
+        }
+
+            .chat-music-play svg {
+                width: 20px;
+                height: 20px;
+                margin-left: 2px;
+            }
+
+        /* КАРТОЧКА В ПОИСКЕ */
+        .search-track-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #1c1c1e;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+            .search-track-item img {
+                width: 48px;
+                height: 48px;
+                border-radius: 8px;
+                margin-right: 12px;
+                object-fit: cover;
+            }
+
+        .search-track-btn {
+            background: #736AF0;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* СТИЛИ ДЛЯ МЕНЮ СКРЕПКИ */
+        .attach-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+            width: 80px;
+        }
+
+            .attach-item:active {
+                transform: scale(0.9);
+            }
+
+        .attach-icon-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px; /* Квадрат со скругленными краями (squircle) */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+            .attach-icon-wrap svg {
+                width: 28px;
+                height: 28px;
+            }
+
+        .attach-item span {
+            color: #ccc;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -4123,6 +4349,45 @@
 </head>
 
 <body>
+
+    <div id="yt-hidden-container" style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;"></div>
+
+    <div id="globalMusicPlayer" class="global-music-player hidden">
+        <div class="gmp-progress-container">
+            <input type="range" id="gmpProgress" class="gmp-slider" min="0" max="100" value="0" step="1" oninput="seekMusic(this.value)">
+        </div>
+        <div class="gmp-content">
+            <img id="gmpCover" class="gmp-cover" src="" alt="cover">
+            <div class="gmp-info">
+                <div id="gmpTitle" class="gmp-title">Название трека</div>
+                <div id="gmpArtist" class="gmp-artist">Исполнитель</div>
+            </div>
+            <div class="gmp-controls">
+                <button class="gmp-btn" onclick="togglePlayPause()">
+                    <svg id="gmpPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                    <svg id="gmpPauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                </button>
+                <button class="gmp-btn" onclick="closeMusicPlayer()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="musicSearchSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0; z-index: 6500;">
+        <div class="premium-header">
+            <button onclick="closeMusicSearch()" class="header-icon-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div class="tg-input-wrapper" style="flex:1; margin: 0 10px;">
+                <input type="text" id="musicSearchInput" placeholder="Поиск треков..." style="width: 100%; background: #21232b; border: none; color: white; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 15px;" onkeydown="if(event.key === 'Enter') searchMusic()">
+            </div>
+            <button onclick="searchMusic()" class="header-icon-btn" style="color: #736AF0;">🔍</button>
+        </div>
+        <div id="musicSearchResults" style="flex: 1; overflow-y: auto; padding: 10px;">
+            <div style="color: #888; text-align: center; margin-top: 50px;">Введите название трека или артиста</div>
+        </div>
+    </div>
 
     <div id="inAppNotification" class="in-app-notification" onclick="openNotifChat()">
         <img id="inAppAvatar" class="in-app-avatar" src="" alt="">
@@ -4369,7 +4634,33 @@
         </div>
     </div>
 
+    <div id="attachmentSheet" class="action-sheet" style="padding-bottom: calc(20px + env(safe-area-inset-bottom)); border-top-left-radius: 20px; border-top-right-radius: 20px; background: #1c1c1e;">
 
+        <input type="file" id="hiddenFileInput" onchange="uploadFile(this)" style="display: none;">
+
+        <div style="display: flex; justify-content: space-around; padding: 10px 0;">
+            <div class="attach-item" onclick="document.getElementById('hiddenFileInput').click(); closeAllSheets();">
+                <div class="attach-icon-wrap" style="background: linear-gradient(135deg, #007bff, #00c6ff);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                </div>
+                <span>Файл / Фото</span>
+            </div>
+
+            <div class="attach-item" onclick="closeAllSheets(); openMusicSearch();">
+                <div class="attach-icon-wrap" style="background: linear-gradient(135deg, #ff4081, #ff9100);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                </div>
+                <span>Музыка</span>
+            </div>
+
+            <div class="attach-item" style="opacity: 0.3;">
+                <div class="attach-icon-wrap" style="background: #333;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                </div>
+                <span>Скоро</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Шторка удаления -->
     <div id="deleteSheet" class="action-sheet">
@@ -4611,10 +4902,9 @@
 
                     <textarea id="msgInput" placeholder="Сообщение" spellcheck="true" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
 
-                    <div class="tg-icon-btn-input">
-                        <input type="file" id="fileInput" onchange="uploadFile(this)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; padding: 0; margin: 0;">
-                        <svg viewBox="0 0 24 24" style="transform: rotate(45deg); position: relative; z-index: 1; pointer-events: none;"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" /></svg>
-                    </div>
+                    <button class="tg-icon-btn-input" onclick="openAttachmentMenu()" title="Прикрепить">
+                        <svg viewBox="0 0 24 24" style="transform: rotate(45deg);"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" /></svg>
+                    </button>
                 </div>
 
                 <button id="voiceBtn" class="main-action-btn btn-mic" onclick="alert('Голосовые скоро!')">
@@ -4986,13 +5276,13 @@
                 : `<div class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">${fullName.charAt(0).toUpperCase()}</div>`;
 
             div.innerHTML = `
-                                                        ${avatarHtml}
-                                                        <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                                                        <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                                                        <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                                                        </div>
-                                                        <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
-                                                        `;
+                                                                ${avatarHtml}
+                                                                <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                                                                <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                                                                <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                                                                </div>
+                                                                <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
+                                                                `;
 
             // Событие клика теперь надежно закреплено за узлом
             div.onclick = () => {
@@ -5690,6 +5980,22 @@
                 });
             }
         });
+
+        function openAttachmentMenu() {
+            // Показываем прозрачный фон, если кликнут мимо - закроется
+            const overlay = document.getElementById('overlaySheet');
+            if (overlay) {
+                overlay.style.background = 'transparent';
+                overlay.style.display = 'block';
+            }
+
+            const sheet = document.getElementById('attachmentSheet');
+            if (sheet) {
+                sheet.style.display = 'block'; // Если у него display: none по умолчанию
+                setTimeout(() => sheet.classList.add('open'), 10);
+            }
+        }
+
         // Слушатель входящих заявок в друзья
         function listenForFriendRequests() {
             db.collection('friend_requests')
@@ -5717,16 +6023,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                        ${avatar}
-                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                        </div>
-                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                        </div>
-                                                        `;
+                                                                ${avatar}
+                                                                <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                </div>
+                                                                <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                </div>
+                                                                `;
                         list.appendChild(div);
                     });
                 });
@@ -5994,19 +6300,19 @@
                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
             return `
-                                                        ${avatarHtml}
-                                                        <div class="user-name">${fName}</div>
-                                                        <div class="last-msg-row">
-                                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                                        </div>
-                                                        <div class="meta-column">
-                                                        <span class="last-msg-date" id="date-${chatId}"></span>
-                                                        <div class="meta-bottom-row">
-                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                        </div>
-                                                        </div>
-                                                        `;
+                                                                ${avatarHtml}
+                                                                <div class="user-name">${fName}</div>
+                                                                <div class="last-msg-row">
+                                                                <span class="last-msg" id="last-${chatId}">...</span>
+                                                                </div>
+                                                                <div class="meta-column">
+                                                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                <div class="meta-bottom-row">
+                                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                </div>
+                                                                </div>
+                                                                `;
         }
 
         function loadData() {
@@ -6143,19 +6449,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                                        ${avatarHtml}
-                                                        <div class="user-name">${fName}</div>
-                                                        <div class="last-msg-row">
-                                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                                        </div>
-                                                        <div class="meta-column">
-                                                        <span class="last-msg-date" id="date-${chatId}"></span>
-                                                        <div class="meta-bottom-row">
-                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                        </div>
-                                                        </div>
-                                                        `;
+                                                                ${avatarHtml}
+                                                                <div class="user-name">${fName}</div>
+                                                                <div class="last-msg-row">
+                                                                <span class="last-msg" id="last-${chatId}">...</span>
+                                                                </div>
+                                                                <div class="meta-column">
+                                                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                <div class="meta-bottom-row">
+                                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                </div>
+                                                                </div>
+                                                                `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -6516,10 +6822,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                                        <div class="msg-reply-name">${m.replyTo.name}</div>
-                                                        <div class="msg-reply-text">${m.replyTo.text}</div>
-                                                        </div>`;
+                                                                <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                                <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                                <div class="msg-reply-text">${m.replyTo.text}</div>
+                                                                </div>`;
             }
 
             // Основной контент
@@ -6566,18 +6872,40 @@
 
                 // ВАЖНО: Добавлено style="color: currentColor;" к SVG и убран onclick из верстки, чтобы не было конфликтов
                 contentHtml += `
-                                                        <div class="chat-call-card">
-                                                        <div class="call-icon-wrapper">
-                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                                                        </svg>
-                                                        </div>
-                                                        <div class="call-info">
-                                                        <div class="call-title">${titleText}</div>
-                                                        <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                                                        </div>
-                                                        </div>
-                                                        `;
+                                                                <div class="chat-call-card">
+                                                                <div class="call-icon-wrapper">
+                                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                                                </svg>
+                                                                </div>
+                                                                <div class="call-info">
+                                                                <div class="call-title">${titleText}</div>
+                                                                <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                                                                </div>
+                                                                </div>
+                                                                `;
+            }
+
+            else if (msgType === 'music') {
+                const parts = m.txt.split('|');
+                const videoId = parts[0];
+                const trackTitle = parts[1] || 'Неизвестный трек';
+                const coverUrl = parts[2] || 'https://placehold.co/100x100?text=♫';
+
+                // Безопасное экранирование кавычек для передачи в функцию
+                const safeTitle = trackTitle.replace(/'/g, "\\'");
+
+                contentHtml += `
+                        <div class="chat-music-card" onclick="playMusicTrack('${videoId}', '${safeTitle}', '${coverUrl}')">
+                            <div class="chat-music-play">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="color:white; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${trackTitle}</div>
+                                <div style="color:rgba(255,255,255,0.6); font-size:12px;">Аудиозапись</div>
+                            </div>
+                        </div>
+                    `;
             }
             else {
                 // Добавили класс "chat-link" и убрали target="_blank"
@@ -6602,11 +6930,11 @@
                 }
 
                 let metaHtml = `
-                                                        <span class="msg-meta" style="${metaStyle}">
-                                                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                                        <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                                        </span>`;
+                                                                <span class="msg-meta" style="${metaStyle}">
+                                                                ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                                                                <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                                                                ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                                                </span>`;
 
                 if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                 else contentHtml += metaHtml;
@@ -7006,6 +7334,7 @@
             document.getElementById('profileSheet')?.classList.remove('open');
             document.getElementById('editProfileSheet')?.classList.remove('open');
             document.getElementById('generalSettingsSheet')?.classList.remove('open');
+            document.getElementById('attachmentSheet')?.classList.remove('open');
 
             const menu = document.getElementById('contextMenu');
             if (menu) {
@@ -7412,7 +7741,7 @@
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
 
-            
+
             isEarpiece = true;
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("audio_ear");
@@ -8973,24 +9302,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                        <div class="upload-spinner"></div>
-                                                        </div>
-                                                        `;
+                                                                <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                                <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                                <div class="upload-spinner"></div>
+                                                                </div>
+                                                                `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                        <div class="chat-file-card" style="opacity: 0.7;">
-                                                        <div class="file-icon">📄</div>
-                                                        <div class="file-info">
-                                                        <div class="file-name">${file.name}</div>
-                                                        <div class="file-action">Загрузка...</div>
-                                                        </div>
-                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                        </div>
-                                                        `;
+                                                                <div class="chat-file-card" style="opacity: 0.7;">
+                                                                <div class="file-icon">📄</div>
+                                                                <div class="file-info">
+                                                                <div class="file-name">${file.name}</div>
+                                                                <div class="file-action">Загрузка...</div>
+                                                                </div>
+                                                                <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                                </div>
+                                                                `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -10078,14 +10407,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                                                    <div class="search-msg-content">
-                                                                        <div class="search-msg-header">
-                                                                            <span class="search-msg-name">${res.name}</span>
-                                                                            <span class="search-msg-time">${res.time}</span>
-                                                                        </div>
-                                                                        <div class="search-msg-text">${res.text}</div>
-                                                                    </div>
-                                                                `;
+                                                                            <div class="search-msg-content">
+                                                                                <div class="search-msg-header">
+                                                                                    <span class="search-msg-name">${res.name}</span>
+                                                                                    <span class="search-msg-time">${res.time}</span>
+                                                                                </div>
+                                                                                <div class="search-msg-text">${res.text}</div>
+                                                                            </div>
+                                                                        `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -10275,31 +10604,31 @@
         }
 
         // 2. Функция переключения
-            function toggleSpeaker() {
-                isEarpiece = !isEarpiece;
-                const btn = document.getElementById('btnSpeaker');
+        function toggleSpeaker() {
+            isEarpiece = !isEarpiece;
+            const btn = document.getElementById('btnSpeaker');
 
-                const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
-                const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+            const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+            const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
 
-                if (isEarpiece) {
-                    btn.innerHTML = iconEar;
-                    btn.classList.add('muted-state');
+            if (isEarpiece) {
+                btn.innerHTML = iconEar;
+                btn.classList.add('muted-state');
 
-                    if (window.mauiInterop) {
-                        window.mauiInterop.postMessage("audio_ear");
-                        window.mauiInterop.postMessage("enable_proximity"); // Вернули к уху - включили датчик
-                    }
-                } else {
-                    btn.innerHTML = iconLoud;
-                    btn.classList.remove('muted-state');
+                if (window.mauiInterop) {
+                    window.mauiInterop.postMessage("audio_ear");
+                    window.mauiInterop.postMessage("enable_proximity"); // Вернули к уху - включили датчик
+                }
+            } else {
+                btn.innerHTML = iconLoud;
+                btn.classList.remove('muted-state');
 
-                    if (window.mauiInterop) {
-                        window.mauiInterop.postMessage("audio_loud");
-                        window.mauiInterop.postMessage("disable_proximity"); // Громкая связь - выключили датчик
-                    }
+                if (window.mauiInterop) {
+                    window.mauiInterop.postMessage("audio_loud");
+                    window.mauiInterop.postMessage("disable_proximity"); // Громкая связь - выключили датчик
                 }
             }
+        }
 
         // 3. Вызови проверку кнопок в момент открытия экрана звонка
         // Добавь это внутрь функции startCall() и answerCall()
@@ -11205,6 +11534,340 @@
             document.getElementById('activeCallWidget').style.display = 'none';
             // Возвращаем большой экран
             document.getElementById('callScreen').style.display = 'flex';
+        }
+
+
+
+        // --- YOUTUBE MUSIC ENGINE ---
+
+        const YT_API_KEY = "AIzaSyA-n-kDNX_kVKSeNPzoNMUG84X3H4mlqV8"; //
+
+        let ytPlayer = null;
+
+        let currentTrackId = null;
+
+        let progressInterval = null;
+
+
+
+        // Загружаем ядро YouTube
+
+        const tag = document.createElement('script');
+
+        tag.src = "https://www.youtube.com/iframe_api";
+
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+
+
+        function onYouTubeIframeAPIReady() {
+
+            ytPlayer = new YT.Player('yt-hidden-container', {
+
+                height: '1', width: '1',
+
+                videoId: '',
+
+                playerVars: { 'playsinline': 1, 'controls': 0, 'disablekb': 1, 'fs': 0 },
+
+                events: {
+
+                    'onStateChange': onPlayerStateChange
+
+                }
+
+            });
+
+        }
+
+
+
+        function onPlayerStateChange(event) {
+
+            const playIcon = document.getElementById('gmpPlayIcon');
+
+            const pauseIcon = document.getElementById('gmpPauseIcon');
+
+
+
+            if (event.data === YT.PlayerState.PLAYING) {
+
+                playIcon.style.display = 'none';
+
+                pauseIcon.style.display = 'block';
+
+                startProgressTimer();
+
+            } else {
+
+                playIcon.style.display = 'block';
+
+                pauseIcon.style.display = 'none';
+
+                stopProgressTimer();
+
+            }
+
+        }
+
+
+
+        // Управление плеером
+
+        function playMusicTrack(videoId, title, coverUrl) {
+
+            if (!ytPlayer) return;
+
+
+
+            const playerUI = document.getElementById('globalMusicPlayer');
+
+            document.getElementById('gmpTitle').innerText = title;
+
+            document.getElementById('gmpArtist').innerText = "Novogram Music";
+
+            document.getElementById('gmpCover').src = coverUrl;
+
+
+
+            playerUI.classList.add('active'); // Показываем плеер
+
+
+
+            if (currentTrackId !== videoId) {
+
+                ytPlayer.loadVideoById(videoId);
+
+                currentTrackId = videoId;
+
+            } else {
+
+                ytPlayer.playVideo();
+
+            }
+
+        }
+
+
+
+        function togglePlayPause() {
+
+            if (!ytPlayer) return;
+
+            const state = ytPlayer.getPlayerState();
+
+            if (state === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
+
+            else ytPlayer.playVideo();
+
+        }
+
+
+
+        function closeMusicPlayer() {
+
+            if (ytPlayer) ytPlayer.pauseVideo();
+
+            document.getElementById('globalMusicPlayer').classList.remove('active');
+
+        }
+
+
+
+        // Перемотка
+
+        function seekMusic(val) {
+
+            if (!ytPlayer || !ytPlayer.getDuration) return;
+
+            const duration = ytPlayer.getDuration();
+
+            const seekTo = (val / 100) * duration;
+
+            ytPlayer.seekTo(seekTo, true);
+
+            updateSliderColor(val);
+
+        }
+
+
+
+        function startProgressTimer() {
+
+            if (progressInterval) clearInterval(progressInterval);
+
+            progressInterval = setInterval(() => {
+
+                if (ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
+
+                    const current = ytPlayer.getCurrentTime();
+
+                    const duration = ytPlayer.getDuration();
+
+                    if (duration > 0) {
+
+                        const percent = (current / duration) * 100;
+
+                        const slider = document.getElementById('gmpProgress');
+
+                        slider.value = percent;
+
+                        updateSliderColor(percent);
+
+                    }
+
+                }
+
+            }, 1000);
+
+        }
+
+
+
+        function stopProgressTimer() {
+
+            if (progressInterval) clearInterval(progressInterval);
+
+        }
+
+
+
+        function updateSliderColor(val) {
+
+            document.getElementById('gmpProgress').style.setProperty('--val', `${val}%`);
+
+        }
+
+
+
+        // --- ПОИСК МУЗЫКИ ---
+
+        function openMusicSearch() {
+
+            document.getElementById('overlaySheet').style.display = 'block';
+
+            const sheet = document.getElementById('musicSearchSheet');
+
+            sheet.style.display = 'flex';
+
+            setTimeout(() => sheet.classList.add('open'), 10);
+
+        }
+
+
+
+        function closeMusicSearch() {
+
+            document.getElementById('musicSearchSheet').classList.remove('open');
+
+            setTimeout(() => { document.getElementById('overlaySheet').style.display = 'none'; }, 300);
+
+        }
+
+
+
+        async function searchMusic() {
+
+            const query = document.getElementById('musicSearchInput').value.trim();
+
+            const resultsBox = document.getElementById('musicSearchResults');
+
+            if (!query) return;
+
+
+
+            resultsBox.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;"><div class="upload-spinner" style="position:relative; transform:none; left:auto; top:auto; margin: 0 auto;"></div> Ищем...</div>';
+
+
+
+            try {
+
+                // Ищем только аудио/музыку
+
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' audio')}&type=video&maxResults=10&key=${YT_API_KEY}`;
+
+                const res = await fetch(url);
+
+                const data = await res.json();
+
+
+
+                if (!data.items || data.items.length === 0) {
+
+                    resultsBox.innerHTML = '<div style="text-align:center; color:#888;">Ничего не найдено</div>';
+
+                    return;
+
+                }
+
+
+
+                resultsBox.innerHTML = '';
+
+                data.items.forEach(item => {
+
+                    const videoId = item.id.videoId;
+
+                    const title = item.snippet.title.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+
+                    const cover = item.snippet.thumbnails.default.url;
+
+
+
+                    const div = document.createElement('div');
+
+                    div.className = 'search-track-item';
+
+                    div.innerHTML = `
+
+                    <img src="${cover}" onclick="playMusicTrack('${videoId}', '${title.replace(/'/g, "\\'")}', '${cover}')">
+
+                    <div style="flex:1; overflow:hidden;" onclick="playMusicTrack('${videoId}', '${title.replace(/'/g, "\\'")}', '${cover}')">
+
+                        <div style="color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
+
+                        <div style="color:#888; font-size:12px;">YouTube Music</div>
+
+                    </div>
+
+                    <button class="search-track-btn" onclick="sendMusicToChat('${videoId}', '${title.replace(/'/g, "\\'")}', '${cover}')">В чат</button>
+
+                `;
+
+                    resultsBox.appendChild(div);
+
+                });
+
+
+
+            } catch (e) {
+
+                resultsBox.innerHTML = '<div style="text-align:center; color:#ff4444;">Ошибка поиска. Проверьте API ключ.</div>';
+
+            }
+
+        }
+
+
+
+        // Отправка музыки в чат
+
+        function sendMusicToChat(videoId, title, cover) {
+
+            // Формируем специальную строку данных
+
+            const musicData = `${videoId}|${title}|${cover}`;
+
+            // Используем твою существующую функцию отправки, но с типом 'music'
+
+            sendMsg(musicData, false, 'music');
+
+            closeMusicSearch();
+
+            showToast('Трек отправлен');
+
         }
 
     </script>
