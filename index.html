@@ -6268,11 +6268,15 @@
                         // --- НОВАЯ ЛОГИКА ОБНОВЛЕНИЯ ТЕКСТА ---
                         const renderPreview = () => {
                             if (!lastEl) return;
-                            const decrypted = decryptText(lastData.txt, chatId);
 
-                            // Если расшифровка не удалась (вернула тот же шифр)
-                            if (decrypted === lastData.txt && !lastData.sys) {
-                                // Рисуем премиальные точки (индикатор защиты)
+                            // 1. Проверяем, реально ли это зашифрованный текст (шифры CryptoJS всегда начинаются с U2FsdGVkX1)
+                            const isEncrypted = lastData.txt && lastData.txt.toString().startsWith('U2FsdGVkX1');
+
+                            // Если зашифровано - расшифровываем, иначе оставляем как есть
+                            const decrypted = isEncrypted ? decryptText(lastData.txt, chatId) : lastData.txt;
+
+                            // 2. Если это реально шифр, но он не расшифровался (нет ключа)
+                            if (isEncrypted && decrypted === lastData.txt && !lastData.sys) {
                                 lastEl.innerHTML = `<span style="opacity:0.5; letter-spacing:2px; color:#736AF0;">••••••••</span>`;
                             } else {
                                 let displayText = '';
@@ -6327,7 +6331,9 @@
                         }
                         // ---> КОНЕЦ БЛОКА УВЕДОМЛЕНИЙ <---
 
-                        if (lastData.ts) timeToDisplay = lastData.ts.toMillis();
+                        if (lastData.ts) {
+                            timeToDisplay = typeof lastData.ts.toMillis === 'function' ? lastData.ts.toMillis() : (lastData.ts.seconds ? lastData.ts.seconds * 1000 : new Date(lastData.ts).getTime());
+                        }
 
                         if (statusEl) {
                             if (lastData.from === currentUser.uid) {
@@ -6847,9 +6853,11 @@
                     let allDocs = snap.docs;
 
                     allDocs.sort((a, b) => {
-                        const timeA = a.data().ts ? a.data().ts.toMillis() : Date.now() + 999999999;
-                        const timeB = b.data().ts ? b.data().ts.toMillis() : Date.now() + 999999999;
-                        return timeA - timeB;
+                        const getTs = (obj) => {
+                            if (!obj.ts) return Date.now() + 999999999;
+                            return typeof obj.ts.toMillis === 'function' ? obj.ts.toMillis() : (obj.ts.seconds ? obj.ts.seconds * 1000 : new Date(obj.ts).getTime());
+                        };
+                        return getTs(a.data()) - getTs(b.data());
                     });
 
                     allDocs.forEach(doc => {
@@ -6863,10 +6871,17 @@
                         }
 
                         const m = { ...rawData };
-                        m.txt = decryptText(rawData.txt, currentChatId);
+
+                        // Умная расшифровка: пытаемся расшифровать только если есть сигнатура шифра
+                        const isEncrypted = rawData.txt && rawData.txt.toString().startsWith('U2FsdGVkX1');
+                        m.txt = isEncrypted ? decryptText(rawData.txt, currentChatId) : rawData.txt;
+
                         const msgType = m.type || 'text';
 
-                        const tsMillis = m.ts ? m.ts.toMillis() : Date.now();
+                        // Безопасное получение времени для самого чата
+                        const tsMillis = m.ts ? (typeof m.ts.toMillis === 'function' ? m.ts.toMillis() : (m.ts.seconds ? m.ts.seconds * 1000 : new Date(m.ts).getTime())) : Date.now();
+
+
                         const dateStr = getChatSeparatorDate(tsMillis);
 
                         // НОВОЕ: Генерируем "машинную" дату для поиска календарем (формат YYYY-MM-DD)
