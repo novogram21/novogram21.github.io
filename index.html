@@ -9050,7 +9050,6 @@
             const file = input.files[0];
             if (!file) return;
 
-            // Filebin переваривает огромные файлы, но для браузерной расшифровки 150 МБ - оптимальный лимит
             if (file.size > 150 * 1024 * 1024) {
                 alert("Лимит файла - 150 МБ (для стабильной работы памяти телефона).");
                 return;
@@ -9090,8 +9089,8 @@
                 // Аппаратное шифрование E2E
                 const encryptedBuffer = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, aesKey, arrayBuffer);
 
-                // Для Filebin лучше всего отправлять просто чистый бинарник (Blob)
-                const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
+                // 🔥 ХИТРОСТЬ: Ставим тип text/plain, чтобы обойти проверку CORS в браузере!
+                const encryptedBlob = new Blob([encryptedBuffer], { type: 'text/plain' });
 
                 msgInput.placeholder = "Отправка...";
 
@@ -9099,12 +9098,13 @@
                 const binId = 'novo' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
                 const uploadUrl = `https://filebin.net/${binId}/media.bin`;
 
-                // Загрузка на Filebin
+                // Загрузка на Filebin без триггера CORS-preflight
                 const fileUrl = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     xhr.open('POST', uploadUrl);
-                    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-                    xhr.setRequestHeader('Accept', 'application/json');
+
+                    // ВАЖНО: Мы удалили setRequestHeader! 
+                    // Теперь браузер пропустит файл без лишних проверок безопасности.
 
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
@@ -9119,12 +9119,12 @@
 
                     xhr.onload = () => {
                         if (xhr.status >= 200 && xhr.status < 300) {
-                            resolve(uploadUrl); // Возвращаем прямую ссылку на бинарник
+                            resolve(uploadUrl); // Возвращаем прямую ссылку
                         } else {
                             reject("Ошибка сервера Filebin: " + xhr.status);
                         }
                     };
-                    xhr.onerror = () => reject("Сбой сети (отключите VPN или проверьте подключение)");
+                    xhr.onerror = () => reject("Сбой сети");
                     xhr.send(encryptedBlob);
                 });
 
