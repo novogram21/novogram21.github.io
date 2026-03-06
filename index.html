@@ -878,50 +878,7 @@
                 content: "";
                 margin-top: auto;
             }
-        /* Телеграм кружок загрузки */
-        .tg-progress-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 44px;
-            height: 44px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
 
-        .tg-progress-svg {
-            position: absolute;
-            transform: rotate(-90deg);
-            width: 44px;
-            height: 44px;
-        }
-
-        .tg-progress-circle-bg {
-            fill: none;
-            stroke: rgba(255, 255, 255, 0.2);
-            stroke-width: 3;
-        }
-
-        .tg-progress-circle-bar {
-            fill: none;
-            stroke: #ffffff;
-            stroke-width: 3;
-            stroke-dasharray: 113; /* Длина окружности (2 * pi * r) где r=18 */
-            stroke-dashoffset: 113; /* 113 = 0%, 0 = 100% */
-            transition: stroke-dashoffset 0.1s linear;
-        }
-
-        .tg-progress-icon {
-            color: white;
-            font-size: 16px;
-            position: relative;
-            z-index: 2;
-        }
 
 
 
@@ -6577,12 +6534,12 @@
                 contentHtml += `<div class="media-container"><img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}')" onerror="this.src='https://placehold.co/200x200?text=Ошибка';"></div>`;
             }
             // === НОВЫЙ БЛОК: ЗАЩИЩЕННЫЕ ФАЙЛЫ И МЕДИА ===
-            else if (msgType === 'secure_cloud_media') {
+            else if (msgType === 'whatsapp_media') {
                 const parts = m.txt.split('|');
-                const fileUrl = parts[0];
+                const fileId = parts[0];
                 const mimeType = parts[1] || '';
                 const fileName = parts[2] || 'Файл';
-                const blurThumb = parts[3] || '';
+                const blurThumb = parts[4] || ''; // В whatsapp_media блюр идет 5-м аргументом (индекс 4)
 
                 const uniqueId = 'media_' + msgId;
                 const safePayload = m.txt.replace(/'/g, "\\'"); // Экранируем для onclick
@@ -6590,11 +6547,12 @@
                 if (mimeType.startsWith('image/') || mimeType.startsWith('video/')) {
                     isVisualMedia = true;
                     const isVideo = mimeType.startsWith('video/');
+                    const icon = isVideo ? '▶' : '⬇';
 
-                    // Иконка скачивания (стрелка вниз) по центру для изначального состояния
+                    // Иконка скачивания/воспроизведения по центру для изначального состояния
                     const downloadIcon = `
                 <div class="tg-progress-overlay" id="overlay_${uniqueId}" style="background: rgba(0,0,0,0.4);">
-                    <div class="tg-progress-icon" style="font-size:20px;">⬇</div>
+                    <div class="tg-progress-icon" style="font-size:20px;">${icon}</div>
                 </div>`;
 
                     contentHtml += `
@@ -6607,10 +6565,10 @@
                     // Для обычных файлов (документы, архивы)
                     contentHtml += `
                 <div class="chat-file-card" style="text-decoration:none; cursor:pointer;" onclick="loadAndDecryptMedia('${safePayload}', '${uniqueId}', false)">
-                    <div class="file-icon">🔒</div>
+                    <div class="file-icon">📁</div>
                     <div class="file-info">
                         <div class="file-name" style="color:white;">${fileName}</div>
-                        <div class="file-action" style="color:#736AF0;" id="action_${uniqueId}">Нажмите для скачивания</div>
+                        <div class="file-action" style="color:#736AF0;" id="action_${uniqueId}">Нажмите для загрузки</div>
                     </div>
                 </div>`;
                 }
@@ -6752,15 +6710,6 @@
             currentFriendId = null;
             currentChatId = null;
         }
-
-
-        // Превращаем пароль чата в ключ для процессора (Web Crypto API)
-        async function getAesKey(chatId) {
-            const keyStr = sessionKeys[chatId] || "default_novogram_key";
-            const hash = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyStr));
-            return window.crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-        }
-
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
         function sendMsg(txt, isSys = false, type = 'text') {
             const inputEl = document.getElementById('msgInput');
@@ -9101,120 +9050,202 @@
             const file = input.files[0];
             if (!file) return;
 
+            // Pixeldrain принимает до 100 МБ анонимно. Для телефонов это идеальный лимит.
             if (file.size > 100 * 1024 * 1024) {
-                alert("Лимит 100 МБ для сохранения скорости расшифровки на телефонах.");
+                alert("Лимит файла - 100 МБ.");
                 return;
             }
 
             const msgInput = document.getElementById('msgInput');
+            const originalPlaceholder = msgInput.placeholder;
             msgInput.disabled = true;
 
-            // 1. Создаем превью в чате с кружком 0%
+            // 1. Создаем превью загрузки с кружком
             const tempId = 'temp-' + Date.now();
             const list = currentMsgList;
             const div = document.createElement('div');
-            div.id = tempId;
-            div.className = 'msg msg-me';
-
-            // Вставляем кружок загрузки (иконка стрелки вверх)
+            div.id = tempId; div.className = 'msg msg-me';
             div.innerHTML = `
-                <div class="media-container" style="position: relative; display: inline-block; width: 240px; min-height: 150px; background: #222;">
-                    <div class="tg-progress-overlay">
-                        <svg class="tg-progress-svg"><circle class="tg-progress-circle-bg" cx="22" cy="22" r="18"></circle><circle class="tg-progress-circle-bar" id="prog-bar-${tempId}" cx="22" cy="22" r="18"></circle></svg>
-                        <div class="tg-progress-icon">⬆</div>
-                    </div>
-                </div>
-            `;
+        <div class="media-container" style="position: relative; display: inline-block; width: 240px; min-height: 150px; background: #222; border-radius: 12px;">
+            <div class="tg-progress-overlay">
+                <svg class="tg-progress-svg"><circle class="tg-progress-circle-bg" cx="22" cy="22" r="18"></circle><circle class="tg-progress-circle-bar" id="prog-bar-${tempId}" cx="22" cy="22" r="18"></circle></svg>
+                <div class="tg-progress-icon" style="font-size:12px;">0%</div>
+            </div>
+        </div>`;
             list.appendChild(div);
             list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
 
             try {
-                // 2. Блюр превью
+                // 2. Блюр-миниатюра (останется в базе навсегда)
+                msgInput.placeholder = "Подготовка...";
                 let thumbnailBase64 = "";
-                if (file.type.startsWith('image/')) thumbnailBase64 = await generateThumbnail(file, 'image');
-                else if (file.type.startsWith('video/')) thumbnailBase64 = await generateThumbnail(file, 'video');
+                let fileType = file.type.startsWith('image/') ? 'image' : (file.type.startsWith('video/') ? 'video' : 'file');
 
-                // 3. Аппаратное шифрование (0.2 секунды)
+                if (fileType !== 'file') thumbnailBase64 = await generateThumbnail(file, fileType);
+
+                // 3. Аппаратное шифрование (очень быстро)
+                msgInput.placeholder = "Шифрование...";
                 const arrayBuffer = await file.arrayBuffer();
                 const iv = window.crypto.getRandomValues(new Uint8Array(12));
                 const aesKey = await getAesKey(currentChatId);
+
                 const encryptedBuffer = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, aesKey, arrayBuffer);
-                const encryptedBlob = new Blob([iv, encryptedBuffer], { type: 'application/octet-stream' });
-                const encryptedFile = new File([encryptedBlob], "data.bin");
 
-                // 4. Загрузка через XMLHttpRequest для отслеживания процентов!
+                // В отличие от прошлого раза, вектор (IV) мы передаем текстом, а файл льем чистым
+                const encryptedFile = new File([encryptedBuffer], "bin.dat", { type: 'application/octet-stream' });
+
+                // 4. Отправка на Pixeldrain с прогрессом
+                msgInput.placeholder = "Отправка...";
                 const formData = new FormData();
-                formData.append('reqtype', 'fileupload');
-                formData.append('fileToUpload', encryptedFile);
+                formData.append('file', encryptedFile);
 
-                const fileUrl = await new Promise((resolve, reject) => {
+                const fileId = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', 'https://catbox.moe/user/api.php');
+                    xhr.open('POST', 'https://pixeldrain.com/api/file');
 
-                    // Обновляем кружок
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
-                            const percent = (e.loaded / e.total) * 100;
-                            // 113 это 0%, 0 это 100%
+                            const percent = Math.round((e.loaded / e.total) * 100);
                             const offset = 113 - (113 * percent / 100);
                             const bar = document.getElementById(`prog-bar-${tempId}`);
+                            const icon = document.querySelector(`#${tempId} .tg-progress-icon`);
                             if (bar) bar.style.strokeDashoffset = offset;
+                            if (icon) icon.innerText = `${percent}%`;
                         }
                     };
 
                     xhr.onload = () => {
-                        if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
-                        else reject("Ошибка сервера Catbox");
+                        if (xhr.status === 200 || xhr.status === 201) {
+                            const res = JSON.parse(xhr.responseText);
+                            if (res.success) resolve(res.id);
+                            else reject("Ошибка сервера");
+                        } else reject("Сбой сети");
                     };
-                    xhr.onerror = () => reject("Ошибка сети");
+                    xhr.onerror = () => reject("Нет интернета");
                     xhr.send(formData);
                 });
 
-                // Успех! Отправляем в базу
+                // 5. Успех! Отправляем в Firebase пакет данных
                 document.getElementById(tempId)?.remove();
-                const payload = `${fileUrl}|${file.type}|${file.name}|${thumbnailBase64}`;
-                sendMsg(payload, false, 'secure_cloud_media');
+
+                const ivHex = buf2hex(iv.buffer);
+                // Формат: ID_на_Pixeldrain | Тип | Имя | IV (Вектор) | Блюр
+                const payload = `${fileId}|${file.type}|${file.name}|${ivHex}|${thumbnailBase64}`;
+
+                sendMsg(payload, false, 'whatsapp_media');
 
             } catch (error) {
                 console.error(error);
                 alert("Ошибка отправки: " + error);
                 document.getElementById(tempId)?.remove();
             } finally {
+                msgInput.placeholder = originalPlaceholder;
                 msgInput.disabled = false;
                 input.value = '';
                 msgInput.focus();
             }
         }
 
-        // Вспомогательная функция генерации размытого превью (50x50)
-        function generateThumbnail(file, type) {
-            return new Promise((resolve) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 50; canvas.height = 50;
+        async function loadAndDecryptMedia(payloadStr, elementId, isVideo) {
+            const el = document.getElementById(elementId);
+            const overlayId = `overlay_${elementId}`;
+            const container = el.parentElement;
 
-                if (type === 'image') {
-                    const img = new Image();
-                    img.onload = () => {
-                        ctx.drawImage(img, 0, 0, 50, 50);
-                        resolve(canvas.toDataURL('image/jpeg', 0.3));
-                    };
-                    img.src = URL.createObjectURL(file);
-                } else if (type === 'video') {
-                    const video = document.createElement('video');
-                    video.muted = true;
-                    video.playsInline = true;
-                    video.onloadeddata = () => { video.currentTime = 1; };
-                    video.onseeked = () => {
-                        ctx.drawImage(video, 0, 0, 50, 50);
-                        resolve(canvas.toDataURL('image/jpeg', 0.3));
-                    };
-                    video.src = URL.createObjectURL(file);
+            // Если уже открыто - просто увеличиваем фото
+            if (el.tagName === 'IMG' && el.style.filter === 'none') {
+                openImageViewer(el.src);
+                return;
+            }
+
+            const parts = payloadStr.split('|');
+            const fileId = parts[0];
+            const mimeType = parts[1];
+            const ivHex = parts[3];
+            const fileUrl = `https://pixeldrain.com/api/file/${fileId}`;
+
+            // Рисуем кружок загрузки
+            let overlay = document.getElementById(overlayId);
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = overlayId;
+                overlay.className = 'tg-progress-overlay';
+                overlay.innerHTML = `<svg class="tg-progress-svg"><circle class="tg-progress-circle-bg" cx="22" cy="22" r="18"></circle><circle class="tg-progress-circle-bar" id="prog-bar-${elementId}" cx="22" cy="22" r="18"></circle></svg><div class="tg-progress-icon" style="font-size:12px;">0%</div>`;
+                container.appendChild(overlay);
+            }
+
+            try {
+                const cacheName = 'novogram-whatsapp-cache';
+                const cache = await caches.open(cacheName);
+                const cachedResponse = await cache.match(fileUrl);
+
+                let decryptedBuffer;
+                const aesKey = await getAesKey(currentChatId);
+                const iv = hex2buf(ivHex);
+
+                if (cachedResponse) {
+                    // ФАЙЛ ЕСТЬ НА ТЕЛЕФОНЕ (Моментальное открытие)
+                    overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none;"></div>`;
+                    const encryptedBuffer = await cachedResponse.arrayBuffer();
+                    decryptedBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, aesKey, encryptedBuffer);
                 } else {
-                    resolve("");
+                    // ФАЙЛА НЕТ - КАЧАЕМ С СЕРВЕРА
+                    const encryptedBuffer = await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', fileUrl);
+                        xhr.responseType = 'arraybuffer';
+
+                        xhr.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                const percent = Math.round((e.loaded / e.total) * 100);
+                                const offset = 113 - (113 * percent / 100);
+                                const bar = document.getElementById(`prog-bar-${elementId}`);
+                                const icon = document.querySelector(`#${overlayId} .tg-progress-icon`);
+                                if (bar) bar.style.strokeDashoffset = offset;
+                                if (icon) icon.innerText = `${percent}%`;
+                            }
+                        };
+
+                        xhr.onload = () => {
+                            if (xhr.status === 404) reject("EXPIRED"); // Файл удален сервером (прошло 60 дней)
+                            else if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+                            else reject("Ошибка сервера");
+                        };
+                        xhr.onerror = () => reject("Ошибка сети");
+                        xhr.send();
+                    });
+
+                    overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none;"></div>`;
+
+                    // Сохраняем в кэш ТЕЛЕФОНА НАВСЕГДА (как в WhatsApp)
+                    cache.put(fileUrl, new Response(encryptedBuffer));
+
+                    decryptedBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, aesKey, encryptedBuffer);
                 }
-            });
+
+                // Превращаем в локальный файл
+                const finalBlob = new Blob([decryptedBuffer], { type: mimeType });
+                const mediaSrc = URL.createObjectURL(finalBlob);
+                overlay.remove();
+
+                // Отрисовка
+                if (isVideo) {
+                    container.innerHTML = `<video src="${mediaSrc}" controls autoplay playsinline style="width: 100%; height: 100%; border-radius: 12px; outline: none; background: black;"></video>`;
+                } else {
+                    el.src = mediaSrc;
+                    el.style.filter = 'none'; // Убираем блюр
+                }
+
+            } catch (err) {
+                console.error("Ошибка:", err);
+                if (err === "EXPIRED") {
+                    overlay.innerHTML = `<div style="background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; color: white; font-size: 12px; text-align: center;">Срок хранения<br>истек</div>`;
+                } else {
+                    overlay.innerHTML = `<div class="tg-progress-icon" style="color:#ff595a; font-size: 20px;">✖</div>`;
+                    showToast("Не удалось загрузить медиа");
+                }
+            }
         }
+
         // Функции для просмотра фото
         function openImageViewer(src) {
             const viewer = document.getElementById('imageViewer');
@@ -9228,88 +9259,6 @@
             img.src = highResSrc;
             viewer.classList.add('active');
         }
-
-        async function loadAndDecryptMedia(payloadStr, elementId, isVideo) {
-            const el = document.getElementById(elementId);
-            const spinner = document.getElementById('spinner_' + elementId);
-            if (!el) return;
-
-            // Если уже расшифровано, открываем вьювер
-            if (el.tagName === 'IMG' && el.style.filter === 'none') {
-                openImageViewer(el.src);
-                return;
-            }
-
-            const parts = payloadStr.split('|');
-            const fileUrl = parts[0];
-            const mimeType = parts[1];
-            const fileName = parts[2];
-
-            if (spinner) spinner.style.display = 'block';
-
-            try {
-                // 1. Проверяем кэш браузера (может мы уже расшифровывали это?)
-                const cacheName = 'novogram-secure-cache';
-                const cache = await caches.open(cacheName);
-                const cachedResponse = await cache.match(fileUrl);
-
-                let mediaSrc = "";
-
-                if (cachedResponse) {
-                    const blob = await cachedResponse.blob();
-                    mediaSrc = URL.createObjectURL(blob);
-                } else {
-                    // 2. Скачиваем зашифрованный .bin файл (GoFile API Direct link extraction needed if direct URL fails, but GoFile usually redirects correctly in JS fetch)
-                    // Для надежности берем API-ссылку GoFile (которая лежит в downloadPage)
-                    let directUrl = fileUrl;
-                    if (fileUrl.includes('downloadPage')) {
-                        // Обход GoFile API (базовый)
-                        const req = await fetch(fileUrl);
-                        // В реальном коде GoFile нужно достать directLink, но для упрощения используем прямую работу с fetch.
-                        // Если GoFile блокирует fetch по CORS, лучше сменить на Catbox (catbox.moe), он идеален для fetch.
-                    }
-
-                    const response = await fetch(directUrl);
-                    const buffer = await response.arrayBuffer();
-
-                    // 3. Аппаратная расшифровка
-                    const iv = buffer.slice(0, 12);
-                    const data = buffer.slice(12);
-                    const aesKey = await getAesKey(currentChatId);
-
-                    const decryptedBuffer = await window.crypto.subtle.decrypt(
-                        { name: "AES-GCM", iv: new Uint8Array(iv) },
-                        aesKey,
-                        data
-                    );
-
-                    // 4. Создаем локальный файл
-                    const finalBlob = new Blob([decryptedBuffer], { type: mimeType });
-
-                    // Сохраняем в кэш навсегда
-                    const cacheResponse = new Response(finalBlob);
-                    cache.put(fileUrl, cacheResponse);
-
-                    mediaSrc = URL.createObjectURL(finalBlob);
-                }
-
-                // 5. Отрисовываем
-                if (isVideo) {
-                    const container = el.parentElement;
-                    container.innerHTML = `<video src="${mediaSrc}" controls autoplay playsinline style="width: 100%; height: 100%; border-radius: 12px; outline: none;"></video>`;
-                } else {
-                    el.src = mediaSrc;
-                    el.style.filter = 'none'; // Убираем блюр
-                    if (spinner) spinner.style.display = 'none';
-                }
-
-            } catch (err) {
-                console.error("Ошибка расшифровки:", err);
-                showToast("Не удалось расшифровать файл");
-                if (spinner) spinner.style.display = 'none';
-            }
-        }
-
         function closeImageViewer() {
             const viewer = document.getElementById('imageViewer');
             viewer.classList.remove('active');
@@ -11412,6 +11361,44 @@
 
             // Сохраняем функцию для отписки
             activeFriendStatusUnsub = () => statusRef.off('value', listener);
+        }
+
+        // Генерация аппаратного ключа из пароля чата
+        async function getAesKey(chatId) {
+            const keyStr = sessionKeys[chatId] || "default_novogram_key";
+            const hash = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyStr));
+            return window.crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+        }
+
+        // Конвертеры для безопасной передачи вектора шифрования
+        function buf2hex(buffer) {
+            return [...new Uint8Array(buffer)].map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+        function hex2buf(hexString) {
+            return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        }
+
+        // Генерация миниатюры 50x50 (как в ТГ и WA)
+        function generateThumbnail(file, type) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 50; canvas.height = 50;
+
+                if (type === 'image') {
+                    const img = new Image();
+                    img.onload = () => { ctx.drawImage(img, 0, 0, 50, 50); resolve(canvas.toDataURL('image/jpeg', 0.3)); };
+                    img.src = URL.createObjectURL(file);
+                } else if (type === 'video') {
+                    const video = document.createElement('video');
+                    video.muted = true; video.playsInline = true;
+                    video.onloadeddata = () => { video.currentTime = 1; };
+                    video.onseeked = () => { ctx.drawImage(video, 0, 0, 50, 50); resolve(canvas.toDataURL('image/jpeg', 0.3)); };
+                    video.src = URL.createObjectURL(file);
+                } else {
+                    resolve("");
+                }
+            });
         }
 
 
