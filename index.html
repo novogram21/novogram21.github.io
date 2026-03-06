@@ -9050,9 +9050,8 @@
             const file = input.files[0];
             if (!file) return;
 
-            // Pixeldrain принимает до 100 МБ анонимно. Для телефонов это идеальный лимит.
             if (file.size > 100 * 1024 * 1024) {
-                alert("Лимит файла - 100 МБ.");
+                alert("Лимит файла - 100 МБ (для безопасности оперативной памяти телефона).");
                 return;
             }
 
@@ -9060,48 +9059,44 @@
             const originalPlaceholder = msgInput.placeholder;
             msgInput.disabled = true;
 
-            // 1. Создаем превью загрузки с кружком
+            // Создаем превью загрузки с кружком в чате
             const tempId = 'temp-' + Date.now();
             const list = currentMsgList;
             const div = document.createElement('div');
             div.id = tempId; div.className = 'msg msg-me';
             div.innerHTML = `
-        <div class="media-container" style="position: relative; display: inline-block; width: 240px; min-height: 150px; background: #222; border-radius: 12px;">
-            <div class="tg-progress-overlay">
-                <svg class="tg-progress-svg"><circle class="tg-progress-circle-bg" cx="22" cy="22" r="18"></circle><circle class="tg-progress-circle-bar" id="prog-bar-${tempId}" cx="22" cy="22" r="18"></circle></svg>
-                <div class="tg-progress-icon" style="font-size:12px;">0%</div>
-            </div>
-        </div>`;
+                <div class="media-container" style="position: relative; display: inline-block; width: 240px; min-height: 150px; background: #222; border-radius: 12px;">
+                    <div class="tg-progress-overlay">
+                        <svg class="tg-progress-svg"><circle class="tg-progress-circle-bg" cx="22" cy="22" r="18"></circle><circle class="tg-progress-circle-bar" id="prog-bar-${tempId}" cx="22" cy="22" r="18"></circle></svg>
+                        <div class="tg-progress-icon" style="font-size:12px;">0%</div>
+                    </div>
+                </div>`;
             list.appendChild(div);
             list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
 
             try {
-                // 2. Блюр-миниатюра (останется в базе навсегда)
                 msgInput.placeholder = "Подготовка...";
                 let thumbnailBase64 = "";
                 let fileType = file.type.startsWith('image/') ? 'image' : (file.type.startsWith('video/') ? 'video' : 'file');
 
                 if (fileType !== 'file') thumbnailBase64 = await generateThumbnail(file, fileType);
 
-                // 3. Аппаратное шифрование (очень быстро)
                 msgInput.placeholder = "Шифрование...";
                 const arrayBuffer = await file.arrayBuffer();
                 const iv = window.crypto.getRandomValues(new Uint8Array(12));
                 const aesKey = await getAesKey(currentChatId);
 
+                // Аппаратное шифрование E2E
                 const encryptedBuffer = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, aesKey, arrayBuffer);
+                const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
+                const encryptedFile = new File([encryptedBlob], "media.bin");
 
-                // В отличие от прошлого раза, вектор (IV) мы передаем текстом, а файл льем чистым
-                const encryptedFile = new File([encryptedBuffer], "bin.dat", { type: 'application/octet-stream' });
-
-                // 4. Отправка на Pixeldrain с прогрессом
                 msgInput.placeholder = "Отправка...";
-                const formData = new FormData();
-                formData.append('file', encryptedFile);
 
-                const fileId = await new Promise((resolve, reject) => {
+                // Загрузка на Transfer.sh (Метод PUT, без FormData - так сервер не ругается на CORS)
+                const fileUrl = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', 'https://pixeldrain.com/api/file');
+                    xhr.open('PUT', 'https://transfer.sh/media.bin');
 
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
@@ -9115,22 +9110,22 @@
                     };
 
                     xhr.onload = () => {
-                        if (xhr.status === 200 || xhr.status === 201) {
-                            const res = JSON.parse(xhr.responseText);
-                            if (res.success) resolve(res.id);
-                            else reject("Ошибка сервера");
-                        } else reject("Сбой сети");
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            let url = xhr.responseText.trim();
+                            // Transfer.sh отдает ссылку для просмотра. Делаем из нее прямую ссылку для скачивания
+                            url = url.replace('transfer.sh/', 'transfer.sh/get/');
+                            resolve(url);
+                        } else reject("Ошибка сервера: " + xhr.status);
                     };
-                    xhr.onerror = () => reject("Нет интернета");
-                    xhr.send(formData);
+                    xhr.onerror = () => reject("Сбой сети");
+                    xhr.send(encryptedFile);
                 });
 
-                // 5. Успех! Отправляем в Firebase пакет данных
                 document.getElementById(tempId)?.remove();
 
                 const ivHex = buf2hex(iv.buffer);
-                // Формат: ID_на_Pixeldrain | Тип | Имя | IV (Вектор) | Блюр
-                const payload = `${fileId}|${file.type}|${file.name}|${ivHex}|${thumbnailBase64}`;
+                // Пакет данных для базы Firebase
+                const payload = `${fileUrl}|${file.type}|${file.name}|${ivHex}|${thumbnailBase64}`;
 
                 sendMsg(payload, false, 'whatsapp_media');
 
@@ -9151,19 +9146,17 @@
             const overlayId = `overlay_${elementId}`;
             const container = el.parentElement;
 
-            // Если уже открыто - просто увеличиваем фото
             if (el.tagName === 'IMG' && el.style.filter === 'none') {
                 openImageViewer(el.src);
                 return;
             }
 
             const parts = payloadStr.split('|');
-            const fileId = parts[0];
+            const fileUrl = parts[0];
             const mimeType = parts[1];
+            const fileName = parts[2];
             const ivHex = parts[3];
-            const fileUrl = `https://pixeldrain.com/api/file/${fileId}`;
 
-            // Рисуем кружок загрузки
             let overlay = document.getElementById(overlayId);
             if (!overlay) {
                 overlay = document.createElement('div');
@@ -9174,6 +9167,7 @@
             }
 
             try {
+                // Проверяем, есть ли файл в памяти телефона
                 const cacheName = 'novogram-whatsapp-cache';
                 const cache = await caches.open(cacheName);
                 const cachedResponse = await cache.match(fileUrl);
@@ -9183,12 +9177,10 @@
                 const iv = hex2buf(ivHex);
 
                 if (cachedResponse) {
-                    // ФАЙЛ ЕСТЬ НА ТЕЛЕФОНЕ (Моментальное открытие)
-                    overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none;"></div>`;
+                    overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none; border-width:3px;"></div>`;
                     const encryptedBuffer = await cachedResponse.arrayBuffer();
                     decryptedBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, aesKey, encryptedBuffer);
                 } else {
-                    // ФАЙЛА НЕТ - КАЧАЕМ С СЕРВЕРА
                     const encryptedBuffer = await new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
                         xhr.open('GET', fileUrl);
@@ -9206,7 +9198,7 @@
                         };
 
                         xhr.onload = () => {
-                            if (xhr.status === 404) reject("EXPIRED"); // Файл удален сервером (прошло 60 дней)
+                            if (xhr.status === 404) reject("EXPIRED"); // Файл удален (прошло 14 дней)
                             else if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
                             else reject("Ошибка сервера");
                         };
@@ -9214,25 +9206,23 @@
                         xhr.send();
                     });
 
-                    overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none;"></div>`;
+                    overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none; border-width:3px;"></div>`;
 
-                    // Сохраняем в кэш ТЕЛЕФОНА НАВСЕГДА (как в WhatsApp)
+                    // Сохраняем в системный кэш браузера навсегда
                     cache.put(fileUrl, new Response(encryptedBuffer));
-
                     decryptedBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, aesKey, encryptedBuffer);
                 }
 
-                // Превращаем в локальный файл
+                // Превращаем массив байтов в картинку/видео
                 const finalBlob = new Blob([decryptedBuffer], { type: mimeType });
                 const mediaSrc = URL.createObjectURL(finalBlob);
                 overlay.remove();
 
-                // Отрисовка
                 if (isVideo) {
                     container.innerHTML = `<video src="${mediaSrc}" controls autoplay playsinline style="width: 100%; height: 100%; border-radius: 12px; outline: none; background: black;"></video>`;
                 } else {
                     el.src = mediaSrc;
-                    el.style.filter = 'none'; // Убираем блюр
+                    el.style.filter = 'none';
                 }
 
             } catch (err) {
@@ -11368,6 +11358,36 @@
             const keyStr = sessionKeys[chatId] || "default_novogram_key";
             const hash = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyStr));
             return window.crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+        }
+
+        function buf2hex(buffer) {
+            return [...new Uint8Array(buffer)].map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+
+        function hex2buf(hexString) {
+            return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        }
+
+        function generateThumbnail(file, type) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 50; canvas.height = 50;
+
+                if (type === 'image') {
+                    const img = new Image();
+                    img.onload = () => { ctx.drawImage(img, 0, 0, 50, 50); resolve(canvas.toDataURL('image/jpeg', 0.3)); };
+                    img.src = URL.createObjectURL(file);
+                } else if (type === 'video') {
+                    const video = document.createElement('video');
+                    video.muted = true; video.playsInline = true;
+                    video.onloadeddata = () => { video.currentTime = 1; };
+                    video.onseeked = () => { ctx.drawImage(video, 0, 0, 50, 50); resolve(canvas.toDataURL('image/jpeg', 0.3)); };
+                    video.src = URL.createObjectURL(file);
+                } else {
+                    resolve("");
+                }
+            });
         }
 
         // Конвертеры для безопасной передачи вектора шифрования
