@@ -9050,8 +9050,9 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (file.size > 100 * 1024 * 1024) {
-                alert("Лимит файла - 100 МБ (для безопасности оперативной памяти телефона).");
+            // Filebin переваривает огромные файлы, но для браузерной расшифровки 150 МБ - оптимальный лимит
+            if (file.size > 150 * 1024 * 1024) {
+                alert("Лимит файла - 150 МБ (для стабильной работы памяти телефона).");
                 return;
             }
 
@@ -9088,15 +9089,22 @@
 
                 // Аппаратное шифрование E2E
                 const encryptedBuffer = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, aesKey, arrayBuffer);
+
+                // Для Filebin лучше всего отправлять просто чистый бинарник (Blob)
                 const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
-                const encryptedFile = new File([encryptedBlob], "media.bin");
 
                 msgInput.placeholder = "Отправка...";
 
-                // Загрузка на Transfer.sh (Метод PUT, без FormData - так сервер не ругается на CORS)
+                // Уникальный ID корзины для файла
+                const binId = 'novo' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+                const uploadUrl = `https://filebin.net/${binId}/media.bin`;
+
+                // Загрузка на Filebin
                 const fileUrl = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
-                    xhr.open('PUT', 'https://transfer.sh/media.bin');
+                    xhr.open('POST', uploadUrl);
+                    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+                    xhr.setRequestHeader('Accept', 'application/json');
 
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
@@ -9111,20 +9119,19 @@
 
                     xhr.onload = () => {
                         if (xhr.status >= 200 && xhr.status < 300) {
-                            let url = xhr.responseText.trim();
-                            // Transfer.sh отдает ссылку для просмотра. Делаем из нее прямую ссылку для скачивания
-                            url = url.replace('transfer.sh/', 'transfer.sh/get/');
-                            resolve(url);
-                        } else reject("Ошибка сервера: " + xhr.status);
+                            resolve(uploadUrl); // Возвращаем прямую ссылку на бинарник
+                        } else {
+                            reject("Ошибка сервера Filebin: " + xhr.status);
+                        }
                     };
-                    xhr.onerror = () => reject("Сбой сети");
-                    xhr.send(encryptedFile);
+                    xhr.onerror = () => reject("Сбой сети (отключите VPN или проверьте подключение)");
+                    xhr.send(encryptedBlob);
                 });
 
                 document.getElementById(tempId)?.remove();
 
                 const ivHex = buf2hex(iv.buffer);
-                // Пакет данных для базы Firebase
+                // Пакет данных: Ссылка | Тип | Имя | Вектор | Блюр
                 const payload = `${fileUrl}|${file.type}|${file.name}|${ivHex}|${thumbnailBase64}`;
 
                 sendMsg(payload, false, 'whatsapp_media');
@@ -9167,7 +9174,7 @@
             }
 
             try {
-                // Проверяем, есть ли файл в памяти телефона
+                // Проверяем, есть ли файл в системном кэше телефона
                 const cacheName = 'novogram-whatsapp-cache';
                 const cache = await caches.open(cacheName);
                 const cachedResponse = await cache.match(fileUrl);
@@ -9177,10 +9184,12 @@
                 const iv = hex2buf(ivHex);
 
                 if (cachedResponse) {
+                    // Файл найден в телефоне
                     overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none; border-width:3px;"></div>`;
                     const encryptedBuffer = await cachedResponse.arrayBuffer();
                     decryptedBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, aesKey, encryptedBuffer);
                 } else {
+                    // Файла нет - качаем с Filebin
                     const encryptedBuffer = await new Promise((resolve, reject) => {
                         const xhr = new XMLHttpRequest();
                         xhr.open('GET', fileUrl);
@@ -9198,7 +9207,7 @@
                         };
 
                         xhr.onload = () => {
-                            if (xhr.status === 404) reject("EXPIRED"); // Файл удален (прошло 14 дней)
+                            if (xhr.status === 404) reject("EXPIRED"); // Файл удален сервером
                             else if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
                             else reject("Ошибка сервера");
                         };
@@ -9208,12 +9217,12 @@
 
                     overlay.innerHTML = `<div class="upload-spinner" style="position:static; transform:none; border-width:3px;"></div>`;
 
-                    // Сохраняем в системный кэш браузера навсегда
+                    // Сохраняем в системный кэш браузера НАВСЕГДА (как делает WhatsApp)
                     cache.put(fileUrl, new Response(encryptedBuffer));
                     decryptedBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, aesKey, encryptedBuffer);
                 }
 
-                // Превращаем массив байтов в картинку/видео
+                // Превращаем массив байтов в медиафайл
                 const finalBlob = new Blob([decryptedBuffer], { type: mimeType });
                 const mediaSrc = URL.createObjectURL(finalBlob);
                 overlay.remove();
