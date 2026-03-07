@@ -5050,22 +5050,24 @@
 
         // ЕДИНАЯ функция отрисовки (удалите старые копии этой функции!)
         // ЕДИНАЯ функция отрисовки результатов поиска
+        // ЕДИНАЯ функция отрисовки результатов поиска (С ЗАЩИТОЙ ОТ ФАНТОМНЫХ ЧАТОВ)
         function renderSearchResult(user, isFriend) {
             const div = document.createElement('div');
             div.className = 'search-item';
 
             const fullName = `${user.name || 'User'} ${user.surname || ''}`.trim();
-
-            // Проверяем, бот ли это
             const isBot = user.isBot === true;
 
-            // Аватарка (если это бот без аватарки, рисуем робота)
+            // 1. НАДЕЖНАЯ ПРОВЕРКА: есть ли карточка этого чата физически в нашем меню?
+            const chatExists = !!document.getElementById('u-' + user.id);
+
+            // Аватарка
             const avatarHtml = user.avatar
                 ? `<img src="${user.avatar}" class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`
                 : `<div class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;">${isBot ? '🤖' : fullName.charAt(0).toUpperCase()}</div>`;
 
-            // Иконка справа: Если это друг ИЛИ бот -> показываем иконку чата (💬). Иначе плюсик (➕)
-            const actionIcon = (isFriend || isBot) ? '💬' : '➕';
+            // Иконка справа: Если чат уже есть ИЛИ это бот -> показываем (💬). Иначе плюсик (➕)
+            const actionIcon = (chatExists || isBot) ? '💬' : '➕';
 
             div.innerHTML = `
                 ${avatarHtml}
@@ -5077,24 +5079,26 @@
             `;
 
             div.onclick = async () => {
-                if (isFriend || isBot) {
-                    // Если это бот, с которым мы еще не переписывались (его нет в друзьях)
-                    if (isBot && !isFriend) {
-                        try {
-                            // Мгновенно добавляем его в список диалогов в фоне
-                            await db.collection('friends').add({
-                                users: [currentUser.uid, user.id],
-                                emails: { [currentUser.uid]: currentUser.email, [user.id]: 'bot@novogram' },
-                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        } catch (e) {
-                            console.error("Ошибка при добавлении бота", e);
-                        }
-                    }
-                    // Открываем чат мгновенно
+                if (chatExists) {
+                    // Чат уже есть в боковом меню — просто открываем его
                     openChat(user.id, fullName, user.username ? '@' + user.username : '');
-                } else {
-                    // Если это живой человек и он не в друзьях - отправляем заявку
+                }
+                else if (isBot) {
+                    // Бота удаляли, и его нет в меню — ПРИВЯЗЫВАЕМ ЗАНОВО!
+                    try {
+                        await db.collection('friends').add({
+                            users: [currentUser.uid, user.id],
+                            emails: { [currentUser.uid]: currentUser.email, [user.id]: 'bot@novogram' },
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    } catch (e) {
+                        console.error("Ошибка при восстановлении бота", e);
+                    }
+                    // Открываем чат, и он тут же появится во вкладке "Боты"
+                    openChat(user.id, fullName, user.username ? '@' + user.username : '');
+                }
+                else {
+                    // Это живой человек, которого нет в друзьях — кидаем заявку
                     sendFriendRequestToId(user.id);
                 }
                 closeSearch();
