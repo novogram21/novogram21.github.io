@@ -4554,6 +4554,14 @@
             </div>
 
             <div id="chatOptionsMenu" class="chat-options-dropdown">
+                <div id="chatOptionsMenu" class="chat-options-dropdown">
+                    <div class="chat-option-item" onclick="closeChatOptionsMenu(); startVideoCall();">
+                        <span class="chat-option-icon">📹</span> Видеозвонок
+                    </div>
+                    <div class="chat-option-item" onclick="closeChatOptionsMenu(); toggleChatSearch();">
+                        <span class="chat-option-icon">🔍</span> Поиск
+                    </div>
+                </div>
                 <div class="chat-option-item" onclick="closeChatOptionsMenu(); toggleChatSearch();">
                     <span class="chat-option-icon">🔍</span> Поиск
                 </div>
@@ -4564,7 +4572,7 @@
                     <span class="chat-option-icon">✏️</span> Изменить контакт
                 </div>
                 <div class="context-divider"></div>
-                
+
                 <div class="chat-option-item danger" onclick="closeChatOptionsMenu(); deleteChatAction();">
                     <span class="chat-option-icon">🧹</span> Очистить историю
                 </div>
@@ -5323,7 +5331,9 @@
             const months = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
             return `${prefix}${d.getDate()} ${months[d.getMonth()]}`;
         }
-
+        function startVideoCall() {
+            startCall(true); // Вызываем основную функцию с флагом true (видео)
+        }
         function formatLastSeen(timestamp, isProfile = false) {
             if (!timestamp) return isProfile ? "был(а) давно" : "давно";
 
@@ -7593,7 +7603,7 @@
             currentFacingMode = nextFacing;
             setLocalMirror(currentFacingMode);
         }
-        async function startCall() {
+        async function startCall(isVideoCall = false) {
             if (!currentFriendId || !currentUser) return;
             updateCallControlsVisibility();
 
@@ -7601,57 +7611,72 @@
             isConnected = false;
             wasCallConnected = false;
 
+            // --- ЛОГИКА ЗВУКА И ДАТЧИКА (PREMIUM UX) ---
+            // Если видеозвонок — громкая связь, если обычный — ухо.
+            isEarpiece = !isVideoCall;
+            if (window.mauiInterop) {
+                // Шлем команды в Android (C#)
+                window.mauiInterop.postMessage(isVideoCall ? "audio_loud" : "audio_ear");
+
+                if (isVideoCall) {
+                    window.mauiInterop.postMessage("disable_proximity"); // Выключаем датчик для видео
+                } else {
+                    window.mauiInterop.postMessage("enable_proximity");  // Включаем датчик для аудио
+                }
+            }
+
             const sessionTs = Date.now();
             currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTs;
 
             const callRef = rtdb.ref('incoming_calls/' + currentFriendId);
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
 
+            // Показываем экран звонка
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
 
-
-            isEarpiece = true;
-            if (window.mauiInterop) {
-                window.mauiInterop.postMessage("audio_ear");
-                window.mauiInterop.postMessage("enable_proximity"); // Включаем датчик
-            }
-
+            // Устанавливаем имя собеседника
             const friendData = usersCache[currentFriendId] || {};
             document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
-            forceEarpiece();
-            updateCallStatus("Соединение..."); // Шаг 1: Ищем собеседника
+
+            updateCallStatus("Соединение...");
             playConnectingTone();
 
             try {
                 setupPeerConnection();
 
+                // Слушаем кандидатов от того, кто примет звонок
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                await getMedia(false); // Начинаем без камеры
+                // ЗАХВАТ МЕДИА (флаг isVideoCall определит, включится ли камера сразу)
+                await getMedia(isVideoCall);
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
+                // Создаем сессию звонка в базе
                 await sessionRef.set({
                     offer: { type: offer.type, sdp: offer.sdp },
                     caller: currentUser.uid,
                     callerName: usersCache[currentUser.uid]?.name || "Пользователь",
                     status: 'dialing',
-                    ts: sessionTs
+                    ts: sessionTs,
+                    isVideoCall: isVideoCall // Помечаем в базе, что это видеозвонок
                 });
 
+                // Уведомляем собеседника о входящем
                 await callRef.set({
                     sessionId: currentCallId,
                     caller: currentUser.uid,
                     callerName: usersCache[currentUser.uid]?.name || "Пользователь",
                     ts: sessionTs,
-                    status: 'ringing'
+                    status: 'ringing',
+                    isVideoCall: isVideoCall
                 });
 
-                updateCallStatus("Звонок..."); // Шаг 2: Пошли гудки
+                updateCallStatus("Звонок...");
 
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
@@ -7660,13 +7685,13 @@
                     if (data.status === 'rejected') {
                         updateCallStatus("Занято");
                         setTimeout(() => endCall(false, true), 1500);
-                    } else if (data.status === 'ended') { // <--- ДОБАВИТЬ ЭТО
-                        endCall(false, true);             // <--- ДОБАВИТЬ ЭТО
+                    } else if (data.status === 'ended') {
+                        endCall(false, true);
                     }
 
                     if (pc && !pc.remoteDescription && data.answer) {
                         console.log("✅ Ответ получен, соединяем...");
-                        updateCallStatus("Обмен шифрованием..."); // Шаг 3: Собеседник взял трубку
+                        updateCallStatus("Обмен шифрованием...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
