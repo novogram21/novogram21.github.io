@@ -11487,6 +11487,9 @@
         // =====================================
         // ИИ БОТА: ЧТЕНИЕ ГРАФА И СВЯЗЕЙ БЛОКОВ
         // =====================================
+        // =====================================
+        // ИИ БОТА: ЧТЕНИЕ ГРАФА И СВЯЗЕЙ БЛОКОВ
+        // =====================================
         async function checkAndTriggerBot(receiverId, messageText, chatId) {
             try {
                 // 1. Проверяем, бот ли это
@@ -11500,7 +11503,7 @@
 
                 const flowDoc = await db.collection('bot_flows').doc(botData.botToken).get();
 
-                let textsArray = [];
+                let finalBlocks = [];
                 let replyImage = "";
 
                 // 2. Читаем визуальный граф
@@ -11527,7 +11530,7 @@
                         }
                     }
 
-                    // ШАГ Б: Если нашли зеленый блок-условие (но не сообщение напрямую), идем по стрелочке
+                    // ШАГ Б: Если нашли зеленый блок-условие, идем по стрелочке
                     if (matchedTriggerNode && !matchedMessageNode) {
                         try {
                             const connections = matchedTriggerNode.outputs["output_1"].connections;
@@ -11543,19 +11546,24 @@
 
                     // ШАГ В: Извлекаем данные из найденного блока сообщения
                     if (matchedMessageNode) {
-                        // Берем новый массив texts, либо старую строку text (если блок старый)
-                        if (matchedMessageNode.data.texts && matchedMessageNode.data.texts.length > 0) {
-                            textsArray = matchedMessageNode.data.texts;
-                        } else if (matchedMessageNode.data.text) {
-                            textsArray = [matchedMessageNode.data.text];
-                        }
                         replyImage = matchedMessageNode.data.image || "";
+
+                        // Берем новый массив blocks
+                        if (matchedMessageNode.data.blocks && matchedMessageNode.data.blocks.length > 0) {
+                            finalBlocks = matchedMessageNode.data.blocks;
+                        }
+                        // Совместимость со старыми ботами (где был texts или text)
+                        else if (matchedMessageNode.data.texts && matchedMessageNode.data.texts.length > 0) {
+                            matchedMessageNode.data.texts.forEach(t => finalBlocks.push({ type: 'text', content: t }));
+                        } else if (matchedMessageNode.data.text) {
+                            finalBlocks.push({ type: 'text', content: matchedMessageNode.data.text });
+                        }
                     }
                 }
 
-                // Если бот ничего не понял или граф пустой
-                if (textsArray.length === 0 && !replyImage) {
-                    textsArray = ["Я не знаю такую команду 🤖"];
+                // Если бот ничего не понял
+                if (finalBlocks.length === 0 && !replyImage) {
+                    finalBlocks.push({ type: 'text', content: "Я не знаю такую команду 🤖" });
                 }
 
                 // 3. Отмечаем входящее сообщение прочитанным
@@ -11565,51 +11573,56 @@
                 msgsSnap.docs.forEach(d => batch.update(d.ref, { read: true }));
                 await batch.commit();
 
-                // 4. УМНАЯ ОТПРАВКА СЕРИИ СООБЩЕНИЙ
-                let delay = 500; // Стартовая задержка
-
-                // Сначала шлем картинку, если она есть
-                if (replyImage) {
-                    setTimeout(async () => {
+                // 4. УМНАЯ ОТПРАВКА БЛОКОВ (ТЕКСТ + ПАУЗЫ)
+                const processBlocks = async () => {
+                    // А. Сначала отправляем картинку (если есть)
+                    if (replyImage) {
+                        await new Promise(r => setTimeout(r, 500));
                         const encryptedImg = encryptText(replyImage, chatId);
                         await db.collection('chats').doc(chatId).collection('msgs').add({
                             txt: encryptedImg,
-                            from: receiverId,
-                            to: currentUser.uid,
-                            sys: false,
-                            type: 'image',
-                            read: false,
-                            ts: firebase.firestore.FieldValue.serverTimestamp()
+                            from: receiverId, to: currentUser.uid, sys: false, type: 'image', read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
                         });
-                    }, delay);
-                    delay += 1000; // Увеличиваем задержку для следующих сообщений
-                }
+                        await new Promise(r => setTimeout(r, 500));
+                    }
 
-                // Затем по очереди шлем текстовые пузыри
-                textsArray.forEach((txt) => {
-                    if (!txt || !txt.trim()) return; // Пропускаем пустые поля
+                    // Б. Проходимся по всем блокам строго по очереди
+                    for (let i = 0; i < finalBlocks.length; i++) {
+                        const blk = finalBlocks[i];
 
-                    setTimeout(() => {
-                        rtdb.ref(`typing/${chatId}/${receiverId}`).set(true); // Включаем статус "печатает..."
+                        if (blk.type === 'text') {
+                            if (!blk.content || !blk.content.trim()) continue;
 
-                        setTimeout(async () => {
-                            rtdb.ref(`typing/${chatId}/${receiverId}`).remove(); // Выключаем "печатает..."
+                            // Эффект печатания перед обычным сообщением (1 сек)
+                            rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
+                            await new Promise(r => setTimeout(r, 1000));
+                            rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
 
-                            const encryptedReply = encryptText(txt, chatId);
+                            // Отправка текста
+                            const encryptedReply = encryptText(blk.content, chatId);
                             await db.collection('chats').doc(chatId).collection('msgs').add({
-                                txt: encryptedReply,
-                                from: receiverId,
-                                to: currentUser.uid,
-                                sys: false,
-                                type: 'text',
-                                read: false,
-                                ts: firebase.firestore.FieldValue.serverTimestamp()
+                                txt: encryptedReply, from: receiverId, to: currentUser.uid, sys: false, type: 'text', read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
                             });
-                        }, 1000); // 1 секунда имитации набора текста
-                    }, delay);
 
-                    delay += 1500; // Каждое следующее сообщение из списка ждет своей очереди
-                });
+                        } else if (blk.type === 'pause') {
+                            // Отработка блока "Пауза"
+                            const durationMs = (parseInt(blk.duration) || 1) * 1000;
+
+                            if (blk.typing) {
+                                rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
+                            }
+
+                            await new Promise(r => setTimeout(r, durationMs)); // Ждем указанное время
+
+                            if (blk.typing) {
+                                rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
+                            }
+                        }
+                    }
+                };
+
+                // Запускаем очередь
+                processBlocks();
 
             } catch (e) {
                 console.error("Ошибка ИИ бота:", e);
