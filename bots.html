@@ -13,667 +13,667 @@
     <script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
 
     <style>
-        :root {
-            --bg-dark: #121316;
-            --bg-panel: #1c1c1e;
-            --bg-panel-light: #252528;
-            --bg-canvas: #f4f5f7; /* Светлый фон холста как в Robochat */
-            --border: rgba(255,255,255,0.05);
-            --primary: #2AABEE; /* Telegram Blue */
-            --text-main: #ffffff;
-            --text-muted: #8e8e93;
+                :root {
+                        --bg-dark: #121316;
+                        --bg-panel: #1c1c1e;
+                        --bg-panel-light: #252528;
+                        --bg-canvas: #f4f5f7; /* Светлый фон холста как в Robochat */
+                        --border: rgba(255,255,255,0.05);
+                        --primary: #2AABEE; /* Telegram Blue */
+                        --text-main: #ffffff;
+                        --text-muted: #8e8e93;
+
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            margin: 0;
-            padding: 0;
+                * {
+                        box-sizing: border-box;
+                        -webkit-tap-highlight-color: transparent;
+                        outline: none;
+                        margin: 0;
+                        padding: 0;
+
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-main);
-            height: 100dvh;
-            overflow: hidden;
-            display: flex;
+                body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        background: var(--bg-dark);
+                        color: var(--text-main);
+                        height: 100dvh;
+                        overflow: hidden;
+                        display: flex;
+
         }
 
-        .view {
-            display: none;
-            width: 100%;
-            height: 100%;
+                .view {
+                        display: none;
+                        width: 100%;
+                        height: 100%;
+
         }
 
-            .view.active {
-                display: flex;
-            }
+                    .view.active {
+                            display: flex;
+
+        }
+
 
         /* --- ЛЕВОЕ МЕНЮ --- */
-        .sidebar {
-            width: 70px;
-            background: var(--bg-panel);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 20px;
-            z-index: 100;
+                .sidebar {
+                        width: 70px;
+                        background: var(--bg-panel);
+                        border-right: 1px solid var(--border);
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        padding-top: 20px;
+                        z-index: 100;
+
         }
 
-        .sidebar-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: 0.2s;
-            margin-bottom: 10px;
+                .sidebar-btn {
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: var(--text-muted);
+                        cursor: pointer;
+                        transition: 0.2s;
+                        margin-bottom: 10px;
+
         }
 
-            .sidebar-btn:hover {
-                background: rgba(255,255,255,0.05);
-                color: var(--text-main);
-            }
+                    .sidebar-btn:hover {
+                            background: rgba(255,255,255,0.05);
+                            color: var(--text-main);
 
-            .sidebar-btn.active {
-                background: rgba(42, 171, 238, 0.15);
-                color: var(--primary);
-            }
-
-        .main-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
         }
+
+                    .sidebar-btn.active {
+                            background: rgba(42, 171, 238, 0.15);
+                            color: var(--primary);
+
+        }
+
+                .main-area {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        position: relative;
+                        overflow: hidden;
+
+        }
+
 
         /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
-        .topbar {
-            height: 60px;
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            z-index: 10;
+                .topbar {
+                        height: 60px;
+                        background: var(--bg-panel);
+                        border-bottom: 1px solid var(--border);
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 0 20px;
+                        z-index: 10;
+
         }
 
-        .bot-selector {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
+                .bot-selector {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        cursor: pointer;
+
         }
 
-        .bot-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
+                .bot-avatar {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: var(--primary);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 16px;
+
         }
 
-        .bot-name {
-            font-weight: 600;
-            font-size: 14px;
+                .bot-name {
+                        font-weight: 600;
+                        font-size: 14px;
+
         }
 
-        .topbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+                .topbar-actions {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+
         }
 
-        .btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+                .btn {
+                        padding: 8px 16px;
+                        border-radius: 8px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: 0.2s;
+                        border: none;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+
         }
 
-        .btn-test {
-            background: rgba(255,255,255,0.1);
-            color: white;
+                .btn-test {
+                        background: rgba(255,255,255,0.1);
+                        color: white;
+
         }
 
-            .btn-test:hover {
-                background: rgba(255,255,255,0.15);
-            }
+                    .btn-test:hover {
+                            background: rgba(255,255,255,0.15);
 
-        .btn-publish {
-            background: var(--primary);
-            color: white;
         }
 
-            .btn-publish:hover {
-                filter: brightness(1.1);
-            }
+                .btn-publish {
+                        background: var(--primary);
+                        color: white;
+
+        }
+
+                    .btn-publish:hover {
+                            filter: brightness(1.1);
+
+        }
+
 
         /* --- ХОЛСТ DRAWFLOW --- */
-        #drawflow {
-            flex: 1;
-            position: relative;
-            background: var(--bg-canvas);
-            background-image: radial-gradient(#d1d5db 1px, transparent 0);
-            background-size: 20px 20px;
+                #drawflow {
+                        flex: 1;
+                        position: relative;
+                        background: var(--bg-canvas);
+                        background-image: radial-gradient(#d1d5db 1px, transparent 0);
+                        background-size: 20px 20px;
+
         }
+
 
         /* --- ПРЕМИУМ ДИЗАЙН КАРТОЧЕК НА ХОЛСТЕ --- */
-        .drawflow .drawflow-node {
-            background: transparent;
-            border: none;
-            border-radius: 16px;
-            width: 260px;
-            padding: 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+                .drawflow .drawflow-node {
+                        background: transparent;
+                        border: none;
+                        border-radius: 16px;
+                        width: 260px;
+                        padding: 0;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+
         }
 
-            .drawflow .drawflow-node.selected .node-card {
-                box-shadow: 0 0 0 3px var(--primary);
-            }
+                    .drawflow .drawflow-node.selected .node-card {
+                            box-shadow: 0 0 0 3px var(--primary);
 
-        .node-card {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            transition: 0.2s;
         }
 
-        .node-card-header {
-            padding: 10px 15px;
-            font-size: 12px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+                .node-card {
+                        background: white;
+                        border-radius: 16px;
+                        overflow: hidden;
+                        color: #333;
+                        display: flex;
+                        flex-direction: column;
+                        transition: 0.2s;
+
         }
 
-        .header-msg {
-            background: #1a4f5f;
-            color: white;
+                .node-card-header {
+                        padding: 10px 15px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+
         }
 
-        .header-trigger {
-            background: #d0f0c0;
-            color: #00695c;
+                .header-msg {
+                        background: #1a4f5f;
+                        color: white;
+
         }
 
-        .node-card-body {
-            padding: 15px;
-            font-size: 13px;
-            line-height: 1.4;
-            color: #555;
-            background: #fff;
-            min-height: 60px;
+                .header-trigger {
+                        background: #d0f0c0;
+                        color: #00695c;
+
         }
 
-        .preview-text {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+                .node-card-body {
+                        padding: 15px;
+                        font-size: 13px;
+                        line-height: 1.4;
+                        color: #555;
+                        background: #fff;
+                        min-height: 60px;
+
         }
 
-        .preview-trigger {
-            color: var(--primary);
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 11px;
-            text-transform: uppercase;
+                .preview-text {
+                        display: -webkit-box;
+                        -webkit-line-clamp: 3;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+
         }
+
+                .preview-trigger {
+                        color: var(--primary);
+                        font-weight: bold;
+                        margin-bottom: 5px;
+                        font-size: 11px;
+                        text-transform: uppercase;
+
+        }
+
 
         /* Точки соединений */
-        .drawflow .connection .main-path {
-            stroke: #a3aab5;
-            stroke-width: 3px;
+                .drawflow .connection .main-path {
+                        stroke: #a3aab5;
+                        stroke-width: 3px;
+
         }
 
-        .drawflow .inputs .input {
-            left: -10px;
-            background: white;
-            border: 2px solid #a3aab5;
-            width: 14px;
-            height: 14px;
+                .drawflow .inputs .input {
+                        left: -10px;
+                        background: white;
+                        border: 2px solid #a3aab5;
+                        width: 14px;
+                        height: 14px;
+
         }
 
-        .drawflow .outputs .output {
-            right: -10px;
-            background: white;
-            border: 2px solid #a3aab5;
-            width: 14px;
-            height: 14px;
+                .drawflow .outputs .output {
+                        right: -10px;
+                        background: white;
+                        border: 2px solid #a3aab5;
+                        width: 14px;
+                        height: 14px;
+
         }
 
-            .drawflow .inputs .input:hover, .drawflow .outputs .output:hover {
-                border-color: var(--primary);
-                transform: scale(1.2);
-            }
+                    .drawflow .inputs .input:hover, .drawflow .outputs .output:hover {
+                            border-color: var(--primary);
+                            transform: scale(1.2);
+
+        }
+
 
         /* --- ВЫЕЗЖАЮЩАЯ ПАНЕЛЬ СВОЙСТВ --- */
-        .properties-panel {
-            position: absolute;
-            right: -400px;
-            top: 60px;
-            bottom: 0;
-            width: 380px;
-            background: var(--bg-panel);
-            border-left: 1px solid var(--border);
-            z-index: 50;
-            transition: right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+                .properties-panel {
+                        position: absolute;
+                        right: -400px;
+                        top: 60px;
+                        bottom: 0;
+                        width: 380px;
+                        background: var(--bg-panel);
+                        border-left: 1px solid var(--border);
+                        z-index: 50;
+                        transition: right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+                        display: flex;
+                        flex-direction: column;
+                        box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+
         }
 
-            .properties-panel.open {
-                right: 0;
-            }
+                    .properties-panel.open {
+                            right: 0;
 
-        .prop-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
         }
 
-        .prop-body {
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+                .prop-header {
+                        padding: 20px;
+                        border-bottom: 1px solid var(--border);
+                        font-size: 18px;
+                        font-weight: bold;
+                        text-align: center;
+
         }
 
-            .prop-body::-webkit-scrollbar {
-                width: 6px;
-            }
+                .prop-body {
+                        padding: 20px;
+                        flex: 1;
+                        overflow-y: auto;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 20px;
 
-            .prop-body::-webkit-scrollbar-thumb {
-                background: #444;
-                border-radius: 10px;
-            }
-
-        .prop-label {
-            font-size: 11px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            font-weight: 600;
         }
 
-        .prop-input {
-            width: 100%;
-            background: #1c1c1e;
-            border: 1px solid rgba(255,255,255,0.08);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 14px;
-            outline: none;
-            transition: 0.2s;
-            font-family: inherit;
+                    .prop-body::-webkit-scrollbar {
+                            width: 6px;
+
         }
 
-            .prop-input:focus {
-                border-color: var(--primary);
-                background: #222226;
-                box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15);
-            }
+                    .prop-body::-webkit-scrollbar-thumb {
+                            background: #444;
+                            border-radius: 10px;
+
+        }
+
+                .prop-label {
+                        font-size: 11px;
+                        color: var(--text-muted);
+                        text-transform: uppercase;
+                        margin-bottom: 5px;
+                        font-weight: 600;
+
+        }
+
+                .prop-input {
+                        width: 100%;
+                        background: #1c1c1e;
+                        border: 1px solid rgba(255,255,255,0.08);
+                        color: white;
+                        padding: 12px 16px;
+                        border-radius: 12px;
+                        font-size: 14px;
+                        outline: none;
+                        transition: 0.2s;
+                        font-family: inherit;
+
+        }
+
+                    .prop-input:focus {
+                            border-color: var(--primary);
+                            background: #222226;
+                            box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15);
+
+        }
+
 
         /* Поле ввода текста с панелью инструментов */
-        .prop-textarea-wrapper {
-            background: #1c1c1e;
-            border-radius: 12px;
-            padding: 12px;
-            border: 1px solid rgba(255,255,255,0.08);
-            transition: 0.2s;
+                .prop-textarea-wrapper {
+                        background: #1c1c1e;
+                        border-radius: 12px;
+                        padding: 12px;
+                        border: 1px solid rgba(255,255,255,0.08);
+                        transition: 0.2s;
+
         }
 
-            .prop-textarea-wrapper:focus-within {
-                border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15);
-                background: #222226;
-            }
+                    .prop-textarea-wrapper:focus-within {
+                            border-color: var(--primary);
+                            box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15);
+                            background: #222226;
 
-            .prop-textarea-wrapper textarea {
-                width: 100%;
-                background: transparent;
-                border: none;
-                color: white;
-                font-size: 14px;
-                resize: none;
-                outline: none;
-                font-family: inherit;
-                min-height: 80px;
-            }
-
-        .textarea-tools {
-            display: flex;
-            gap: 5px;
-            color: #888;
-            margin-top: 5px;
-            font-size: 16px;
         }
 
-            .textarea-tools span {
-                cursor: pointer;
-                transition: 0.2s;
-                padding: 4px 8px;
-                border-radius: 6px;
-                user-select: none;
-            }
+                    .prop-textarea-wrapper textarea {
+                            width: 100%;
+                            background: transparent;
+                            border: none;
+                            color: white;
+                            font-size: 14px;
+                            resize: none;
+                            outline: none;
+                            font-family: inherit;
+                            min-height: 80px;
 
-                .textarea-tools span:hover {
-                    background: rgba(255,255,255,0.1);
-                    color: white;
-                }
+        }
+
+                .textarea-tools {
+                        display: flex;
+                        gap: 5px;
+                        color: #888;
+                        margin-top: 5px;
+                        font-size: 16px;
+
+        }
+
+                    .textarea-tools span {
+                            cursor: pointer;
+                            transition: 0.2s;
+                            padding: 4px 8px;
+                            border-radius: 6px;
+                            user-select: none;
+
+        }
+
+                        .textarea-tools span:hover {
+                                background: rgba(255,255,255,0.1);
+                                color: white;
+
+        }
+
 
         /* --- МЕНЮ ЭМОДЗИ (ПИКЕР) --- */
-        .emoji-picker {
-            display: none;
-            background: #252528;
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 10px;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 5px;
-            max-height: 180px;
-            overflow-y: auto;
-            margin-top: 10px;
+                .emoji-picker {
+                        display: none;
+                        background: #252528;
+                        border: 1px solid #333;
+                        border-radius: 12px;
+                        padding: 10px;
+                        grid-template-columns: repeat(8, 1fr);
+                        gap: 5px;
+                        max-height: 180px;
+                        overflow-y: auto;
+                        margin-top: 10px;
+
         }
 
-            .emoji-picker.active {
-                display: grid;
-            }
+                    .emoji-picker.active {
+                            display: grid;
 
-        .emoji-item {
-            cursor: pointer;
-            text-align: center;
-            font-size: 20px;
-            padding: 5px;
-            border-radius: 8px;
-            transition: 0.1s;
-            user-select: none;
         }
 
-            .emoji-item:hover {
-                background: rgba(255,255,255,0.1);
-                transform: scale(1.1);
-            }
+                .emoji-item {
+                        cursor: pointer;
+                        text-align: center;
+                        font-size: 20px;
+                        padding: 5px;
+                        border-radius: 8px;
+                        transition: 0.1s;
+                        user-select: none;
 
-        .emoji-picker::-webkit-scrollbar {
-            width: 4px;
         }
 
-        .emoji-picker::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 10px;
+                    .emoji-item:hover {
+                            background: rgba(255,255,255,0.1);
+                            transform: scale(1.1);
+
         }
 
-        .blocks-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+                .emoji-picker::-webkit-scrollbar {
+                        width: 4px;
+
         }
 
-        .block-btn {
-            background: var(--bg-panel-light);
-            border: 1px solid #333;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 5px;
-            cursor: pointer;
-            transition: 0.2s;
-            color: #aaa;
-            gap: 5px;
+                .emoji-picker::-webkit-scrollbar-thumb {
+                        background: #555;
+                        border-radius: 10px;
+
         }
 
-            .block-btn:hover {
-                background: #333;
-                color: white;
-                border-color: #555;
-            }
+                .blocks-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 8px;
 
-            .block-btn svg {
-                width: 20px;
-                height: 20px;
-            }
+        }
 
-            .block-btn span {
-                font-size: 11px;
-            }
+                .block-btn {
+                        background: var(--bg-panel-light);
+                        border: 1px solid #333;
+                        border-radius: 10px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 12px 5px;
+                        cursor: pointer;
+                        transition: 0.2s;
+                        color: #aaa;
+                        gap: 5px;
+
+        }
+
+                    .block-btn:hover {
+                            background: #333;
+                            color: white;
+                            border-color: #555;
+
+        }
+
+                    .block-btn svg {
+                            width: 20px;
+                            height: 20px;
+
+        }
+
+                    .block-btn span {
+                            font-size: 11px;
+
+        }
+
 
         /* Контекстное меню (ПКМ) */
-        #nodeContextMenu {
-            position: absolute;
-            background: #252528;
-            border: 1px solid #333;
-            border-radius: 12px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-            z-index: 10000;
-            width: 220px;
-            display: none;
-            flex-direction: column;
-            padding: 6px 0;
-            user-select: none;
+                #nodeContextMenu {
+                        position: absolute;
+                        background: #252528;
+                        border: 1px solid #333;
+                        border-radius: 12px;
+                        box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+                        z-index: 10000;
+                        width: 220px;
+                        display: none;
+                        flex-direction: column;
+                        padding: 6px 0;
+                        user-select: none;
+
         }
 
-        .context-menu-item {
-            padding: 10px 16px;
-            color: #ccc;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+                .context-menu-item {
+                        padding: 10px 16px;
+                        color: #ccc;
+                        font-size: 14px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+
         }
 
-            .context-menu-item:hover {
-                background: rgba(255,255,255,0.05);
-                color: #fff;
-            }
+                    .context-menu-item:hover {
+                            background: rgba(255,255,255,0.05);
+                            color: #fff;
 
-        .floating-controls {
-            position: absolute;
-            right: 25px;
-            bottom: 25px;
-            display: flex;
-            gap: 10px;
-            z-index: 40;
-            transition: right 0.3s;
         }
 
-            .floating-controls.shifted {
-                right: 400px;
-            }
+                .floating-controls {
+                        position: absolute;
+                        right: 25px;
+                        bottom: 25px;
+                        display: flex;
+                        gap: 10px;
+                        z-index: 40;
+                        transition: right 0.3s;
 
-        .zoom-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: white;
-            color: black;
-            border: none;
-            font-size: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        #loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            color: white;
-            font-weight: bold;
+                    .floating-controls.shifted {
+                            right: 400px;
+
         }
+
+                .zoom-btn {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        background: white;
+                        color: black;
+                        border: none;
+                        font-size: 20px;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+
+        }
+
+                #loader {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: var(--bg-dark);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 9999;
+                        color: white;
+                        font-weight: bold;
+
+        }
+
 
         /* --- СТИЛИ ДЛЯ БЛОКОВ И ПЕРЕТАСКИВАНИЯ --- */
-        .draggable-block {
-            background: #1c1c1e;
-            border-radius: 12px;
-            padding: 12px;
-            border: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 10px;
-            transition: 0.2s;
-            position: relative;
+                .draggable-block {
+                        background: #1c1c1e;
+                        border-radius: 12px;
+                        padding: 12px;
+                        border: 1px solid rgba(255,255,255,0.08);
+                        margin-bottom: 10px;
+                        transition: 0.2s;
+                        position: relative;
+
         }
 
-            .draggable-block:focus-within {
-                border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15);
-                background: #222226;
-            }
+                    .draggable-block:focus-within {
+                            border-color: var(--primary);
+                            box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15);
+                            background: #222226;
 
-            .draggable-block.dragging {
-                opacity: 0.5;
-                border: 1px dashed var(--primary);
-            }
-
-        .drag-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            padding-bottom: 8px;
         }
 
-        .drag-handle {
-            cursor: grab;
-            color: #888;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: bold;
-            text-transform: uppercase;
+                    .draggable-block.dragging {
+                            opacity: 0.5;
+                            border: 1px dashed var(--primary);
+
         }
 
-        .pause-body {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding: 5px 0;
+                .drag-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 8px;
+                        border-bottom: 1px solid rgba(255,255,255,0.05);
+                        padding-bottom: 8px;
+
         }
 
-        /* --- PREMIUM BUTTONS UI --- */
-        .preview-buttons-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 12px;
+                .drag-handle {
+                        cursor: grab;
+                        color: #888;
+                        font-size: 12px;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-weight: bold;
+                        text-transform: uppercase;
+
         }
 
-        .preview-btn {
-            background: rgba(42, 171, 238, 0.1);
-            border: 1px solid rgba(42, 171, 238, 0.3);
-            border-radius: 8px;
-            padding: 8px 4px;
-            font-size: 10px;
-            color: var(--primary);
-            font-weight: 700;
-            text-align: center;
-            backdrop-filter: blur(5px);
-            box-sizing: border-box;
+                .pause-body {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                        padding: 5px 0;
+
         }
 
-            /* Динамическая ширина кнопок на холсте */
-            .preview-btn.w-25 {
-                width: calc(25% - 5px);
-            }
-
-            .preview-btn.w-50 {
-                width: calc(50% - 3px);
-            }
-
-            .preview-btn.w-75 {
-                width: calc(75% - 2px);
-            }
-
-            .preview-btn.w-100 {
-                width: 100%;
-            }
-
-        /* Карточка кнопки в панели управления */
-        .prop-button-item {
-            background: #252528;
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 16px;
-            border-radius: 16px;
-            margin-bottom: 10px;
-            cursor: grab;
-            transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-        }
-
-            .prop-button-item:active {
-                cursor: grabbing;
-                transform: scale(0.98);
-            }
-
-            .prop-button-item.dragging {
-                opacity: 0.2;
-                border: 1px dashed var(--primary);
-            }
-
-        .width-control-label {
-            font-size: 10px;
-            color: #666;
-            margin-top: 10px;
-            display: block;
-            text-transform: uppercase;
-        }
-
-        .add-tg-btn {
-            width: 50px;
-            height: 50px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            margin: 20px auto;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 8px 25px rgba(42, 171, 238, 0.4);
-        }
 
     </style>
 </head>
@@ -822,10 +822,10 @@
                 snap.forEach(doc => {
                     const b = doc.data();
                     html += `
-                                <div style="background:var(--bg-panel); border:1px solid #333; padding:20px; border-radius:16px; margin-bottom:15px; cursor:pointer; display:flex; align-items:center;" onclick="openEditor('${b.botToken}', '${b.name}')">
-                                    <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px; margin-right:15px;">🤖</div>
-                                    <div style="font-size:16px; font-weight:bold;">${b.name} <span style="color:#888; font-weight:normal; font-size:13px; margin-left:10px;">@${b.username}</span></div>
-                                </div>`;
+                                    <div style="background:var(--bg-panel); border:1px solid #333; padding:20px; border-radius:16px; margin-bottom:15px; cursor:pointer; display:flex; align-items:center;" onclick="openEditor('${b.botToken}', '${b.name}')">
+                                        <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px; margin-right:15px;">🤖</div>
+                                        <div style="font-size:16px; font-weight:bold;">${b.name} <span style="color:#888; font-weight:normal; font-size:13px; margin-left:10px;">@${b.username}</span></div>
+                                    </div>`;
                 });
                 container.innerHTML = html;
             } catch (e) { console.error(e); }
@@ -939,45 +939,40 @@
         function addTriggerNode(data = null, posX = 50, posY = 200) {
             const nodeData = data || { type: 'trigger', trigger: "" };
             const html = `
-                    <div class="node-card">
-                        <div class="node-card-header header-trigger">
-                            <span>Условие</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <div class="node-card">
+                            <div class="node-card-header header-trigger">
+                                <span>Условие</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </div>
+                            <div class="node-card-body">
+                                <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
+                                <div class="preview-text" style="font-weight:bold;">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
+                            </div>
                         </div>
-                        <div class="node-card-body">
-                            <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
-                            <div class="preview-text" style="font-weight:bold;">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
-                        </div>
-                    </div>
-                `;
+                    `;
             editor.addNode('trigger', 0, 1, posX, posY, 'trigger-node', nodeData, html);
         }
 
         function generateMessageCardHtml(nodeId, nodeData) {
             let blocksPreview = '';
             (nodeData.blocks || []).forEach(blk => {
-                if (blk.type === 'text') blocksPreview += `<div class="preview-text">${blk.content || '...'}</div>`;
-                else if (blk.type === 'pause') blocksPreview += `<div style="font-size: 10px; color: #2AABEE;">⏱ ${blk.duration}с</div>`;
+                if (blk.type === 'text') {
+                    blocksPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${blk.content || '<em>(Пустое сообщение)</em>'}</div>`;
+                } else if (blk.type === 'pause') {
+                    blocksPreview += `<div style="font-size: 11px; color: #2AABEE; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">⏱ Пауза: ${blk.duration || 1} сек.</div>`;
+                }
             });
-
-            let buttonsPreview = '';
-            if (nodeData.buttons && nodeData.buttons.length > 0) {
-                buttonsPreview = '<div class="preview-buttons-container">';
-                nodeData.buttons.forEach(btn => {
-                    // Используем ширину из данных или 100 по умолчанию
-                    const w = btn.width || 100;
-                    buttonsPreview += `<div class="preview-btn w-${w}">${btn.text || 'Кнопка'}</div>`;
-                });
-                buttonsPreview += '</div>';
-            }
-
-            return `<div class="node-card">
-                <div class="node-card-header header-msg"><span>Сообщение #${nodeId}</span></div>
-                <div class="node-card-body" id="node-body-content-${nodeId}">${blocksPreview}${buttonsPreview}</div>
-            </div>`;
+            return `
+                    <div class="node-card">
+                        <div class="node-card-header header-msg">
+                            <span>Сообщение</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </div>
+                        <div class="node-card-body" id="node-body-content-${nodeId}">
+                            ${blocksPreview}
+                        </div>
+                    </div>`;
         }
-
-        
 
         function updateCanvasCard(nodeId) {
             const node = editor.getNodeFromId(nodeId);
@@ -1026,24 +1021,6 @@
             updateCanvasCard(nodeId);
         };
 
-        window.addNewButtonToNode = function (nodeId) {
-            const node = editor.getNodeFromId(nodeId);
-            if (!node.data.buttons) node.data.buttons = [];
-            // По умолчанию кнопка на всю ширину (full)
-            node.data.buttons.push({ text: "Кнопка", targetNodeId: "", width: "full" });
-            editor.updateNodeDataFromId(nodeId, node.data);
-            renderPropertiesPanel(nodeId);
-            updateCanvasCard(nodeId);
-        };
-
-        window.deleteButtonFromNode = function (nodeId, index) {
-            const node = editor.getNodeFromId(nodeId);
-            node.data.buttons.splice(index, 1);
-            editor.updateNodeDataFromId(nodeId, node.data);
-            renderPropertiesPanel(nodeId);
-            updateCanvasCard(nodeId);
-        };
-
         // ==========================================================
         // 5. ЛОГИКА ПРАВОЙ ПАНЕЛИ СВОЙСТВ (PROPERTIES PANEL)
         // ==========================================================
@@ -1073,82 +1050,65 @@
                 node.data.blocks.forEach((blk, index) => {
                     if (blk.type === 'text') {
                         blocksHtml += `
-                            <div class="draggable-block" data-index="${index}" draggable="true">
-                                <div class="drag-header">
-                                    <span class="drag-handle">☰ Текст</span>
-                                    <span class="delete-block-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>
-                                </div>
-                                <textarea class="prop-msg-text-dynamic" data-index="${index}" placeholder="Введите сообщение..." style="width: 100%; background: transparent; border: none; color: white; font-size: 14px; resize: none; outline: none; font-family: inherit; min-height: 60px;">${blk.content || ''}</textarea>
-                                <div class="textarea-tools">
-                                    <div>
-                                        <span class="toggle-emoji-btn" title="Смайлики">🙂</span>
-                                        <span title="Переменные">{..}</span>
-                                        <span title="Вложение">📎</span>
+                                <div class="draggable-block" data-index="${index}" draggable="true">
+                                    <div class="drag-header">
+                                        <span class="drag-handle">☰ Текст</span>
+                                        <span class="delete-block-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>
                                     </div>
-                                </div>
-                            </div>`;
+                                    <textarea class="prop-msg-text-dynamic" data-index="${index}" placeholder="Введите сообщение..." style="width: 100%; background: transparent; border: none; color: white; font-size: 14px; resize: none; outline: none; font-family: inherit; min-height: 60px;">${blk.content || ''}</textarea>
+                                    <div class="textarea-tools">
+                                        <div>
+                                            <span class="toggle-emoji-btn" title="Смайлики">🙂</span>
+                                            <span title="Переменные">{..}</span>
+                                            <span title="Вложение">📎</span>
+                                        </div>
+                                    </div>
+                                </div>`;
                     } else if (blk.type === 'pause') {
                         blocksHtml += `
-                            <div class="draggable-block" data-index="${index}" draggable="true" style="border-color: #2AABEE;">
-                                <div class="drag-header">
-                                    <span class="drag-handle" style="color:#2AABEE;">☰ ⏱ Задержка</span>
-                                    <span class="delete-block-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>
-                                </div>
-                                <div class="pause-body">
-                                    <div style="display:flex; align-items:center; justify-content:space-between;">
-                                        <span style="font-size:12px; color:#aaa;">Длительность (секунд)</span>
-                                        <input type="number" min="1" max="60" class="pause-duration-input prop-input" style="width:70px; padding:8px; text-align:center;" data-index="${index}" value="${blk.duration || 1}">
+                                <div class="draggable-block" data-index="${index}" draggable="true" style="border-color: #2AABEE;">
+                                    <div class="drag-header">
+                                        <span class="drag-handle" style="color:#2AABEE;">☰ ⏱ Задержка</span>
+                                        <span class="delete-block-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>
                                     </div>
-                                    <label style="font-size:12px; color:#aaa; display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:5px;">
-                                        <input type="checkbox" class="pause-typing-checkbox" data-index="${index}" ${blk.typing ? 'checked' : ''}>
-                                        Добавить эффект печати
-                                    </label>
-                                </div>
-                            </div>`;
+                                    <div class="pause-body">
+                                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                                            <span style="font-size:12px; color:#aaa;">Длительность (секунд)</span>
+                                            <input type="number" min="1" max="60" class="pause-duration-input prop-input" style="width:70px; padding:8px; text-align:center;" data-index="${index}" value="${blk.duration || 1}">
+                                        </div>
+                                        <label style="font-size:12px; color:#aaa; display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:5px;">
+                                            <input type="checkbox" class="pause-typing-checkbox" data-index="${index}" ${blk.typing ? 'checked' : ''}>
+                                            Добавить эффект печати
+                                        </label>
+                                    </div>
+                                </div>`;
                     }
                 });
 
-                // Формируем HTML для списка кнопок
-                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки (Drag & Drop)</div><div id="msg-buttons-container">';
-                (node.data.buttons || []).forEach((btn, index) => {
-                    buttonsHtml += `
-                        <div class="prop-button-item" data-index="${index}" draggable="true">
-                            <div class="btn-settings-row">
-                                <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст кнопки" value="${btn.text}">
-                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer; font-size:18px;">✕</span>
-                            </div>
-                            <input type="text" class="prop-input btn-target-input" style="font-size:11px; margin-top:8px; opacity:0.5;" data-index="${index}" placeholder="ID перехода (цель)" value="${btn.targetNodeId || ''}">
-                            
-                            <span class="width-control-label">Ширина кнопки: ${btn.width || 100}%</span>
-                            <input type="range" class="btn-width-slider" data-index="${index}" min="25" max="100" step="25" value="${btn.width || 100}" style="width:100%; accent-color:#2AABEE;">
-                        </div>`;
-                });
-                buttonsHtml += '</div><button class="add-tg-btn" onclick="addNewButtonToNode(' + nodeId + ')">+</button>';
-
                 content.innerHTML = `
-                        <div id="msg-blocks-container">
-                            ${blocksHtml}
-                        </div>
-
-                        ${buttonsHtml}  <div class="emoji-picker" id="emoji-picker-container">
-                            ${emojisHtml}
-                        </div>
-
-                        <div style="margin-top: 15px;">
-                            <div class="prop-label">Добавить блок</div>
-                            <div class="blocks-grid">
-                                <div class="block-btn" onclick="addNewTextToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
-                                <div class="block-btn" onclick="addNewButtonToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
-                                <div class="block-btn" onclick="addNewPauseToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Задержка</span></div>
-                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
+                            <div id="msg-blocks-container">
+                                ${blocksHtml}
                             </div>
-                        </div>
 
-                        <div style="margin-top: 15px;">
-                            <div class="prop-label">Ссылка на картинку (Опционально)</div>
-                            <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
-                        </div>
-                    `;
+                            <div class="emoji-picker" id="emoji-picker-container">
+                                ${emojisHtml}
+                            </div>
+
+                            <div style="margin-top: 15px;">
+                                <div class="prop-label">Добавить блок</div>
+                                <div class="blocks-grid">
+                                    <div class="block-btn" onclick="addNewTextToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
+                                    <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
+                                    <div class="block-btn" onclick="addNewPauseToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Задержка</span></div>
+                                    <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 15px;">
+                                <div class="prop-label">Ссылка на картинку (Опционально)</div>
+                                <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
+                            </div>
+                        `;
 
                 document.getElementById('prop-msg-image').addEventListener('input', (e) => {
                     node.data.image = e.target.value; editor.updateNodeDataFromId(nodeId, node.data);
@@ -1159,12 +1119,12 @@
             } else if (node.name === 'trigger') {
                 title.innerHTML = `Условие #${nodeId}`;
                 content.innerHTML = `
-                        <div>
-                            <div class="prop-label">Если сообщение содержит текст:</div>
-                            <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
-                            <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит цепочку, если клиент напишет это слово.</div>
-                        </div>
-                    `;
+                            <div>
+                                <div class="prop-label">Если сообщение содержит текст:</div>
+                                <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
+                                <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит цепочку, если клиент напишет это слово.</div>
+                            </div>
+                        `;
 
                 const nodeCard = document.querySelector(`#node-${nodeId}`);
                 document.getElementById('prop-trigger-text').addEventListener('input', (e) => {
@@ -1180,109 +1140,95 @@
         function bindBlockEvents(nodeId) {
             const node = editor.getNodeFromId(nodeId);
             const container = document.getElementById('msg-blocks-container');
-            const btnContainer = document.getElementById('msg-buttons-container'); // Контейнер для кнопок
             const emojiContainer = document.getElementById('emoji-picker-container');
 
-            // --- 1. ЛОГИКА ОСНОВНЫХ БЛОКОВ (ТЕКСТ И ЗАДЕРЖКИ) ---
-
-            // Удаление блоков (текст или пауза)
+            // 1. Удаление
             document.querySelectorAll('.delete-block-btn').forEach(btn => {
-                btn.onclick = () => deleteBlockFromNode(nodeId, parseInt(btn.dataset.index));
+                btn.addEventListener('click', (e) => deleteBlockFromNode(nodeId, parseInt(e.currentTarget.dataset.index)));
             });
 
-            // Ввод текста в сообщениях
+            // 2. Ввод текста
             document.querySelectorAll('.prop-msg-text-dynamic').forEach(ta => {
-                ta.onfocus = function () { window.currentActiveTextArea = this; };
-                ta.oninput = function () {
+                ta.addEventListener('focus', function () { window.currentActiveTextArea = this; });
+                ta.addEventListener('input', function () {
                     node.data.blocks[this.dataset.index].content = this.value;
                     editor.updateNodeDataFromId(nodeId, node.data);
                     updateCanvasCard(nodeId);
-                };
+                });
             });
 
-            // Настройка длительности паузы
+            // 3. Настройка паузы
             document.querySelectorAll('.pause-duration-input').forEach(inp => {
-                inp.oninput = function () {
+                inp.addEventListener('input', function () {
                     node.data.blocks[this.dataset.index].duration = parseInt(this.value) || 1;
                     editor.updateNodeDataFromId(nodeId, node.data);
                     updateCanvasCard(nodeId);
-                };
+                });
             });
-
-            // Чекбокс эффекта печати
             document.querySelectorAll('.pause-typing-checkbox').forEach(chk => {
-                chk.onchange = function () {
+                chk.addEventListener('change', function () {
                     node.data.blocks[this.dataset.index].typing = this.checked;
                     editor.updateNodeDataFromId(nodeId, node.data);
-                };
+                });
             });
 
-            // --- 2. ПРЕМИУМ ЛОГИКА КНОПОК (DRAG-AND-DROP + СЛАЙДЕРЫ) ---
-
-            if (btnContainer) {
-                // ПЕРЕТАСКИВАНИЕ КНОПОК
-                btnContainer.querySelectorAll('.prop-button-item').forEach(item => {
-                    item.setAttribute('draggable', true);
-                    item.ondragstart = () => setTimeout(() => item.classList.add('dragging'), 0);
-                    item.ondragend = () => {
-                        item.classList.remove('dragging');
-                        const newButtons = [];
-                        // Собираем данные в новом порядке по DOM-элементам
-                        btnContainer.querySelectorAll('.prop-button-item').forEach(el => {
-                            newButtons.push(node.data.buttons[parseInt(el.dataset.index)]);
-                        });
-                        node.data.buttons = newButtons;
-                        editor.updateNodeDataFromId(nodeId, node.data);
-                        renderPropertiesPanel(nodeId); // Перерисовываем панель для сброса индексов
-                        updateCanvasCard(nodeId);
-                    };
+            // 4. Эмодзи
+            document.querySelectorAll('.toggle-emoji-btn').forEach(btn => {
+                btn.addEventListener('click', () => emojiContainer.classList.toggle('active'));
+            });
+            document.querySelectorAll('.emoji-item').forEach(el => {
+                const newEl = el.cloneNode(true);
+                el.parentNode.replaceChild(newEl, el);
+                newEl.addEventListener('click', (e) => {
+                    const emoji = e.target.innerText;
+                    const ta = window.currentActiveTextArea || document.querySelector('.prop-msg-text-dynamic');
+                    if (!ta) return;
+                    const start = ta.selectionStart, end = ta.selectionEnd, text = ta.value;
+                    ta.value = text.substring(0, start) + emoji + text.substring(end);
+                    ta.focus();
+                    ta.selectionStart = ta.selectionEnd = start + emoji.length;
+                    node.data.blocks[ta.dataset.index].content = ta.value;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    updateCanvasCard(nodeId);
                 });
+            });
 
-                // Сортировка при наведении
-                btnContainer.ondragover = (e) => {
-                    e.preventDefault();
-                    const draggingItem = btnContainer.querySelector('.dragging');
-                    const siblings = [...btnContainer.querySelectorAll('.prop-button-item:not(.dragging)')];
-                    let nextSibling = siblings.find(sib => e.clientY <= sib.getBoundingClientRect().top + sib.getBoundingClientRect().height / 2);
-                    btnContainer.insertBefore(draggingItem, nextSibling);
-                };
-
-                // ТЕКСТ КНОПКИ И ID ПЕРЕХОДА
-                document.querySelectorAll('.btn-text-input').forEach(inp => {
-                    inp.oninput = function () {
-                        node.data.buttons[this.dataset.index].text = this.value;
-                        editor.updateNodeDataFromId(nodeId, node.data);
-                        updateCanvasCard(nodeId);
-                    };
+            // 5. DRAG AND DROP (Перетаскивание)
+            let draggedItem = null;
+            container.querySelectorAll('.draggable-block').forEach(item => {
+                item.addEventListener('dragstart', function (e) {
+                    draggedItem = this;
+                    setTimeout(() => this.classList.add('dragging'), 0);
                 });
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('dragging');
+                    draggedItem = null;
 
-                document.querySelectorAll('.btn-target-input').forEach(inp => {
-                    inp.oninput = function () {
-                        node.data.buttons[this.dataset.index].targetNodeId = this.value;
-                        editor.updateNodeDataFromId(nodeId, node.data);
-                    };
+                    // Сохраняем новый порядок после броска
+                    const newBlocks = [];
+                    container.querySelectorAll('.draggable-block').forEach(el => {
+                        newBlocks.push(node.data.blocks[parseInt(el.dataset.index)]);
+                    });
+                    node.data.blocks = newBlocks;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    renderPropertiesPanel(nodeId); // Перерисовываем индексы
+                    updateCanvasCard(nodeId);
                 });
+            });
 
-                // ПРЕМИУМ СЛАЙДЕР ШИРИНЫ (25%, 50%, 75%, 100%)
-                document.querySelectorAll('.btn-width-slider').forEach(slider => {
-                    slider.oninput = function () {
-                        const idx = this.dataset.index;
-                        const val = this.value;
-                        node.data.buttons[idx].width = val;
-                        // Обновляем текст в лейбле над слайдером
-                        this.previousElementSibling.innerText = `Ширина кнопки: ${val}%`;
-                        editor.updateNodeDataFromId(nodeId, node.data);
-                        updateCanvasCard(nodeId);
-                    };
-                });
-            }
+            container.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                const afterElement = [...container.querySelectorAll('.draggable-block:not(.dragging)')].reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = e.clientY - box.top - box.height / 2;
+                    if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+                    else return closest;
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
 
-            // --- 3. ДОПОЛНИТЕЛЬНО (ЭМОДЗИ И ПРОЧЕЕ) ---
-
-            const emojiBtn = document.querySelector('.toggle-emoji-btn');
-            if (emojiBtn) {
-                emojiBtn.onclick = () => emojiContainer.classList.toggle('active');
-            }
+                const currentItem = document.querySelector('.dragging');
+                if (afterElement == null) container.appendChild(currentItem);
+                else container.insertBefore(currentItem, afterElement);
+            });
         }
 
 
@@ -1338,7 +1284,7 @@
 
         // 7. СОХРАНЕНИЕ
         async function saveGraphToFirebase() {
-            const btn = document.getElementById('saveBtn');ф
+            const btn = document.getElementById('saveBtn');
             btn.innerText = "Сохранение...";
             const exportedData = editor.export();
             try {
