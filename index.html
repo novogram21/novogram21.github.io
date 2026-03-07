@@ -4719,28 +4719,36 @@
         </div>
 
         <div style="flex:1; overflow-y: auto; padding: 0 20px 40px;">
-            <div class="premium-input-box" style="padding: 10px 0;">
-                <label>Имя бота</label>
-                <input type="text" id="botEditName" placeholder="Например: Бот Заметок" style="background:#121316; padding:14px 12px; border-radius:12px; border:1px solid #333;">
-            </div>
-            <div class="premium-input-box" style="padding: 10px 0;">
-                <label>Username (уникальный)</label>
-                <div class="premium-username-wrapper" style="background:#121316; border-radius:12px; border:1px solid #333; padding-left:12px;">
-                    <span style="color:#736AF0; font-weight:bold; margin-right:5px;">@</span>
-                    <input type="text" id="botEditUsername" placeholder="note_bot" style="padding:14px 0; flex:1;" oninput="this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()">
+            <div id="botCreationForm">
+                <div class="premium-input-box" style="padding: 10px 0;">
+                    <label>Имя бота</label>
+                    <input type="text" id="botEditName" placeholder="Например: Бот Заметок" style="background:#121316; padding:14px 12px; border-radius:12px; border:1px solid #333;">
+                </div>
+                <div class="premium-input-box" style="padding: 10px 0;">
+                    <label>Username (уникальный)</label>
+                    <div class="premium-username-wrapper" style="background:#121316; border-radius:12px; border:1px solid #333; padding-left:12px;">
+                        <span style="color:#736AF0; font-weight:bold; margin-right:5px;">@</span>
+                        <input type="text" id="botEditUsername" placeholder="note_bot" style="padding:14px 0; flex:1;" oninput="this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()">
+                    </div>
                 </div>
             </div>
-            <div class="premium-input-box" style="padding: 10px 0;">
-                <label>Ответ по умолчанию (если команда не распознана)</label>
-                <textarea id="botEditDefaultReply" rows="2" placeholder="Я не понимаю. Напиши 'помощь'." style="background:#121316; padding:14px 12px; border-radius:12px; border:1px solid #333; resize:none;"></textarea>
+
+            <div id="botTokenDisplay" style="display: none; text-align: center; margin-top: 30px;">
+                <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
+                <h3 style="color: white; margin-bottom: 5px;">Бот успешно создан!</h3>
+                <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Скопируйте этот токен и вставьте его на сайте настройки ботов, чтобы добавить команды.</p>
+
+                <div style="background: #121316; padding: 15px; border-radius: 12px; border: 1px dashed #736AF0; margin-bottom: 20px;">
+                    <div style="font-size: 11px; color: #736AF0; margin-bottom: 5px; text-transform: uppercase; font-weight: bold;">Ваш API Токен:</div>
+                    <div id="generatedBotToken" style="color: white; font-family: monospace; font-size: 16px; word-break: break-all;"></div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="copyBotToken()" style="flex:1; background: #2d2d2d; color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer;">📋 Копировать</button>
+                    <a href="https://novogram21.github.io/bots" target="_blank" style="flex:1; background: #736AF0; color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; text-decoration: none; display: flex; align-items: center; justify-content: center;">Настроить ➔</a>
+                </div>
             </div>
 
-            <div style="margin-top: 30px; display:flex; justify-content:space-between; align-items:center;">
-                <label style="color:#8e8e93; font-size:13px; font-weight:600; text-transform:uppercase;">Правила автоответа</label>
-                <button onclick="addBotRuleUI('', '')" style="background:rgba(115,106,240,0.15); border:none; color:#736AF0; font-weight:bold; cursor:pointer; padding:6px 12px; border-radius:8px;">+ Добавить</button>
-            </div>
-
-            <div id="botRulesContainer" style="margin-top: 15px;"></div>
         </div>
     </div>
 
@@ -11291,10 +11299,20 @@
         }
 
 
+
+
+
+
+
+
+
+
+
         // ==========================================
-        // ДВИЖОК БОТОВ (GHOST BOT) & КОНСТРУКТОР
+        // СОЗДАНИЕ БОТОВ В ЧАТЕ (ГЕНЕРАЦИЯ ТОКЕНА)
         // ==========================================
         let currentEditingBotId = null;
+        let currentEditingBotToken = null;
 
         function openBotsList() {
             if (typeof sheetHistoryStack !== 'undefined') sheetHistoryStack++;
@@ -11303,7 +11321,6 @@
             const sheet = document.getElementById('botsListSheet');
             sheet.style.display = 'flex';
             setTimeout(() => sheet.classList.add('open'), 10);
-
             loadMyBots();
         }
 
@@ -11316,212 +11333,161 @@
 
         async function loadMyBots() {
             const container = document.getElementById('botsContainer');
-            container.innerHTML = '<div style="text-align:center; color:#888; margin-top: 40px;"><div class="status-spinner-small" style="display:inline-block;"></div> Загрузка...</div>';
-
+            container.innerHTML = '<div style="text-align:center; color:#888; margin-top: 40px;">Загрузка...</div>';
             try {
-                const snap = await db.collection('users')
-                    .where('ownerId', '==', currentUser.uid)
-                    .where('isBot', '==', true).get();
-
+                const snap = await db.collection('users').where('ownerId', '==', currentUser.uid).where('isBot', '==', true).get();
                 container.innerHTML = '';
-
                 if (snap.empty) {
                     container.innerHTML = `
                         <div style="text-align:center; margin-top: 60px;">
                             <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
                             <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
-                            <p style="color:#888; font-size:14px; margin-bottom: 20px;">Создайте бота для автоответов.</p>
-                            <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer;">Создать бота</button>
+                            <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer; margin-top: 15px;">Создать бота</button>
                         </div>`;
                     return;
                 }
-
                 snap.forEach(doc => {
                     const bot = doc.data();
                     container.innerHTML += `
                         <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
-                            <div class="premium-item" onclick="openBotEditor('${doc.id}')" style="border:none;">
+                            <div class="premium-item" onclick="openBotEditor('${doc.id}', '${bot.botToken}')" style="border:none;">
                                 <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
                                 <div class="premium-item-content">
                                     <div class="premium-item-value">${bot.name}</div>
                                     <div class="premium-item-label">@${bot.username}</div>
                                 </div>
-                                <div style="color: #736AF0; font-size:14px; font-weight:bold;">Настроить</div>
+                                <div style="color: #736AF0; font-size:14px; font-weight:bold;">Токен</div>
                             </div>
                         </div>`;
                 });
-            } catch (e) {
-                container.innerHTML = '<div style="color:#ff595a; text-align:center;">Ошибка загрузки</div>';
-            }
+            } catch (e) { }
         }
 
-        async function openBotEditor(botId) {
+        function openBotEditor(botId, token = null) {
             if (typeof sheetHistoryStack !== 'undefined') sheetHistoryStack++;
             history.pushState({ isSheet: true }, "", window.location.href);
 
             currentEditingBotId = botId;
-            const sheet = document.getElementById('botEditorSheet');
-            sheet.style.display = 'flex';
-            setTimeout(() => sheet.classList.add('open'), 10);
+            currentEditingBotToken = token;
 
-            document.getElementById('botRulesContainer').innerHTML = '';
-            document.getElementById('saveBotBtn').style.opacity = "1";
-            document.getElementById('saveBotBtn').style.pointerEvents = "auto";
+            document.getElementById('botCreationForm').style.display = 'block';
+            document.getElementById('botTokenDisplay').style.display = 'none';
+            document.getElementById('saveBotBtn').style.display = 'flex';
 
             if (botId) {
-                document.getElementById('botEditorTitle').innerText = 'Настройка бота';
-                const userDoc = await db.collection('users').doc(botId).get();
-                const botDoc = await db.collection('bots').doc(botId).get();
-
-                document.getElementById('botEditName').value = userDoc.data().name || '';
-                document.getElementById('botEditUsername').value = userDoc.data().username || '';
-                document.getElementById('botEditUsername').disabled = true; // Username нельзя менять
-
-                document.getElementById('botEditDefaultReply').value = botDoc.exists ? botDoc.data().defaultReply : '';
-
-                if (botDoc.exists && botDoc.data().rules) {
-                    botDoc.data().rules.forEach(r => addBotRuleUI(r.trigger, r.response));
-                }
+                document.getElementById('botEditorTitle').innerText = 'Управление ботом';
+                // Бот уже создан, сразу показываем токен
+                document.getElementById('botCreationForm').style.display = 'none';
+                document.getElementById('saveBotBtn').style.display = 'none';
+                showBotTokenSuccess(token);
             } else {
                 document.getElementById('botEditorTitle').innerText = 'Новый бот';
                 document.getElementById('botEditName').value = '';
                 document.getElementById('botEditUsername').value = '';
-                document.getElementById('botEditUsername').disabled = false;
-                document.getElementById('botEditDefaultReply').value = 'Я бот. Команда не распознана.';
-                addBotRuleUI('привет', 'Здравствуйте! Я бот.');
             }
+
+            const sheet = document.getElementById('botEditorSheet');
+            sheet.style.display = 'flex';
+            setTimeout(() => sheet.classList.add('open'), 10);
         }
 
-        function closeBotEditor(fromPopState = false) {
-            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
-                history.back(); return;
-            }
+        function closeBotEditor() {
             document.getElementById('botEditorSheet').classList.remove('open');
-        }
-
-        function addBotRuleUI(trigger, response) {
-            const container = document.getElementById('botRulesContainer');
-            const div = document.createElement('div');
-            div.style.cssText = "background: #252528; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); position:relative;";
-            div.innerHTML = `
-                <button onclick="this.parentElement.remove()" style="position:absolute; top:10px; right:10px; background:rgba(255,89,90,0.15); border:none; color:#ff595a; border-radius:50%; width:24px; height:24px; font-size:12px; cursor:pointer;">✖</button>
-                <div style="margin-bottom:10px; padding-right: 30px;">
-                    <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ ПИШУТ СЛОВО:</div>
-                    <input type="text" class="rule-trigger" value="${trigger}" placeholder="напр. цена" style="background:transparent; border:none; border-bottom:1px solid #444; color:white; width:100%; outline:none; padding:5px 0;">
-                </div>
-                <div>
-                    <div style="font-size:11px; color:#888; margin-bottom:4px;">БОТ ОТВЕТИТ:</div>
-                    <textarea class="rule-response" rows="2" placeholder="Текст ответа..." style="background:#1c1c1e; border:1px solid #333; color:white; width:100%; border-radius:8px; padding:10px; outline:none; resize:none; box-sizing:border-box;">${response}</textarea>
-                </div>
-            `;
-            container.appendChild(div);
         }
 
         async function saveBotData() {
             const name = document.getElementById('botEditName').value.trim();
             let username = document.getElementById('botEditUsername').value.trim();
-            const defaultReply = document.getElementById('botEditDefaultReply').value.trim();
 
             if (!name || !username) return showToast("Заполните Имя и Username!");
             if (!username.endsWith('bot')) username += '_bot';
 
-            const triggers = document.querySelectorAll('.rule-trigger');
-            const responses = document.querySelectorAll('.rule-response');
-            let rules = [];
-
-            for (let i = 0; i < triggers.length; i++) {
-                if (triggers[i].value.trim() && responses[i].value.trim()) {
-                    rules.push({
-                        trigger: triggers[i].value.trim().toLowerCase(),
-                        response: responses[i].value.trim()
-                    });
-                }
-            }
-
-            const botId = currentEditingBotId || ('bot_' + Date.now());
             const saveBtn = document.getElementById('saveBotBtn');
-            saveBtn.style.opacity = "0.5";
-            saveBtn.style.pointerEvents = "none";
+            saveBtn.style.opacity = "0.5"; saveBtn.style.pointerEvents = "none";
 
             try {
-                // Если бот новый - проверяем уникальность юзернейма
-                if (!currentEditingBotId) {
-                    const checkSnap = await db.collection('users').where('username', '==', username).get();
-                    if (!checkSnap.empty) {
-                        saveBtn.style.opacity = "1"; saveBtn.style.pointerEvents = "auto";
-                        return showToast("Этот Username уже занят!");
-                    }
+                // Проверяем уникальность никнейма
+                const checkSnap = await db.collection('users').where('username', '==', username).get();
+                if (!checkSnap.empty) {
+                    saveBtn.style.opacity = "1"; saveBtn.style.pointerEvents = "auto";
+                    return showToast("Этот Username уже занят!");
                 }
 
-                // 1. Создаем профиль бота, чтобы его находил поиск
+                const botId = 'bot_' + Date.now() + Math.random().toString(36).substring(2, 8);
+                // Генерируем надежный токен (API Key)
+                const newToken = 'nvg_' + currentUser.uid.substring(0, 5) + Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
+
+                // Создаем пользователя-бота
                 await db.collection('users').doc(botId).set({
                     name: name,
                     username: username,
                     isBot: true,
                     ownerId: currentUser.uid,
-                    avatar: "https://placehold.co/200x200/2b2d31/736AF0?text=BOT",
+                    botToken: newToken, // Важно! Сохраняем токен
+                    avatar: "https://placehold.co/200x200/252528/736AF0?text=BOT",
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-
-                // 2. Сохраняем правила в коллекцию bots
-                await db.collection('bots').doc(botId).set({
-                    defaultReply: defaultReply,
-                    rules: rules
                 });
 
-                showToast("Бот сохранен ✓");
-                closeBotEditor();
+                showBotTokenSuccess(newToken);
                 loadMyBots();
             } catch (e) {
                 console.error(e);
-                showToast("Ошибка сохранения");
-                saveBtn.style.opacity = "1"; saveBtn.style.pointerEvents = "auto";
+                showToast("Ошибка сохранения (проверьте правила Firebase)");
             }
         }
 
+        function showBotTokenSuccess(token) {
+            document.getElementById('botCreationForm').style.display = 'none';
+            document.getElementById('saveBotBtn').style.display = 'none';
+
+            const display = document.getElementById('botTokenDisplay');
+            display.style.display = 'block';
+            document.getElementById('generatedBotToken').innerText = token;
+        }
+
+        function copyBotToken() {
+            const token = document.getElementById('generatedBotToken').innerText;
+            navigator.clipboard.writeText(token).then(() => showToast("Токен скопирован!"));
+        }
+
         // =====================================
-        // ИИ БОТА: СРАБАТЫВАНИЕ НА СООБЩЕНИЯ
+        // ИИ БОТА: СРАБАТЫВАНИЕ В ЧАТЕ
         // =====================================
         async function checkAndTriggerBot(receiverId, messageText, chatId) {
             try {
-                // 1. Проверяем, бот ли это
-                let isBot = false;
+                // Узнаем, является ли собеседник ботом
                 let botData = usersCache[receiverId];
-
-                if (botData && botData.isBot) {
-                    isBot = true;
-                } else if (!botData) {
+                if (!botData) {
                     const userDoc = await db.collection('users').doc(receiverId).get();
-                    if (userDoc.exists && userDoc.data().isBot) {
-                        isBot = true;
-                        usersCache[receiverId] = userDoc.data();
-                    }
+                    if (userDoc.exists) botData = userDoc.data();
                 }
 
-                if (!isBot) return; // Живой человек, уходим
+                if (!botData || !botData.isBot || !botData.botToken) return;
 
-                // 2. Скачиваем "мозги"
-                const botDoc = await db.collection('bots').doc(receiverId).get();
-                if (!botDoc.exists) return;
+                // Если бот найден, идем в специальную коллекцию bot_rules по его токену
+                const rulesDoc = await db.collection('bot_rules').doc(botData.botToken).get();
+                let replyText = "Команда не распознана.";
 
-                const botConfig = botDoc.data();
-                const rules = botConfig.rules || [];
-                const lowerMsg = messageText.toLowerCase();
+                if (rulesDoc.exists) {
+                    const botConfig = rulesDoc.data();
+                    const rules = botConfig.rules || [];
+                    replyText = botConfig.defaultReply || replyText;
 
-                // 3. Выбираем ответ
-                let replyText = botConfig.defaultReply || "Команда не распознана.";
-                for (let rule of rules) {
-                    if (lowerMsg.includes(rule.trigger)) {
-                        replyText = rule.response;
-                        break;
+                    const lowerMsg = messageText.toLowerCase();
+                    for (let rule of rules) {
+                        if (lowerMsg.includes(rule.trigger)) {
+                            replyText = rule.response;
+                            break;
+                        }
                     }
+                } else {
+                    replyText = "Бот еще не настроен. Владельцу нужно зайти на novogram21.github.io/bots";
                 }
 
-                // 4. Имитация (Бот думает и пишет)
+                // Имитация (Бот думает и пишет)
                 setTimeout(async () => {
-                    rtdb.ref(`typing/${chatId}/${receiverId}`).set(true); // Статус "печатает..."
+                    rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
 
-                    // Помечаем твое сообщение прочитанным от лица бота
                     const msgsSnap = await db.collection('chats').doc(chatId).collection('msgs')
                         .where('to', '==', receiverId).where('read', '==', false).get();
                     const batch = db.batch();
@@ -11529,12 +11495,9 @@
                     await batch.commit();
 
                     setTimeout(async () => {
-                        rtdb.ref(`typing/${chatId}/${receiverId}`).remove(); // Снимаем статус
-
-                        // Шифруем текст, чтобы не сломать E2E защиту чата!
+                        rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
                         const encryptedReply = encryptText(replyText, chatId);
 
-                        // Отправляем ОТ ЛИЦА БОТА
                         await db.collection('chats').doc(chatId).collection('msgs').add({
                             txt: encryptedReply,
                             from: receiverId, // Подмена отправителя
@@ -11544,10 +11507,8 @@
                             read: false,
                             ts: firebase.firestore.FieldValue.serverTimestamp()
                         });
-
-                    }, 1000 + Math.random() * 1000); // Пишет от 1 до 2 секунд
-
-                }, 500); // Читает полсекунды
+                    }, 1000);
+                }, 500);
 
             } catch (e) {
                 console.error("Ошибка автоответчика:", e);
