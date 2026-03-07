@@ -9145,19 +9145,15 @@
                 if (!currentUser) return;
 
                 // --- ПРОВЕРКА ДОСТУПА С АНИМАЦИЕЙ ---
-                const friendsSnap = await db.collection('friends')
-                    .where('users', 'array-contains', currentUser.uid)
-                    .get();
+                let isFriend = !!document.getElementById('u-' + userId) || (usersCache[userId] && usersCache[userId].isBot);
 
-                let isFriend = false;
-                friendsSnap.forEach(doc => {
-                    if (doc.data().users.includes(userId)) isFriend = true;
-                });
+                // Если список контактов еще вообще не прогрузился (заход по пуш-уведомлению), пропускаем проверку
+                if (document.querySelectorAll('.user-item').length === 0) {
+                    isFriend = true;
+                }
 
                 if (!isFriend) {
-                    // Вместо тоста — показываем премиум окно
                     document.getElementById('accessDeniedModal').style.display = 'flex';
-                    // Очищаем хеш, чтобы при закрытии модалки мы были на главной
                     history.replaceState(null, null, ' ');
                     return;
                 }
