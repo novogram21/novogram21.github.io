@@ -5535,17 +5535,16 @@
                 });
 
             } else {
+                // Просто очищаем данные и показываем экран входа без лишних вопросов
                 localStorage.removeItem('isLoggedIn');
                 localStorage.removeItem('current_user_uid');
 
-                if (typeof wasLoggedIn !== 'undefined' && wasLoggedIn) {
-                    alert("Сессия истекла. Войдите снова.");
-                }
                 document.getElementById('authScreen').classList.remove('hidden');
                 document.getElementById('stepEmail').style.display = 'block';
+
                 if (typeof lastSeenInterval !== 'undefined' && lastSeenInterval) clearInterval(lastSeenInterval);
 
-                // Сбрасываем кнопку авторизации при выходе
+                // Сбрасываем кнопку авторизации
                 const btn = document.querySelector('#stepEmail button');
                 if (btn) {
                     btn.innerText = "Далее";
