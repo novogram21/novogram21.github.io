@@ -615,6 +615,7 @@
         }
 
         // 3. ИНИЦИАЛИЗАЦИЯ DRAWFLOW
+        // 3. ИНИЦИАЛИЗАЦИЯ DRAWFLOW
         let lastMouseX = 0, lastMouseY = 0;
 
         function initDrawflow() {
@@ -622,6 +623,37 @@
             editor = new Drawflow(id);
             editor.reroute = true;
             editor.start();
+
+            // === ЗАЩИТА СВЯЗЕЙ (1 К 1) ===
+            editor.on('connectionCreated', function (connection) {
+                const outNodeId = connection.output_id;
+                const outPort = connection.output_class;
+                const inNodeId = connection.input_id;
+                const inPort = connection.input_class;
+
+                // 1. Ограничение для Выхода (Зеленая точка): удаляем старую связь, если тянем новую
+                const nodeOut = editor.getNodeFromId(outNodeId);
+                const outConnections = nodeOut.outputs[outPort].connections;
+                if (outConnections.length > 1) {
+                    outConnections.forEach(conn => {
+                        if (conn.node != inNodeId || conn.output != inPort) {
+                            editor.removeSingleConnection(outNodeId, conn.node, outPort, conn.output);
+                        }
+                    });
+                }
+
+                // 2. Ограничение для Входа (Синяя точка): чтобы к одному сообщению не шло две стрелки
+                const nodeIn = editor.getNodeFromId(inNodeId);
+                const inConnections = nodeIn.inputs[inPort].connections;
+                if (inConnections.length > 1) {
+                    inConnections.forEach(conn => {
+                        if (conn.node != outNodeId || conn.input != outPort) {
+                            editor.removeSingleConnection(conn.node, inNodeId, conn.input, inPort);
+                        }
+                    });
+                }
+            });
+            // =============================
 
             // Открытие меню по ПКМ
             id.addEventListener('contextmenu', function (e) {
