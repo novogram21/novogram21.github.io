@@ -4437,7 +4437,20 @@
                 </div>
             </div>
 
+
             <input type="date" id="profileBirthdate" style="display: none;">
+
+            <div class="premium-section-title">Разработка</div>
+            <div class="premium-section">
+                <div class="premium-item" onclick="openBotsList()">
+                    <div class="premium-item-icon" style="background: rgba(115, 106, 240, 0.15); color: #736AF0;">🤖</div>
+                    <div class="premium-item-content">
+                        <div class="premium-item-value">Мои боты</div>
+                        <div class="premium-item-label">Конструктор автоответов</div>
+                    </div>
+                    <div class="premium-item-arrow">›</div>
+                </div>
+            </div>
 
             <div class="premium-section-title">Система</div>
             <div class="premium-section">
@@ -4678,6 +4691,60 @@
             </button>
         </div>
     </div>
+
+    <div id="botsListSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0; background: #121316 !important; z-index: 6015 !important;">
+        <div class="premium-header">
+            <button onclick="closeBotsList()" class="header-icon-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div style="flex:1; text-align:center; font-weight: 600; font-size: 18px; color: white;">Мои Боты</div>
+            <button onclick="openBotEditor(null)" class="header-icon-btn" style="color: #736AF0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+        </div>
+        <div id="botsContainer" style="flex:1; overflow-y: auto; padding: 20px 15px;">
+            <div style="text-align:center; color:#888; margin-top: 40px;">Загрузка...</div>
+        </div>
+    </div>
+
+    <div id="botEditorSheet" class="action-sheet full-screen-sheet" style="padding: 0; border-radius: 0; background: #1c1c1e !important; z-index: 6020 !important;">
+        <div class="premium-header" style="background: transparent; border-bottom: none;">
+            <button onclick="closeBotEditor()" class="header-icon-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div style="flex:1; text-align:center; font-weight: 600; font-size: 18px; color: white;" id="botEditorTitle">Новый бот</div>
+            <button onclick="saveBotData()" class="header-icon-btn" style="color: #736AF0;" id="saveBotBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12" /></svg>
+            </button>
+        </div>
+
+        <div style="flex:1; overflow-y: auto; padding: 0 20px 40px;">
+            <div class="premium-input-box" style="padding: 10px 0;">
+                <label>Имя бота</label>
+                <input type="text" id="botEditName" placeholder="Например: Бот Заметок" style="background:#121316; padding:14px 12px; border-radius:12px; border:1px solid #333;">
+            </div>
+            <div class="premium-input-box" style="padding: 10px 0;">
+                <label>Username (уникальный)</label>
+                <div class="premium-username-wrapper" style="background:#121316; border-radius:12px; border:1px solid #333; padding-left:12px;">
+                    <span style="color:#736AF0; font-weight:bold; margin-right:5px;">@</span>
+                    <input type="text" id="botEditUsername" placeholder="note_bot" style="padding:14px 0; flex:1;" oninput="this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()">
+                </div>
+            </div>
+            <div class="premium-input-box" style="padding: 10px 0;">
+                <label>Ответ по умолчанию (если команда не распознана)</label>
+                <textarea id="botEditDefaultReply" rows="2" placeholder="Я не понимаю. Напиши 'помощь'." style="background:#121316; padding:14px 12px; border-radius:12px; border:1px solid #333; resize:none;"></textarea>
+            </div>
+
+            <div style="margin-top: 30px; display:flex; justify-content:space-between; align-items:center;">
+                <label style="color:#8e8e93; font-size:13px; font-weight:600; text-transform:uppercase;">Правила автоответа</label>
+                <button onclick="addBotRuleUI('', '')" style="background:rgba(115,106,240,0.15); border:none; color:#736AF0; font-weight:bold; cursor:pointer; padding:6px 12px; border-radius:8px;">+ Добавить</button>
+            </div>
+
+            <div id="botRulesContainer" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+
     <script>
 
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4AnViDZV8N6X-Tk9XFG2LQwTUVb2TWWR3RcoCNhkRmOM5XLug9UBi1Ky-_j2sQB5u/exec";
@@ -4986,13 +5053,13 @@
                 : `<div class="search-avatar-placeholder" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">${fullName.charAt(0).toUpperCase()}</div>`;
 
             div.innerHTML = `
-                                                        ${avatarHtml}
-                                                        <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                                                        <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                                                        <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                                                        </div>
-                                                        <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
-                                                        `;
+                                                            ${avatarHtml}
+                                                            <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                                                            <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                                                            <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                                                            </div>
+                                                            <div class="search-action" style="color:#007bff; font-size:20px;">${isFriend ? '💬' : '➕'}</div>
+                                                            `;
 
             // Событие клика теперь надежно закреплено за узлом
             div.onclick = () => {
@@ -5717,16 +5784,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
                         div.innerHTML = `
-                                                        ${avatar}
-                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                        </div>
-                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                        </div>
-                                                        `;
+                                                            ${avatar}
+                                                            <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                            ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                            <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                            </div>
+                                                            <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                            <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                            <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                            </div>
+                                                            `;
                         list.appendChild(div);
                     });
                 });
@@ -5994,19 +6061,19 @@
                 : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
             return `
-                                                        ${avatarHtml}
-                                                        <div class="user-name">${fName}</div>
-                                                        <div class="last-msg-row">
-                                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                                        </div>
-                                                        <div class="meta-column">
-                                                        <span class="last-msg-date" id="date-${chatId}"></span>
-                                                        <div class="meta-bottom-row">
-                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                        </div>
-                                                        </div>
-                                                        `;
+                                                            ${avatarHtml}
+                                                            <div class="user-name">${fName}</div>
+                                                            <div class="last-msg-row">
+                                                            <span class="last-msg" id="last-${chatId}">...</span>
+                                                            </div>
+                                                            <div class="meta-column">
+                                                            <span class="last-msg-date" id="date-${chatId}"></span>
+                                                            <div class="meta-bottom-row">
+                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                            </div>
+                                                            </div>
+                                                            `;
         }
 
         function loadData() {
@@ -6143,19 +6210,19 @@
                             : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
 
                         div.innerHTML = `
-                                                        ${avatarHtml}
-                                                        <div class="user-name">${fName}</div>
-                                                        <div class="last-msg-row">
-                                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                                        </div>
-                                                        <div class="meta-column">
-                                                        <span class="last-msg-date" id="date-${chatId}"></span>
-                                                        <div class="meta-bottom-row">
-                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                        </div>
-                                                        </div>
-                                                        `;
+                                                            ${avatarHtml}
+                                                            <div class="user-name">${fName}</div>
+                                                            <div class="last-msg-row">
+                                                            <span class="last-msg" id="last-${chatId}">...</span>
+                                                            </div>
+                                                            <div class="meta-column">
+                                                            <span class="last-msg-date" id="date-${chatId}"></span>
+                                                            <div class="meta-bottom-row">
+                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                            </div>
+                                                            </div>
+                                                            `;
 
                         if (isNew) {
                             list.appendChild(div);
@@ -6516,10 +6583,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                                        <div class="msg-reply-name">${m.replyTo.name}</div>
-                                                        <div class="msg-reply-text">${m.replyTo.text}</div>
-                                                        </div>`;
+                                                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                                            <div class="msg-reply-name">${m.replyTo.name}</div>
+                                                            <div class="msg-reply-text">${m.replyTo.text}</div>
+                                                            </div>`;
             }
 
             // Основной контент
@@ -6566,18 +6633,18 @@
 
                 // ВАЖНО: Добавлено style="color: currentColor;" к SVG и убран onclick из верстки, чтобы не было конфликтов
                 contentHtml += `
-                                                        <div class="chat-call-card">
-                                                        <div class="call-icon-wrapper">
-                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                                                        </svg>
-                                                        </div>
-                                                        <div class="call-info">
-                                                        <div class="call-title">${titleText}</div>
-                                                        <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                                                        </div>
-                                                        </div>
-                                                        `;
+                                                            <div class="chat-call-card">
+                                                            <div class="call-icon-wrapper">
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                                            </svg>
+                                                            </div>
+                                                            <div class="call-info">
+                                                            <div class="call-title">${titleText}</div>
+                                                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                                                            </div>
+                                                            </div>
+                                                            `;
             }
             else {
                 // Добавили класс "chat-link" и убрали target="_blank"
@@ -6602,11 +6669,11 @@
                 }
 
                 let metaHtml = `
-                                                        <span class="msg-meta" style="${metaStyle}">
-                                                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                                        <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                                        ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                                        </span>`;
+                                                            <span class="msg-meta" style="${metaStyle}">
+                                                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
+                                                            <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
+                                                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
+                                                            </span>`;
 
                 if (msgType === 'image') contentHtml += metaHtml + `</div>`;
                 else contentHtml += metaHtml;
@@ -6751,6 +6818,15 @@
             if (!isSys && currentFriendId) {
                 sendNotificationSecure(currentFriendId, t, type);
             }
+            if (!isSys && currentFriendId) {
+                sendNotificationSecure(currentFriendId, t, type);
+
+                // === МАГИЯ АВТООТВЕТЧИКА ===
+                if (type === 'text') {
+                    checkAndTriggerBot(currentFriendId, t, currentChatId);
+                }
+            }
+
         }
 
         window.processNativeAction = async function (action, chatId, text) {
@@ -7001,6 +7077,8 @@
                 history.go(steps);
             }
 
+            document.getElementById('botsListSheet')?.classList.remove('open');
+            document.getElementById('botEditorSheet')?.classList.remove('open');
             document.getElementById('actionSheet')?.classList.remove('open');
             document.getElementById('deleteSheet')?.classList.remove('open');
             document.getElementById('profileSheet')?.classList.remove('open');
@@ -7412,7 +7490,7 @@
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
 
-            
+
             isEarpiece = true;
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("audio_ear");
@@ -8973,24 +9051,24 @@
             if (file.type.startsWith('image/')) {
                 const url = URL.createObjectURL(file);
                 contentHtml = `
-                                                        <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                        <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                        <div class="upload-spinner"></div>
-                                                        </div>
-                                                        `;
+                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
+                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
+                                                            <div class="upload-spinner"></div>
+                                                            </div>
+                                                            `;
             }
             // Если это файл — показываем карточку
             else {
                 contentHtml = `
-                                                        <div class="chat-file-card" style="opacity: 0.7;">
-                                                        <div class="file-icon">📄</div>
-                                                        <div class="file-info">
-                                                        <div class="file-name">${file.name}</div>
-                                                        <div class="file-action">Загрузка...</div>
-                                                        </div>
-                                                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                        </div>
-                                                        `;
+                                                            <div class="chat-file-card" style="opacity: 0.7;">
+                                                            <div class="file-icon">📄</div>
+                                                            <div class="file-info">
+                                                            <div class="file-name">${file.name}</div>
+                                                            <div class="file-action">Загрузка...</div>
+                                                            </div>
+                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                                                            </div>
+                                                            `;
             }
             div.innerHTML = contentHtml;
             list.appendChild(div);
@@ -10078,14 +10156,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                                                    <div class="search-msg-content">
-                                                                        <div class="search-msg-header">
-                                                                            <span class="search-msg-name">${res.name}</span>
-                                                                            <span class="search-msg-time">${res.time}</span>
+                                                                        <div class="search-msg-content">
+                                                                            <div class="search-msg-header">
+                                                                                <span class="search-msg-name">${res.name}</span>
+                                                                                <span class="search-msg-time">${res.time}</span>
+                                                                            </div>
+                                                                            <div class="search-msg-text">${res.text}</div>
                                                                         </div>
-                                                                        <div class="search-msg-text">${res.text}</div>
-                                                                    </div>
-                                                                `;
+                                                                    `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -10275,31 +10353,31 @@
         }
 
         // 2. Функция переключения
-            function toggleSpeaker() {
-                isEarpiece = !isEarpiece;
-                const btn = document.getElementById('btnSpeaker');
+        function toggleSpeaker() {
+            isEarpiece = !isEarpiece;
+            const btn = document.getElementById('btnSpeaker');
 
-                const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
-                const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+            const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+            const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
 
-                if (isEarpiece) {
-                    btn.innerHTML = iconEar;
-                    btn.classList.add('muted-state');
+            if (isEarpiece) {
+                btn.innerHTML = iconEar;
+                btn.classList.add('muted-state');
 
-                    if (window.mauiInterop) {
-                        window.mauiInterop.postMessage("audio_ear");
-                        window.mauiInterop.postMessage("enable_proximity"); // Вернули к уху - включили датчик
-                    }
-                } else {
-                    btn.innerHTML = iconLoud;
-                    btn.classList.remove('muted-state');
+                if (window.mauiInterop) {
+                    window.mauiInterop.postMessage("audio_ear");
+                    window.mauiInterop.postMessage("enable_proximity"); // Вернули к уху - включили датчик
+                }
+            } else {
+                btn.innerHTML = iconLoud;
+                btn.classList.remove('muted-state');
 
-                    if (window.mauiInterop) {
-                        window.mauiInterop.postMessage("audio_loud");
-                        window.mauiInterop.postMessage("disable_proximity"); // Громкая связь - выключили датчик
-                    }
+                if (window.mauiInterop) {
+                    window.mauiInterop.postMessage("audio_loud");
+                    window.mauiInterop.postMessage("disable_proximity"); // Громкая связь - выключили датчик
                 }
             }
+        }
 
         // 3. Вызови проверку кнопок в момент открытия экрана звонка
         // Добавь это внутрь функции startCall() и answerCall()
@@ -10911,7 +10989,12 @@
                     closeGeneralSettings(true);
                 } else if (document.getElementById('profileSheet')?.classList.contains('open')) {
                     closeAllSheets(true);
+                } else if (document.getElementById('botEditorSheet')?.classList.contains('open')) {
+                    closeBotEditor(true);
+                } else if (document.getElementById('botsListSheet')?.classList.contains('open')) {
+                    closeBotsList(true);
                 }
+
             }
         });
 
@@ -11206,6 +11289,271 @@
             // Возвращаем большой экран
             document.getElementById('callScreen').style.display = 'flex';
         }
+
+
+        // ==========================================
+        // ДВИЖОК БОТОВ (GHOST BOT) & КОНСТРУКТОР
+        // ==========================================
+        let currentEditingBotId = null;
+
+        function openBotsList() {
+            if (typeof sheetHistoryStack !== 'undefined') sheetHistoryStack++;
+            history.pushState({ isSheet: true }, "", window.location.href);
+
+            const sheet = document.getElementById('botsListSheet');
+            sheet.style.display = 'flex';
+            setTimeout(() => sheet.classList.add('open'), 10);
+
+            loadMyBots();
+        }
+
+        function closeBotsList(fromPopState = false) {
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                history.back(); return;
+            }
+            document.getElementById('botsListSheet').classList.remove('open');
+        }
+
+        async function loadMyBots() {
+            const container = document.getElementById('botsContainer');
+            container.innerHTML = '<div style="text-align:center; color:#888; margin-top: 40px;"><div class="status-spinner-small" style="display:inline-block;"></div> Загрузка...</div>';
+
+            try {
+                const snap = await db.collection('users')
+                    .where('ownerId', '==', currentUser.uid)
+                    .where('isBot', '==', true).get();
+
+                container.innerHTML = '';
+
+                if (snap.empty) {
+                    container.innerHTML = `
+                        <div style="text-align:center; margin-top: 60px;">
+                            <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
+                            <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
+                            <p style="color:#888; font-size:14px; margin-bottom: 20px;">Создайте бота для автоответов.</p>
+                            <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer;">Создать бота</button>
+                        </div>`;
+                    return;
+                }
+
+                snap.forEach(doc => {
+                    const bot = doc.data();
+                    container.innerHTML += `
+                        <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
+                            <div class="premium-item" onclick="openBotEditor('${doc.id}')" style="border:none;">
+                                <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
+                                <div class="premium-item-content">
+                                    <div class="premium-item-value">${bot.name}</div>
+                                    <div class="premium-item-label">@${bot.username}</div>
+                                </div>
+                                <div style="color: #736AF0; font-size:14px; font-weight:bold;">Настроить</div>
+                            </div>
+                        </div>`;
+                });
+            } catch (e) {
+                container.innerHTML = '<div style="color:#ff595a; text-align:center;">Ошибка загрузки</div>';
+            }
+        }
+
+        async function openBotEditor(botId) {
+            if (typeof sheetHistoryStack !== 'undefined') sheetHistoryStack++;
+            history.pushState({ isSheet: true }, "", window.location.href);
+
+            currentEditingBotId = botId;
+            const sheet = document.getElementById('botEditorSheet');
+            sheet.style.display = 'flex';
+            setTimeout(() => sheet.classList.add('open'), 10);
+
+            document.getElementById('botRulesContainer').innerHTML = '';
+            document.getElementById('saveBotBtn').style.opacity = "1";
+            document.getElementById('saveBotBtn').style.pointerEvents = "auto";
+
+            if (botId) {
+                document.getElementById('botEditorTitle').innerText = 'Настройка бота';
+                const userDoc = await db.collection('users').doc(botId).get();
+                const botDoc = await db.collection('bots').doc(botId).get();
+
+                document.getElementById('botEditName').value = userDoc.data().name || '';
+                document.getElementById('botEditUsername').value = userDoc.data().username || '';
+                document.getElementById('botEditUsername').disabled = true; // Username нельзя менять
+
+                document.getElementById('botEditDefaultReply').value = botDoc.exists ? botDoc.data().defaultReply : '';
+
+                if (botDoc.exists && botDoc.data().rules) {
+                    botDoc.data().rules.forEach(r => addBotRuleUI(r.trigger, r.response));
+                }
+            } else {
+                document.getElementById('botEditorTitle').innerText = 'Новый бот';
+                document.getElementById('botEditName').value = '';
+                document.getElementById('botEditUsername').value = '';
+                document.getElementById('botEditUsername').disabled = false;
+                document.getElementById('botEditDefaultReply').value = 'Я бот. Команда не распознана.';
+                addBotRuleUI('привет', 'Здравствуйте! Я бот.');
+            }
+        }
+
+        function closeBotEditor(fromPopState = false) {
+            if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
+                history.back(); return;
+            }
+            document.getElementById('botEditorSheet').classList.remove('open');
+        }
+
+        function addBotRuleUI(trigger, response) {
+            const container = document.getElementById('botRulesContainer');
+            const div = document.createElement('div');
+            div.style.cssText = "background: #252528; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); position:relative;";
+            div.innerHTML = `
+                <button onclick="this.parentElement.remove()" style="position:absolute; top:10px; right:10px; background:rgba(255,89,90,0.15); border:none; color:#ff595a; border-radius:50%; width:24px; height:24px; font-size:12px; cursor:pointer;">✖</button>
+                <div style="margin-bottom:10px; padding-right: 30px;">
+                    <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ ПИШУТ СЛОВО:</div>
+                    <input type="text" class="rule-trigger" value="${trigger}" placeholder="напр. цена" style="background:transparent; border:none; border-bottom:1px solid #444; color:white; width:100%; outline:none; padding:5px 0;">
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#888; margin-bottom:4px;">БОТ ОТВЕТИТ:</div>
+                    <textarea class="rule-response" rows="2" placeholder="Текст ответа..." style="background:#1c1c1e; border:1px solid #333; color:white; width:100%; border-radius:8px; padding:10px; outline:none; resize:none; box-sizing:border-box;">${response}</textarea>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        async function saveBotData() {
+            const name = document.getElementById('botEditName').value.trim();
+            let username = document.getElementById('botEditUsername').value.trim();
+            const defaultReply = document.getElementById('botEditDefaultReply').value.trim();
+
+            if (!name || !username) return showToast("Заполните Имя и Username!");
+            if (!username.endsWith('bot')) username += '_bot';
+
+            const triggers = document.querySelectorAll('.rule-trigger');
+            const responses = document.querySelectorAll('.rule-response');
+            let rules = [];
+
+            for (let i = 0; i < triggers.length; i++) {
+                if (triggers[i].value.trim() && responses[i].value.trim()) {
+                    rules.push({
+                        trigger: triggers[i].value.trim().toLowerCase(),
+                        response: responses[i].value.trim()
+                    });
+                }
+            }
+
+            const botId = currentEditingBotId || ('bot_' + Date.now());
+            const saveBtn = document.getElementById('saveBotBtn');
+            saveBtn.style.opacity = "0.5";
+            saveBtn.style.pointerEvents = "none";
+
+            try {
+                // Если бот новый - проверяем уникальность юзернейма
+                if (!currentEditingBotId) {
+                    const checkSnap = await db.collection('users').where('username', '==', username).get();
+                    if (!checkSnap.empty) {
+                        saveBtn.style.opacity = "1"; saveBtn.style.pointerEvents = "auto";
+                        return showToast("Этот Username уже занят!");
+                    }
+                }
+
+                // 1. Создаем профиль бота, чтобы его находил поиск
+                await db.collection('users').doc(botId).set({
+                    name: name,
+                    username: username,
+                    isBot: true,
+                    ownerId: currentUser.uid,
+                    avatar: "https://placehold.co/200x200/2b2d31/736AF0?text=BOT",
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                // 2. Сохраняем правила в коллекцию bots
+                await db.collection('bots').doc(botId).set({
+                    defaultReply: defaultReply,
+                    rules: rules
+                });
+
+                showToast("Бот сохранен ✓");
+                closeBotEditor();
+                loadMyBots();
+            } catch (e) {
+                console.error(e);
+                showToast("Ошибка сохранения");
+                saveBtn.style.opacity = "1"; saveBtn.style.pointerEvents = "auto";
+            }
+        }
+
+        // =====================================
+        // ИИ БОТА: СРАБАТЫВАНИЕ НА СООБЩЕНИЯ
+        // =====================================
+        async function checkAndTriggerBot(receiverId, messageText, chatId) {
+            try {
+                // 1. Проверяем, бот ли это
+                let isBot = false;
+                let botData = usersCache[receiverId];
+
+                if (botData && botData.isBot) {
+                    isBot = true;
+                } else if (!botData) {
+                    const userDoc = await db.collection('users').doc(receiverId).get();
+                    if (userDoc.exists && userDoc.data().isBot) {
+                        isBot = true;
+                        usersCache[receiverId] = userDoc.data();
+                    }
+                }
+
+                if (!isBot) return; // Живой человек, уходим
+
+                // 2. Скачиваем "мозги"
+                const botDoc = await db.collection('bots').doc(receiverId).get();
+                if (!botDoc.exists) return;
+
+                const botConfig = botDoc.data();
+                const rules = botConfig.rules || [];
+                const lowerMsg = messageText.toLowerCase();
+
+                // 3. Выбираем ответ
+                let replyText = botConfig.defaultReply || "Команда не распознана.";
+                for (let rule of rules) {
+                    if (lowerMsg.includes(rule.trigger)) {
+                        replyText = rule.response;
+                        break;
+                    }
+                }
+
+                // 4. Имитация (Бот думает и пишет)
+                setTimeout(async () => {
+                    rtdb.ref(`typing/${chatId}/${receiverId}`).set(true); // Статус "печатает..."
+
+                    // Помечаем твое сообщение прочитанным от лица бота
+                    const msgsSnap = await db.collection('chats').doc(chatId).collection('msgs')
+                        .where('to', '==', receiverId).where('read', '==', false).get();
+                    const batch = db.batch();
+                    msgsSnap.docs.forEach(d => batch.update(d.ref, { read: true }));
+                    await batch.commit();
+
+                    setTimeout(async () => {
+                        rtdb.ref(`typing/${chatId}/${receiverId}`).remove(); // Снимаем статус
+
+                        // Шифруем текст, чтобы не сломать E2E защиту чата!
+                        const encryptedReply = encryptText(replyText, chatId);
+
+                        // Отправляем ОТ ЛИЦА БОТА
+                        await db.collection('chats').doc(chatId).collection('msgs').add({
+                            txt: encryptedReply,
+                            from: receiverId, // Подмена отправителя
+                            to: currentUser.uid,
+                            sys: false,
+                            type: 'text',
+                            read: false,
+                            ts: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                    }, 1000 + Math.random() * 1000); // Пишет от 1 до 2 секунд
+
+                }, 500); // Читает полсекунды
+
+            } catch (e) {
+                console.error("Ошибка автоответчика:", e);
+            }
+        }
+
 
     </script>
 
