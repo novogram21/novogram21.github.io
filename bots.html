@@ -953,12 +953,7 @@
                 </div>`;
         }
 
-        function updateCanvasCard(nodeId) {
-            const node = editor.getNodeFromId(nodeId);
-            const bodyContainer = document.getElementById(`node-body-content-${nodeId}`);
-            if (!bodyContainer || node.name !== 'message') return;
-            bodyContainer.innerHTML = generateMessageCardHtml(nodeId, node.data).split('<div class="node-card-body"')[1].split('</div>\n                </div>')[0].replace('id="node-body-content-' + nodeId + '">', '');
-        }
+        
 
         function updateCanvasCard(nodeId) {
             const node = editor.getNodeFromId(nodeId);
@@ -1088,12 +1083,26 @@
                     }
                 });
 
+                // Формируем HTML для списка кнопок
+                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки (Inline)</div><div id="msg-buttons-container">';
+                (node.data.buttons || []).forEach((btn, index) => {
+                    buttonsHtml += `
+                        <div class="prop-button-item">
+                            <div class="btn-settings-row">
+                                <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст кнопки" value="${btn.text}">
+                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer;">✖</span>
+                            </div>
+                            <input type="text" class="prop-input btn-target-input" style="font-size:11px; padding:8px;" data-index="${index}" placeholder="ID шага (напр: 5)" value="${btn.targetNodeId || ''}">
+                        </div>`;
+                });
+                buttonsHtml += '</div><button class="add-tg-btn" onclick="addNewButtonToNode(' + nodeId + ')">+ Добавить кнопку</button>';
+
                 content.innerHTML = `
                         <div id="msg-blocks-container">
                             ${blocksHtml}
                         </div>
 
-                        <div class="emoji-picker" id="emoji-picker-container">
+                        ${buttonsHtml}  <div class="emoji-picker" id="emoji-picker-container">
                             ${emojisHtml}
                         </div>
 
