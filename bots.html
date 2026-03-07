@@ -1057,44 +1057,49 @@
             const container = document.getElementById('msg-blocks-container');
             const emojiContainer = document.getElementById('emoji-picker-container');
 
-            // 1. Удаление
+            // 1. УДАЛЕНИЕ (Исправлено)
             document.querySelectorAll('.delete-block-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => deleteBlockFromNode(nodeId, parseInt(e.currentTarget.dataset.index)));
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.getAttribute('data-index'));
+                    deleteBlockFromNode(nodeId, idx);
+                };
             });
 
             // 2. Ввод текста
             document.querySelectorAll('.prop-msg-text-dynamic').forEach(ta => {
-                ta.addEventListener('focus', function () { window.currentActiveTextArea = this; });
-                ta.addEventListener('input', function () {
-                    node.data.blocks[this.dataset.index].content = this.value;
+                ta.onfocus = function () { window.currentActiveTextArea = this; };
+                ta.oninput = function () {
+                    const idx = parseInt(this.getAttribute('data-index'));
+                    node.data.blocks[idx].content = this.value;
                     editor.updateNodeDataFromId(nodeId, node.data);
                     updateCanvasCard(nodeId);
-                });
+                };
             });
 
             // 3. Настройка паузы
             document.querySelectorAll('.pause-duration-input').forEach(inp => {
-                inp.addEventListener('input', function () {
-                    node.data.blocks[this.dataset.index].duration = parseInt(this.value) || 1;
+                inp.oninput = function () {
+                    const idx = parseInt(this.getAttribute('data-index'));
+                    node.data.blocks[idx].duration = parseInt(this.value) || 1;
                     editor.updateNodeDataFromId(nodeId, node.data);
                     updateCanvasCard(nodeId);
-                });
+                };
             });
             document.querySelectorAll('.pause-typing-checkbox').forEach(chk => {
-                chk.addEventListener('change', function () {
-                    node.data.blocks[this.dataset.index].typing = this.checked;
+                chk.onchange = function () {
+                    const idx = parseInt(this.getAttribute('data-index'));
+                    node.data.blocks[idx].typing = this.checked;
                     editor.updateNodeDataFromId(nodeId, node.data);
-                });
+                };
             });
 
             // 4. Эмодзи
-            document.querySelectorAll('.toggle-emoji-btn').forEach(btn => {
-                btn.addEventListener('click', () => emojiContainer.classList.toggle('active'));
-            });
+            const emojiBtn = document.querySelector('.toggle-emoji-btn');
+            if (emojiBtn) emojiBtn.onclick = () => emojiContainer.classList.toggle('active');
+
             document.querySelectorAll('.emoji-item').forEach(el => {
-                const newEl = el.cloneNode(true);
-                el.parentNode.replaceChild(newEl, el);
-                newEl.addEventListener('click', (e) => {
+                el.onclick = (e) => {
                     const emoji = e.target.innerText;
                     const ta = window.currentActiveTextArea || document.querySelector('.prop-msg-text-dynamic');
                     if (!ta) return;
@@ -1102,37 +1107,33 @@
                     ta.value = text.substring(0, start) + emoji + text.substring(end);
                     ta.focus();
                     ta.selectionStart = ta.selectionEnd = start + emoji.length;
-                    node.data.blocks[ta.dataset.index].content = ta.value;
+
+                    const idx = parseInt(ta.getAttribute('data-index'));
+                    node.data.blocks[idx].content = ta.value;
                     editor.updateNodeDataFromId(nodeId, node.data);
                     updateCanvasCard(nodeId);
-                });
+                };
             });
 
-            // 5. DRAG AND DROP (Перетаскивание)
-            let draggedItem = null;
+            // 5. DRAG AND DROP
             container.querySelectorAll('.draggable-block').forEach(item => {
-                item.addEventListener('dragstart', function (e) {
-                    draggedItem = this;
-                    setTimeout(() => this.classList.add('dragging'), 0);
-                });
-                item.addEventListener('dragend', function () {
+                item.ondragstart = function () { setTimeout(() => this.classList.add('dragging'), 0); };
+                item.ondragend = function () {
                     this.classList.remove('dragging');
-                    draggedItem = null;
-
-                    // Сохраняем новый порядок после броска
                     const newBlocks = [];
                     container.querySelectorAll('.draggable-block').forEach(el => {
-                        newBlocks.push(node.data.blocks[parseInt(el.dataset.index)]);
+                        newBlocks.push(node.data.blocks[parseInt(el.getAttribute('data-index'))]);
                     });
                     node.data.blocks = newBlocks;
                     editor.updateNodeDataFromId(nodeId, node.data);
-                    renderPropertiesPanel(nodeId); // Перерисовываем индексы
+                    renderPropertiesPanel(nodeId);
                     updateCanvasCard(nodeId);
-                });
+                };
             });
 
-            container.addEventListener('dragover', function (e) {
+            container.ondragover = function (e) {
                 e.preventDefault();
+                const currentItem = document.querySelector('.dragging');
                 const afterElement = [...container.querySelectorAll('.draggable-block:not(.dragging)')].reduce((closest, child) => {
                     const box = child.getBoundingClientRect();
                     const offset = e.clientY - box.top - box.height / 2;
@@ -1140,10 +1141,9 @@
                     else return closest;
                 }, { offset: Number.NEGATIVE_INFINITY }).element;
 
-                const currentItem = document.querySelector('.dragging');
                 if (afterElement == null) container.appendChild(currentItem);
                 else container.insertBefore(currentItem, afterElement);
-            });
+            };
         }
 
 
