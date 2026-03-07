@@ -818,13 +818,23 @@
 
         function updateCanvasCard(nodeId) {
             const node = editor.getNodeFromId(nodeId);
-            const bodyContainer = document.getElementById(`node-body-content-${nodeId}`);
-            if (bodyContainer) {
-                let textsPreview = `<div class="preview-trigger">${node.data.trigger ? '⚡ ' + node.data.trigger : ''}</div>`;
-                node.data.texts.forEach(txt => {
-                    textsPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${txt || '<em>(Пустое сообщение)</em>'}</div>`;
-                });
-                bodyContainer.innerHTML = textsPreview;
+            const nodeCard = document.querySelector(`#node-${nodeId}`);
+            if (!nodeCard) return;
+
+            if (node.name === 'message') {
+                const bodyContainer = document.getElementById(`node-body-content-${nodeId}`);
+                if (bodyContainer) {
+                    let textsPreview = '';
+                    // Защита: если блок старый, берем text, иначе texts
+                    let textsArr = node.data.texts || [node.data.text || ""];
+                    textsArr.forEach(txt => {
+                        textsPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${txt || '<em>(Пустое сообщение)</em>'}</div>`;
+                    });
+                    bodyContainer.innerHTML = textsPreview;
+                }
+            } else if (node.name === 'trigger') {
+                const preview = nodeCard.querySelector('.preview-text');
+                if (preview) preview.innerHTML = node.data.trigger || '<em>(Любое слово)</em>';
             }
         }
 
@@ -996,9 +1006,16 @@
                 const doc = await db.collection('bot_flows').doc(token).get();
                 if (doc.exists && doc.data().flowData) {
                     editor.import(doc.data().flowData);
+
+                    // 🔥 ФИКС: Пробегаемся по всем блокам после загрузки и рисуем их реальный текст
+                    const allNodes = editor.drawflow.drawflow.Home.data;
+                    for (const id in allNodes) {
+                        updateCanvasCard(id);
+                    }
+
                 } else {
                     addTriggerNode({ trigger: "старт" }, 100, 300);
-                    addMessageNode({ text: "Добро пожаловать в бота!" }, 500, 300);
+                    addMessageNode({ texts: ["Добро пожаловать в бота!"] }, 500, 300);
                 }
             } catch (e) { console.error(e); }
         }
