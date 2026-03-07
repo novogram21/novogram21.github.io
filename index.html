@@ -11485,11 +11485,11 @@
         }
 
         // =====================================
-        // ИИ БОТА: СРАБАТЫВАНИЕ В ЧАТЕ
+        // ИИ БОТА: СРАБАТЫВАНИЕ НА ВИЗУАЛЬНЫЕ БЛОКИ (DRAWFLOW)
         // =====================================
         async function checkAndTriggerBot(receiverId, messageText, chatId) {
             try {
-                // Узнаем, является ли собеседник ботом
+                // 1. Проверяем, бот ли это
                 let botData = usersCache[receiverId];
                 if (!botData) {
                     const userDoc = await db.collection('users').doc(receiverId).get();
@@ -11498,30 +11498,69 @@
 
                 if (!botData || !botData.isBot || !botData.botToken) return;
 
-                // Если бот найден, идем в специальную коллекцию bot_rules по его токену
-                const rulesDoc = await db.collection('bot_rules').doc(botData.botToken).get();
+                // 2. Идем в НОВУЮ базу визуальных сценариев (bot_flows)
+                const flowDoc = await db.collection('bot_flows').doc(botData.botToken).get();
+
                 let replyText = "Команда не распознана.";
+                let replyImage = "";
 
-                if (rulesDoc.exists) {
-                    const botConfig = rulesDoc.data();
-                    const rules = botConfig.rules || [];
-                    replyText = botConfig.defaultReply || replyText;
-
+                if (flowDoc.exists && flowDoc.data().flowData) {
+                    const data = flowDoc.data();
+                    const drawflowData = data.flowData.drawflow.Home.data; // Достаем все блоки с холста
                     const lowerMsg = messageText.toLowerCase();
-                    for (let rule of rules) {
-                        if (lowerMsg.includes(rule.trigger)) {
-                            replyText = rule.response;
-                            break;
+
+                    let matchedNode = null;
+
+                    // 3. Ищем блок, у которого "Триггер" совпадает с сообщением пользователя
+                    for (const nodeId in drawflowData) {
+                        const node = drawflowData[nodeId];
+                        const trigger = (node.data.trigger || "").toLowerCase().trim();
+
+                        // Если триггер не пустой и содержится в сообщении
+                        if (trigger && lowerMsg.includes(trigger)) {
+                            matchedNode = node;
+                            break; // Нашли совпадение - останавливаем поиск
                         }
                     }
+
+                    // 4. Формируем ответ
+                    if (matchedNode) {
+                        replyText = matchedNode.data.text || "";
+                        replyImage = matchedNode.data.image || "";
+
+                        // В будущем здесь мы будем обрабатывать кнопки (btn1, btn2), 
+                        // но пока бот просто ждет, что юзер напишет текст с кнопки
+                    } else {
+                        // Если совпадений нет, берем ответ по умолчанию
+                        replyText = data.defaultReply || "Я вас не понимаю. Напишите команду из меню.";
+                    }
                 } else {
-                    replyText = "Бот еще не настроен. Владельцу нужно зайти на novogram21.github.io/bots";
+                    // Фоллбэк: если визуального сценария нет, пробуем старый способ
+                    const rulesDoc = await db.collection('bot_rules').doc(botData.botToken).get();
+                    if (rulesDoc.exists) {
+                        const botConfig = rulesDoc.data();
+                        const rules = botConfig.rules || [];
+                        replyText = botConfig.defaultReply || replyText;
+
+                        const lowerMsg = messageText.toLowerCase();
+                        for (let rule of rules) {
+                            if (lowerMsg.includes(rule.trigger)) {
+                                replyText = rule.response;
+                                break;
+                            }
+                        }
+                    } else {
+                        replyText = "Бот в разработке (сценарий не опубликован).";
+                    }
                 }
 
-                // Имитация (Бот думает и пишет)
+                if (!replyText && !replyImage) return; // Нечего отвечать
+
+                // 5. Имитация (Бот думает и пишет)
                 setTimeout(async () => {
                     rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
 
+                    // Помечаем твое сообщение прочитанным
                     const msgsSnap = await db.collection('chats').doc(chatId).collection('msgs')
                         .where('to', '==', receiverId).where('read', '==', false).get();
                     const batch = db.batch();
@@ -11530,22 +11569,40 @@
 
                     setTimeout(async () => {
                         rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
-                        const encryptedReply = encryptText(replyText, chatId);
 
-                        await db.collection('chats').doc(chatId).collection('msgs').add({
-                            txt: encryptedReply,
-                            from: receiverId, // Подмена отправителя
-                            to: currentUser.uid,
-                            sys: false,
-                            type: 'text',
-                            read: false,
-                            ts: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }, 1000);
+                        // А. Если в блоке была картинка - бот сначала кидает картинку
+                        if (replyImage) {
+                            const encryptedImg = encryptText(replyImage, chatId);
+                            await db.collection('chats').doc(chatId).collection('msgs').add({
+                                txt: encryptedImg,
+                                from: receiverId,
+                                to: currentUser.uid,
+                                sys: false,
+                                type: 'image', // Тип картинка!
+                                read: false,
+                                ts: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+
+                        // Б. Затем бот отправляет текст (если он есть)
+                        if (replyText) {
+                            const encryptedReply = encryptText(replyText, chatId);
+                            await db.collection('chats').doc(chatId).collection('msgs').add({
+                                txt: encryptedReply,
+                                from: receiverId,
+                                to: currentUser.uid,
+                                sys: false,
+                                type: 'text',
+                                read: false,
+                                ts: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+
+                    }, 1000 + Math.random() * 1000);
                 }, 500);
 
             } catch (e) {
-                console.error("Ошибка автоответчика:", e);
+                console.error("Ошибка ИИ бота:", e);
             }
         }
 
