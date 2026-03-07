@@ -11981,9 +11981,6 @@
                 console.error("Ошибка ИИ бота:", e);
             }
         }
-        // --- ЛОГИКА ПЛАВНОГО ЗУМА ФОТОГРАФИЙ (TELEGRAM STYLE) ---
-        const viewerImg = document.getElementById('imageViewerImg');
-
         let currentScale = 1;
         let currentTranslateX = 0;
         let currentTranslateY = 0;
@@ -11994,8 +11991,11 @@
         let initialScale = 1;
         let lastTapTime = 0;
 
-        // Применяем трансформацию
+        // Применяем трансформацию (ищем картинку динамически)
         function updateImageTransform(withTransition = false) {
+            const viewerImg = document.getElementById('imageViewerImg');
+            if (!viewerImg) return;
+
             if (withTransition) {
                 viewerImg.style.transition = 'transform 0.2s ease-out';
             } else {
@@ -12003,6 +12003,133 @@
             }
             viewerImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
         }
+
+        // Сброс зума (делаем функцию глобальной, чтобы её видела модалка)
+        window.resetImageZoom = function () {
+            currentScale = 1;
+            currentTranslateX = 0;
+            currentTranslateY = 0;
+            updateImageTransform(true);
+        };
+
+        // ЖДЕМ ЗАГРУЗКИ HTML ПЕРЕД ТЕМ КАК ВЕШАТЬ ЖЕСТЫ
+        document.addEventListener('DOMContentLoaded', () => {
+            const viewerImg = document.getElementById('imageViewerImg');
+            if (!viewerImg) return;
+
+            // --- СЕНСОРНЫЕ СОБЫТИЯ (ТЕЛЕФОН) ---
+            viewerImg.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    // Начало зума двумя пальцами
+                    isZoomDragging = false;
+                    initialPinchDistance = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    initialScale = currentScale;
+                } else if (e.touches.length === 1) {
+                    // Начало перемещения одним пальцем (если картинка увеличена)
+                    if (currentScale > 1) {
+                        isZoomDragging = true;
+                        startDragX = e.touches[0].pageX - currentTranslateX;
+                        startDragY = e.touches[0].pageY - currentTranslateY;
+                    }
+                }
+            }, { passive: false });
+
+            viewerImg.addEventListener('touchmove', (e) => {
+                // Блокируем скролл страницы, если мы зумим или таскаем картинку
+                if (currentScale > 1 || e.touches.length === 2) e.preventDefault();
+
+                if (e.touches.length === 2 && initialPinchDistance) {
+                    // Зуммируем
+                    const currentDistance = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    const zoomDelta = currentDistance / initialPinchDistance;
+                    currentScale = Math.min(Math.max(1, initialScale * zoomDelta), 5); // Лимит увеличения 5x
+                    updateImageTransform(false);
+                } else if (e.touches.length === 1 && isZoomDragging && currentScale > 1) {
+                    // Двигаем
+                    currentTranslateX = e.touches[0].pageX - startDragX;
+                    currentTranslateY = e.touches[0].pageY - startDragY;
+                    updateImageTransform(false);
+                }
+            }, { passive: false });
+
+            viewerImg.addEventListener('touchend', (e) => {
+                isZoomDragging = false;
+                initialPinchDistance = null;
+
+                if (currentScale <= 1) {
+                    window.resetImageZoom();
+                }
+
+                // Обработка двойного тапа
+                if (e.changedTouches.length === 1) {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTapTime;
+                    if (tapLength < 300 && tapLength > 0) {
+                        // Двойной тап распознан
+                        if (currentScale > 1) {
+                            window.resetImageZoom();
+                        } else {
+                            currentScale = 2.5; // Приближаем
+                            updateImageTransform(true);
+                        }
+                    }
+                    lastTapTime = currentTime;
+                }
+            });
+
+            // --- СОБЫТИЯ МЫШИ (ПК) ---
+            viewerImg.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomSpeed = 0.15;
+                if (e.deltaY < 0) {
+                    currentScale = Math.min(currentScale + zoomSpeed, 5); // Вперед = увеличить
+                } else {
+                    currentScale = Math.max(currentScale - zoomSpeed, 1); // Назад = уменьшить
+                }
+
+                if (currentScale === 1) {
+                    currentTranslateX = 0;
+                    currentTranslateY = 0;
+                }
+                updateImageTransform(false);
+            }, { passive: false });
+
+            viewerImg.addEventListener('mousedown', (e) => {
+                if (currentScale > 1) {
+                    e.preventDefault();
+                    isZoomDragging = true;
+                    startDragX = e.clientX - currentTranslateX;
+                    startDragY = e.clientY - currentTranslateY;
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (isZoomDragging && currentScale > 1) {
+                    currentTranslateX = e.clientX - startDragX;
+                    currentTranslateY = e.clientY - startDragY;
+                    updateImageTransform(false);
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                isZoomDragging = false;
+            });
+
+            // Двойной клик на ПК
+            viewerImg.addEventListener('dblclick', () => {
+                if (currentScale > 1) window.resetImageZoom();
+                else {
+                    currentScale = 2.5;
+                    updateImageTransform(true);
+                }
+            });
+        });
 
         // Сброс зума
         function resetImageZoom() {
