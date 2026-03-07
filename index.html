@@ -6345,8 +6345,19 @@
 
             const newHash = "#chat/" + fid;
 
-            // Если кликнули на тот же самый чат, в котором уже находимся - игнорируем
-            if (window.location.hash === newHash) return;
+            // Если кликнули на тот же самый чат, в котором уже находимся
+            if (window.location.hash === newHash) {
+                // Принудительно возвращаем фокус в поле ввода
+                const inp = document.getElementById('msgInput');
+                if (inp) inp.focus();
+
+                // Если мы на мобильном телефоне, прячем меню, чтобы оно не перекрывало чат
+                if (window.innerWidth <= 850 || window.innerHeight <= 500) {
+                    document.getElementById('mainSidebar').classList.add('hidden-mobile');
+                    document.getElementById('mainChatArea').classList.add('active');
+                }
+                return; // Прерываем дальнейшее выполнение
+            }
 
             // --- ТОТ САМЫЙ МИКРО-ПРЫЖОК ---
             if (window.location.hash.startsWith('#chat/')) {
@@ -6363,6 +6374,8 @@
                 window.location.hash = newHash;
             }
         }
+
+           
 
         function scrollToMsg(id) {
             const el = document.getElementById('msg-' + id);
