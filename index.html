@@ -11503,57 +11503,70 @@
                 let replyText = "";
                 let replyImage = "";
 
-                // 2. Читаем новый визуальный граф (с узлами и связями)
+                // 2. Читаем визуальный граф (с узлами и связями)
                 if (flowDoc.exists && flowDoc.data().flowData) {
                     const data = flowDoc.data();
                     const drawflowData = data.flowData.drawflow.Home.data;
                     const lowerMsg = messageText.toLowerCase();
 
                     let matchedTriggerNode = null;
+                    let matchedMessageNode = null;
 
-                    // ШАГ А: Ищем блок-триггер (условие)
+                    // ШАГ А: Ищем совпадение слова-триггера ВО ВСЕХ блоках
                     for (const nodeId in drawflowData) {
                         const node = drawflowData[nodeId];
-                        if (node.name === 'trigger') {
-                            const triggerWord = (node.data.trigger || "").toLowerCase().trim();
-                            if (triggerWord && lowerMsg.includes(triggerWord)) {
+                        const triggerWord = (node.data.trigger || "").toLowerCase().trim();
+
+                        if (triggerWord && lowerMsg.includes(triggerWord)) {
+                            // Нашли триггер! Смотрим, какой это тип блока
+                            if (node.name === 'message') {
+                                // Юзер вписал триггер прямо в блок сообщения (одиночный режим)
+                                matchedMessageNode = node;
+                                break;
+                            } else if (node.name === 'trigger') {
+                                // Юзер использовал отдельный зеленый блок "Условие"
                                 matchedTriggerNode = node;
-                                break; // Триггер найден!
+                                break;
                             }
                         }
                     }
 
-                    // ШАГ Б: Если нашли триггер, идем по "проводу" (стрелочке) к следующему блоку
+                    // ШАГ Б: Если нашли отдельный блок "Условие", идем по стрелочке к ответу
                     if (matchedTriggerNode) {
-                        // Смотрим, куда ведет выход (output_1) из блока триггера
-                        const connections = matchedTriggerNode.outputs["output_1"].connections;
+                        const outputs = matchedTriggerNode.outputs;
+                        // Проверяем, есть ли исходящие связи
+                        const connections = (outputs && outputs["output_1"] && outputs["output_1"].connections) ? outputs["output_1"].connections : [];
 
-                        if (connections && connections.length > 0) {
-                            const nextNodeId = connections[0].node; // ID блока, к которому пришла стрелочка
-                            const messageNode = drawflowData[nextNodeId];
+                        if (connections.length > 0) {
+                            const nextNodeId = connections[0].node;
+                            const nextNode = drawflowData[nextNodeId];
 
-                            // Если следующий блок — это блок сообщения, берем данные из него
-                            if (messageNode && messageNode.name === 'message') {
-                                replyText = messageNode.data.text || "";
-                                replyImage = messageNode.data.image || "";
+                            // Если стрелочка ведет к блоку сообщения, запоминаем его
+                            if (nextNode && nextNode.name === 'message') {
+                                matchedMessageNode = nextNode;
                             }
                         }
                     }
 
-                    // Если ничего не нашли или стрелочка никуда не ведет
+                    // ШАГ В: Если мы успешно нашли блок сообщения (напрямую или по стрелочке) - берем текст
+                    if (matchedMessageNode) {
+                        replyText = matchedMessageNode.data.text || "";
+                        replyImage = matchedMessageNode.data.image || "";
+                    }
+
+                    // Если ничего не подошло или связи оборваны
                     if (!replyText && !replyImage) {
-                        replyText = "Я бот, но для этой команды еще не настроен ответ.";
+                        replyText = "Команда не распознана. Воспользуйтесь меню.";
                     }
 
                 } else {
-                    // Фоллбэк: если это совсем старый бот без визуального графа
+                    // Фоллбэк: для старых ботов без визуального редактора
                     const rulesDoc = await db.collection('bot_rules').doc(botData.botToken).get();
                     if (rulesDoc.exists) {
                         const botConfig = rulesDoc.data();
                         const rules = botConfig.rules || [];
                         replyText = botConfig.defaultReply || "Команда не распознана.";
 
-                        const lowerMsg = messageText.toLowerCase();
                         for (let rule of rules) {
                             if (lowerMsg.includes(rule.trigger)) {
                                 replyText = rule.response;
@@ -11561,11 +11574,11 @@
                             }
                         }
                     } else {
-                        replyText = "Сценарий для этого бота не опубликован.";
+                        replyText = "Сценарий для этого бота еще не опубликован.";
                     }
                 }
 
-                if (!replyText && !replyImage) return;
+                if (!replyText && !replyImage) return; // Нечего отвечать
 
                 // 3. Имитация (Бот думает и пишет)
                 setTimeout(async () => {
@@ -11580,7 +11593,7 @@
                     setTimeout(async () => {
                         rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
 
-                        // Отправка картинки (если есть в блоке)
+                        // А. Сначала отправляем картинку (если она была в блоке)
                         if (replyImage) {
                             const encryptedImg = encryptText(replyImage, chatId);
                             await db.collection('chats').doc(chatId).collection('msgs').add({
@@ -11594,7 +11607,7 @@
                             });
                         }
 
-                        // Отправка текста
+                        // Б. Затем отправляем сам текст
                         if (replyText) {
                             const encryptedReply = encryptText(replyText, chatId);
                             await db.collection('chats').doc(chatId).collection('msgs').add({
