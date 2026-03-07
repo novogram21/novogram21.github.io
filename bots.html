@@ -20,452 +20,112 @@
             --bg-canvas: #f4f5f7; /* Светлый фон холста как в Robochat */
             --border: rgba(255,255,255,0.05);
             --primary: #2AABEE; /* Telegram Blue */
-            --node-msg: #004d40;
-            --node-trigger: #e0f2f1;
             --text-main: #ffffff;
             --text-muted: #8e8e93;
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); height: 100dvh; overflow: hidden; display: flex; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-main);
-            height: 100dvh;
-            overflow: hidden;
-            display: flex;
-        }
-
-        .view {
-            display: none;
-            width: 100%;
-            height: 100%;
-        }
-
-            .view.active {
-                display: flex;
-            }
+        .view { display: none; width: 100%; height: 100%; }
+        .view.active { display: flex; }
 
         /* --- ЛЕВОЕ МЕНЮ --- */
-        .sidebar {
-            width: 70px;
-            background: var(--bg-panel);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 20px;
-            z-index: 100;
-        }
+        .sidebar { width: 70px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding-top: 20px; z-index: 100; }
+        .sidebar-btn { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; transition: 0.2s; margin-bottom: 10px; }
+        .sidebar-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+        .sidebar-btn.active { background: rgba(42, 171, 238, 0.15); color: var(--primary); }
 
-        .sidebar-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: 0.2s;
-            margin-bottom: 10px;
-        }
-
-            .sidebar-btn:hover {
-                background: rgba(255,255,255,0.05);
-                color: var(--text-main);
-            }
-
-            .sidebar-btn.active {
-                background: rgba(42, 171, 238, 0.15);
-                color: var(--primary);
-            }
-
-        .main-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
+        .main-area { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
 
         /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
-        .topbar {
-            height: 60px;
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            z-index: 10;
-        }
-
-        .bot-selector {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-        }
-
-        .bot-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        .bot-name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .topbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-test {
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
-
-            .btn-test:hover {
-                background: rgba(255,255,255,0.15);
-            }
-
-        .btn-publish {
-            background: var(--primary);
-            color: white;
-        }
-
-            .btn-publish:hover {
-                filter: brightness(1.1);
-            }
+        .topbar { height: 60px; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; }
+        .bot-selector { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .bot-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .bot-name { font-weight: 600; font-size: 14px; }
+        
+        .topbar-actions { display: flex; align-items: center; gap: 10px; }
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; border: none; display: flex; align-items: center; gap: 8px;}
+        .btn-test { background: rgba(255,255,255,0.1); color: white; }
+        .btn-test:hover { background: rgba(255,255,255,0.15); }
+        .btn-publish { background: var(--primary); color: white; }
+        .btn-publish:hover { filter: brightness(1.1); }
 
         /* --- ХОЛСТ DRAWFLOW --- */
-        #drawflow {
-            flex: 1;
-            position: relative;
-            background: var(--bg-canvas);
-            background-image: radial-gradient(#d1d5db 1px, transparent 0);
-            background-size: 20px 20px;
-        }
+        #drawflow { flex: 1; position: relative; background: var(--bg-canvas); background-image: radial-gradient(#d1d5db 1px, transparent 0); background-size: 20px 20px; }
 
         /* --- ПРЕМИУМ ДИЗАЙН КАРТОЧЕК НА ХОЛСТЕ --- */
-        .drawflow .drawflow-node {
-            background: transparent;
-            border: none;
-            border-radius: 16px;
-            width: 260px;
-            padding: 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        }
-
-            .drawflow .drawflow-node.selected .node-card {
-                box-shadow: 0 0 0 3px var(--primary);
-            }
-
-        .node-card {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            transition: 0.2s;
-        }
-
-        /* Заголовок карточки */
-        .node-card-header {
-            padding: 10px 15px;
-            font-size: 12px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-msg {
-            background: #1a4f5f;
-            color: white;
-        }
-        /* Темно изумрудный как на скрине 1 */
-        .header-trigger {
-            background: #d0f0c0;
-            color: #00695c;
-        }
-
-        /* Тело карточки (Превью) */
-        .node-card-body {
-            padding: 15px;
-            font-size: 13px;
-            line-height: 1.4;
-            color: #555;
-            background: #fff;
-            min-height: 60px;
-        }
-
-        .preview-text {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+        .drawflow .drawflow-node { background: transparent; border: none; border-radius: 16px; width: 260px; padding: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        .drawflow .drawflow-node.selected .node-card { box-shadow: 0 0 0 3px var(--primary); }
+        
+        .node-card { background: white; border-radius: 16px; overflow: hidden; color: #333; display: flex; flex-direction: column; transition: 0.2s;}
+        .node-card-header { padding: 10px 15px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .header-msg { background: #1a4f5f; color: white; } 
+        .header-trigger { background: #d0f0c0; color: #00695c; }
+        
+        .node-card-body { padding: 15px; font-size: 13px; line-height: 1.4; color: #555; background: #fff; min-height: 60px;}
+        .preview-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .preview-trigger { color: var(--primary); font-weight: bold; margin-bottom: 5px; font-size: 11px; text-transform: uppercase; }
 
         /* Точки соединений */
-        .drawflow .connection .main-path {
-            stroke: #a3aab5;
-            stroke-width: 3px;
-        }
+        .drawflow .connection .main-path { stroke: #a3aab5; stroke-width: 3px; }
+        .drawflow .inputs .input { left: -10px; background: white; border: 2px solid #a3aab5; width: 14px; height: 14px; }
+        .drawflow .outputs .output { right: -10px; background: white; border: 2px solid #a3aab5; width: 14px; height: 14px; }
+        .drawflow .inputs .input:hover, .drawflow .outputs .output:hover { border-color: var(--primary); transform: scale(1.2); }
 
-        .drawflow .inputs .input {
-            left: -10px;
-            background: white;
-            border: 2px solid #a3aab5;
-            width: 14px;
-            height: 14px;
-        }
-
-        .drawflow .outputs .output {
-            right: -10px;
-            background: white;
-            border: 2px solid #a3aab5;
-            width: 14px;
-            height: 14px;
-        }
-
-            .drawflow .inputs .input:hover, .drawflow .outputs .output:hover {
-                border-color: var(--primary);
-                transform: scale(1.2);
-            }
-
-        /* --- ВЫЕЗЖАЮЩАЯ ПАНЕЛЬ СВОЙСТВ (СПРАВА) --- */
+        /* --- ВЫЕЗЖАЮЩАЯ ПАНЕЛЬ СВОЙСТВ --- */
         .properties-panel {
-            position: absolute;
-            right: -400px;
-            top: 60px;
-            bottom: 0;
-            width: 380px;
-            background: var(--bg-panel);
-            border-left: 1px solid var(--border);
-            z-index: 50;
-            transition: right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+            position: absolute; right: -400px; top: 60px; bottom: 0; width: 380px;
+            background: var(--bg-panel); border-left: 1px solid var(--border); z-index: 50;
+            transition: right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.3);
         }
+        .properties-panel.open { right: 0; }
 
-            .properties-panel.open {
-                right: 0;
-            }
+        .prop-header { padding: 20px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: bold; text-align: center;}
+        .prop-body { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .prop-body::-webkit-scrollbar { width: 6px; }
+        .prop-body::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
 
-        .prop-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
+        .prop-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; font-weight: 600; }
+        .prop-input { width: 100%; background: #1c1c1e; border: 1px solid rgba(255,255,255,0.08); color: white; padding: 12px 16px; border-radius: 12px; font-size: 14px; outline: none; transition: 0.2s; font-family: inherit;}
+        .prop-input:focus { border-color: var(--primary); background: #222226; box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15); }
+
+        /* Поле ввода текста с панелью инструментов */
+        .prop-textarea-wrapper { background: #1c1c1e; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.08); transition: 0.2s; }
+        .prop-textarea-wrapper:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15); background: #222226; }
+        .prop-textarea-wrapper textarea { width: 100%; background: transparent; border: none; color: white; font-size: 14px; resize: none; outline: none; font-family: inherit; min-height: 80px; }
+        
+        .textarea-tools { display: flex; gap: 5px; color: #888; margin-top: 5px; font-size: 16px; }
+        .textarea-tools span { cursor: pointer; transition: 0.2s; padding: 4px 8px; border-radius: 6px; user-select: none; }
+        .textarea-tools span:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        /* --- МЕНЮ ЭМОДЗИ (ПИКЕР) --- */
+        .emoji-picker {
+            display: none; background: #252528; border: 1px solid #333; border-radius: 12px; padding: 10px;
+            grid-template-columns: repeat(8, 1fr); gap: 5px; max-height: 180px; overflow-y: auto; margin-top: 10px;
         }
+        .emoji-picker.active { display: grid; }
+        .emoji-item { cursor: pointer; text-align: center; font-size: 20px; padding: 5px; border-radius: 8px; transition: 0.1s; user-select: none; }
+        .emoji-item:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
+        .emoji-picker::-webkit-scrollbar { width: 4px; }
+        .emoji-picker::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
 
-        .prop-body {
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        /* Поле ввода текста сообщения (как на скрине 3) */
-        .prop-textarea-wrapper {
-            background: #121316;
-            border-radius: 12px;
-            padding: 12px;
-            border: 1px solid #333;
-        }
-
-            .prop-textarea-wrapper textarea {
-                width: 100%;
-                background: transparent;
-                border: none;
-                color: white;
-                font-size: 14px;
-                resize: none;
-                outline: none;
-                font-family: inherit;
-                min-height: 60px;
-            }
-
-        .textarea-tools {
-            display: flex;
-            gap: 10px;
-            color: #888;
-            margin-top: 5px;
-            font-size: 16px;
-        }
-
-        /* Сетка кнопок (Текст, Кнопки, Фото...) */
-        .prop-label {
-            font-size: 12px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .blocks-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        .block-btn {
-            background: var(--bg-panel-light);
-            border: 1px solid #333;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 5px;
-            cursor: pointer;
-            transition: 0.2s;
-            color: #aaa;
-            gap: 5px;
-        }
-
-            .block-btn:hover {
-                background: #333;
-                color: white;
-                border-color: #555;
-            }
-
-            .block-btn svg {
-                width: 20px;
-                height: 20px;
-            }
-
-            .block-btn span {
-                font-size: 11px;
-            }
-
-        /* Обычный инпут */
-        .prop-input {
-            width: 100%;
-            background: var(--bg-panel-light);
-            border: 1px solid #333;
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 14px;
-            outline: none;
-            transition: 0.2s;
-        }
-
-            .prop-input:focus {
-                border-color: var(--primary);
-            }
+        .blocks-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .block-btn { background: var(--bg-panel-light); border: 1px solid #333; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 5px; cursor: pointer; transition: 0.2s; color: #aaa; gap: 5px; }
+        .block-btn:hover { background: #333; color: white; border-color: #555; }
+        .block-btn svg { width: 20px; height: 20px; }
+        .block-btn span { font-size: 11px; }
 
         /* Контекстное меню (ПКМ) */
-        #nodeContextMenu {
-            position: absolute;
-            background: #252528;
-            border: 1px solid #333;
-            border-radius: 12px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-            z-index: 10000;
-            width: 220px;
-            display: none;
-            flex-direction: column;
-            padding: 6px 0;
-            user-select: none;
-        }
+        #nodeContextMenu { position: absolute; background: #252528; border: 1px solid #333; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); z-index: 10000; width: 220px; display: none; flex-direction: column; padding: 6px 0; user-select: none; }
+        .context-menu-item { padding: 10px 16px; color: #ccc; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+        .context-menu-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
 
-        .context-menu-item {
-            padding: 10px 16px;
-            color: #ccc;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .floating-controls { position: absolute; right: 25px; bottom: 25px; display: flex; gap: 10px; z-index: 40; transition: right 0.3s; }
+        .floating-controls.shifted { right: 400px; }
+        .zoom-btn { width: 40px; height: 40px; border-radius: 50%; background: white; color: black; border: none; font-size: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); cursor: pointer; display: flex; align-items: center; justify-content: center;}
 
-            .context-menu-item:hover {
-                background: rgba(255,255,255,0.05);
-                color: #fff;
-            }
-
-        /* Плавающие кнопки Zoom */
-        .floating-controls {
-            position: absolute;
-            right: 25px;
-            bottom: 25px;
-            display: flex;
-            gap: 10px;
-            z-index: 40;
-            transition: right 0.3s;
-        }
-
-            .floating-controls.shifted {
-                right: 400px;
-            }
-        /* Сдвигаем, когда открыта панель */
-        .zoom-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: white;
-            color: black;
-            border: none;
-            font-size: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            color: white;
-            font-weight: bold;
-        }
+        #loader { position: fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); display:flex; align-items:center; justify-content:center; z-index:9999; color: white; font-weight: bold;}
     </style>
 </head>
 <body>
@@ -490,7 +150,7 @@
     </div>
 
     <div id="viewEditor" class="view">
-
+        
         <aside class="sidebar">
             <div class="sidebar-btn" onclick="switchView('viewList')" title="На главную">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
@@ -504,7 +164,6 @@
         </aside>
 
         <main class="main-area">
-
             <header class="topbar">
                 <div class="bot-selector">
                     <div class="bot-avatar">🤖</div>
@@ -519,11 +178,11 @@
             <div id="drawflow"></div>
 
             <div id="nodeContextMenu">
-                <div class="context-menu-item" onclick="addNodeFromMenu('message')">
-                    <span style="color:#4a9eff">💬</span> Блок Сообщения
+                <div class="context-menu-item" onclick="event.stopPropagation(); addNodeFromMenu('message')">
+                    <span style="color:#4a9eff; font-size:18px;">💬</span> Блок Сообщения
                 </div>
-                <div class="context-menu-item" onclick="addNodeFromMenu('trigger')">
-                    <span style="color:#10b981">⚡</span> Стартовое условие
+                <div class="context-menu-item" onclick="event.stopPropagation(); addNodeFromMenu('trigger')">
+                    <span style="color:#10b981; font-size:18px;">⚡</span> Стартовое условие
                 </div>
             </div>
 
@@ -539,13 +198,10 @@
                     <div style="color:#888; text-align:center; margin-top:50px;">Выберите блок на холсте</div>
                 </div>
             </div>
-
         </main>
     </div>
 
-
     <script>
-        // === ВСТАВЬ СВОИ ДАННЫЕ FIREBASE ===
         const firebaseConfig = {
             apiKey: "AIzaSyBncXLA4D1JdsqQtA8_8rPqQioq2XRfic4",
             authDomain: "mycoolmessenger.firebaseapp.com",
@@ -558,6 +214,9 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
+
+        // 🔥 МАССИВ ЭМОДЗИ ДЛЯ ПИКЕРА (Его не хватало в твоем коде)
+        const EMOJI_LIST = "😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😋 😎 😍 😘 🥰 😗 😙 😚 🙂 🤗 🤩 🤔 🤨 😐 😑 😶 🙄 😏 😣 😥 😮 🤐 😯 😪 😫 🥱 😴 😌 😛 😜 😝 🤤 😒 😓 😔 😕 🙃 🤑 😲 ☹️ 🙁 😖 😞 😟 😤 😢 😭 😦 😧 😨 😩 🤯 😬 😰 😱 🥵 🥶 😳 🤪 😵 😡 😠 🤬 😷 🤒 🤕 🤢 🤮 🤧 😇 🥳 🥺 🤠 🤡 🤥 🤫 🤭 🧐 🤓 😈 👿 👹 👺 💀 👻 👽 🤖 💩 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊 💋 💌 💘 💝 💖 💗 💓 💞 💕 💟 ❣️ 💔 ❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 💯 💢 💥 💫 💦 💨 🕳️ 💣 💬 👁️‍🗨️ 🗨️ 🗯️ 💭 💤 👋 🤚 🖐️ ✋ 🖖 👌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏".split(" ");
 
         let currentUser = null;
         let currentBotToken = null;
@@ -593,10 +252,10 @@
                 snap.forEach(doc => {
                     const b = doc.data();
                     html += `
-                            <div style="background:var(--bg-panel); border:1px solid #333; padding:20px; border-radius:16px; margin-bottom:15px; cursor:pointer; display:flex; align-items:center;" onclick="openEditor('${b.botToken}', '${b.name}')">
-                                <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; margin-right:15px;">🤖</div>
-                                <div style="font-size:16px; font-weight:bold;">${b.name} <span style="color:#888; font-weight:normal; font-size:13px; margin-left:10px;">@${b.username}</span></div>
-                            </div>`;
+                        <div style="background:var(--bg-panel); border:1px solid #333; padding:20px; border-radius:16px; margin-bottom:15px; cursor:pointer; display:flex; align-items:center;" onclick="openEditor('${b.botToken}', '${b.name}')">
+                            <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px; margin-right:15px;">🤖</div>
+                            <div style="font-size:16px; font-weight:bold;">${b.name} <span style="color:#888; font-weight:normal; font-size:13px; margin-left:10px;">@${b.username}</span></div>
+                        </div>`;
                 });
                 container.innerHTML = html;
             } catch (e) { console.error(e); }
@@ -614,8 +273,9 @@
             } catch (e) { alert(e.message); }
         }
 
+        // ==========================================
         // 3. ИНИЦИАЛИЗАЦИЯ DRAWFLOW
-        // 3. ИНИЦИАЛИЗАЦИЯ DRAWFLOW
+        // ==========================================
         let lastMouseX = 0, lastMouseY = 0;
 
         function initDrawflow() {
@@ -624,36 +284,27 @@
             editor.reroute = true;
             editor.start();
 
-            // === ЗАЩИТА СВЯЗЕЙ (1 К 1) ===
+            // ЗАЩИТА СВЯЗЕЙ (1 К 1)
             editor.on('connectionCreated', function (connection) {
-                const outNodeId = connection.output_id;
-                const outPort = connection.output_class;
-                const inNodeId = connection.input_id;
-                const inPort = connection.input_class;
+                const outNodeId = connection.output_id, outPort = connection.output_class;
+                const inNodeId = connection.input_id, inPort = connection.input_class;
 
-                // 1. Ограничение для Выхода (Зеленая точка): удаляем старую связь, если тянем новую
                 const nodeOut = editor.getNodeFromId(outNodeId);
                 const outConnections = nodeOut.outputs[outPort].connections;
                 if (outConnections.length > 1) {
                     outConnections.forEach(conn => {
-                        if (conn.node != inNodeId || conn.output != inPort) {
-                            editor.removeSingleConnection(outNodeId, conn.node, outPort, conn.output);
-                        }
+                        if (conn.node != inNodeId || conn.output != inPort) editor.removeSingleConnection(outNodeId, conn.node, outPort, conn.output);
                     });
                 }
 
-                // 2. Ограничение для Входа (Синяя точка): чтобы к одному сообщению не шло две стрелки
                 const nodeIn = editor.getNodeFromId(inNodeId);
                 const inConnections = nodeIn.inputs[inPort].connections;
                 if (inConnections.length > 1) {
                     inConnections.forEach(conn => {
-                        if (conn.node != outNodeId || conn.input != outPort) {
-                            editor.removeSingleConnection(conn.node, inNodeId, conn.input, inPort);
-                        }
+                        if (conn.node != outNodeId || conn.input != outPort) editor.removeSingleConnection(conn.node, inNodeId, conn.input, inPort);
                     });
                 }
             });
-            // =============================
 
             // Открытие меню по ПКМ
             id.addEventListener('contextmenu', function (e) {
@@ -668,13 +319,12 @@
             });
             document.addEventListener('click', () => document.getElementById('nodeContextMenu').style.display = 'none');
 
-            // СОБЫТИЯ: Клик по блоку -> Открываем боковую панель
+            // СОБЫТИЯ
             editor.on('nodeSelected', function (id) {
                 activeNodeId = id;
                 renderPropertiesPanel(id);
             });
 
-            // Клик по пустому месту -> Закрываем панель
             editor.on('nodeUnselected', function () {
                 activeNodeId = null;
                 document.getElementById('propPanel').classList.remove('open');
@@ -693,46 +343,46 @@
         }
 
         function addNodeFromMenu(type) {
+            document.getElementById('nodeContextMenu').style.display = 'none';
             if (type === 'message') addMessageNode(null, lastMouseX, lastMouseY);
             else if (type === 'trigger') addTriggerNode(null, lastMouseX, lastMouseY);
         }
 
         // ==========================================================
-        // 4. СОЗДАНИЕ ВИЗУАЛЬНЫХ КАРТОЧЕК (ДЛЯ ХОЛСТА)
-        // Они больше не содержат инпутов, только превью!
+        // 4. СОЗДАНИЕ ВИЗУАЛЬНЫХ КАРТОЧЕК НА ХОЛСТЕ
         // ==========================================================
 
         function addMessageNode(data = null, posX = 100, posY = 200) {
-            const nodeData = data || { type: 'message', text: "", image: "" };
-            // Визуальная обертка для холста
+            const nodeData = data || { type: 'message', text: "", image: "", trigger: "" };
             const html = `
-                    <div class="node-card">
-                        <div class="node-card-header header-msg">
-                            <span>Сообщение</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </div>
-                        <div class="node-card-body">
-                            <div class="preview-text" id="preview-text-${editor.nodeId}">${nodeData.text || '<em>(Пустое сообщение)</em>'}</div>
-                        </div>
+                <div class="node-card">
+                    <div class="node-card-header header-msg">
+                        <span>Сообщение</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
-                `;
+                    <div class="node-card-body">
+                        <div class="preview-trigger">${nodeData.trigger ? '⚡ ' + nodeData.trigger : ''}</div>
+                        <div class="preview-text">${nodeData.text || '<em>(Пустое сообщение)</em>'}</div>
+                    </div>
+                </div>
+            `;
             editor.addNode('message', 1, 1, posX, posY, 'message-node', nodeData, html);
         }
 
         function addTriggerNode(data = null, posX = 50, posY = 200) {
             const nodeData = data || { type: 'trigger', trigger: "" };
             const html = `
-                    <div class="node-card">
-                        <div class="node-card-header header-trigger">
-                            <span>Условие</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </div>
-                        <div class="node-card-body">
-                            <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
-                            <div class="preview-text" style="font-weight:bold;" id="preview-trigger-${editor.nodeId}">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
-                        </div>
+                <div class="node-card">
+                    <div class="node-card-header header-trigger">
+                        <span>Условие</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
-                `;
+                    <div class="node-card-body">
+                        <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
+                        <div class="preview-text" style="font-weight:bold;">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
+                    </div>
+                </div>
+            `;
             editor.addNode('trigger', 0, 1, posX, posY, 'trigger-node', nodeData, html);
         }
 
@@ -753,106 +403,112 @@
             // ЕСЛИ КЛИКНУЛИ НА БЛОК СООБЩЕНИЯ
             if (node.name === 'message') {
                 title.innerHTML = `Сообщение #${nodeId}`;
-
-                // Генерируем HTML для сетки смайлов из массива EMOJI_LIST
                 const emojisHtml = EMOJI_LIST.map(emoji => `<div class="emoji-item">${emoji}</div>`).join('');
 
                 content.innerHTML = `
-                        <div class="prop-textarea-wrapper">
-                            <textarea id="prop-msg-text" placeholder="Введите сообщение...">${node.data.text || ''}</textarea>
-                            <div class="textarea-tools">
-                                <span id="toggle-emoji" title="Смайлики">🙂</span> 
-                                <span title="Переменные">{..}</span> 
-                                <span title="Вложение">📎</span>
-                            </div>
-                            
-                            <div class="emoji-picker" id="emoji-picker-container">
-                                ${emojisHtml}
-                            </div>
-                        </div>
+                    <div>
+                        <div class="prop-label">Команда (Триггер)</div>
+                        <input type="text" id="prop-msg-trigger" class="prop-input" placeholder="Напр: Привет" value="${node.data.trigger || ''}">
+                        <div style="font-size:11px; color:#888; margin-top:5px; margin-bottom:15px;">Если хотите запустить ответ без стрелочки.</div>
+                    </div>
 
-                        <div>
-                            <div class="prop-label">Добавить блок</div>
-                            <div class="blocks-grid">
-                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
-                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
-                                <div class="block-btn" onclick="alert('Доступно в Pro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Пауза</span></div>
-                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
-                            </div>
+                    <div class="prop-textarea-wrapper">
+                        <textarea id="prop-msg-text" placeholder="Введите сообщение...">${node.data.text || ''}</textarea>
+                        <div class="textarea-tools">
+                            <span id="toggle-emoji" title="Смайлики">🙂</span> 
+                            <span title="Переменные">{..}</span> 
+                            <span title="Вложение">📎</span>
                         </div>
-
-                        <div>
-                            <div class="prop-label">Ссылка на картинку (Опционально)</div>
-                            <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
+                        
+                        <div class="emoji-picker" id="emoji-picker-container">
+                            ${emojisHtml}
                         </div>
+                    </div>
 
-                        <div>
-                            <div class="prop-label">Следующий шаг</div>
-                            <button class="prop-input" style="color:#aaa; cursor:pointer;">Выбрать шаг...</button>
+                    <div style="margin-top: 15px;">
+                        <div class="prop-label">Добавить блок</div>
+                        <div class="blocks-grid">
+                            <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
+                            <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
+                            <div class="block-btn" onclick="alert('Доступно в Pro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Пауза</span></div>
+                            <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
                         </div>
-                    `;
+                    </div>
 
+                    <div style="margin-top: 15px;">
+                        <div class="prop-label">Ссылка на картинку (Опционально)</div>
+                        <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
+                    </div>
+                `;
+
+                // Получаем карточку напрямую с холста
+                const nodeCard = document.querySelector(`#node-${nodeId}`);
+
+                // Синхронизация Команды
+                document.getElementById('prop-msg-trigger').addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    editor.updateNodeDataFromId(nodeId, { ...editor.getNodeFromId(nodeId).data, trigger: val });
+                    const preview = nodeCard.querySelector('.preview-trigger');
+                    if (preview) preview.innerHTML = val ? '⚡ ' + val : '';
+                });
+
+                // Эмодзи пикер и курсор
                 const textArea = document.getElementById('prop-msg-text');
                 const emojiContainer = document.getElementById('emoji-picker-container');
 
-                // 1. Открытие/закрытие меню смайлов
                 document.getElementById('toggle-emoji').addEventListener('click', () => {
                     emojiContainer.classList.toggle('active');
                 });
 
-                // 2. Клик по любому смайлу из списка
                 document.querySelectorAll('.emoji-item').forEach(el => {
                     el.addEventListener('click', (e) => {
                         const emoji = e.target.innerText;
-
-                        // Получаем позицию курсора
                         const start = textArea.selectionStart;
                         const end = textArea.selectionEnd;
                         const text = textArea.value;
 
-                        // Вставляем смайл ровно туда, где стоит курсор
                         const newText = text.substring(0, start) + emoji + text.substring(end);
                         textArea.value = newText;
-
-                        // Возвращаем фокус и ставим курсор сразу после вставленного смайла
                         textArea.focus();
                         textArea.selectionStart = textArea.selectionEnd = start + emoji.length;
 
-                        // Синхронизируем изменения с холстом и сохраняем в базу блока
-                        editor.updateNodeDataFromId(nodeId, { ...node.data, text: newText });
-                        const preview = document.getElementById(`preview-text-${nodeId}`);
+                        editor.updateNodeDataFromId(nodeId, { ...editor.getNodeFromId(nodeId).data, text: newText });
+                        const preview = nodeCard.querySelector('.preview-text');
                         if (preview) preview.innerHTML = newText || '<em>(Пустое сообщение)</em>';
                     });
                 });
 
-                // 3. Обычный ввод текста с клавиатуры
+                // Синхронизация Текста
                 textArea.addEventListener('input', (e) => {
                     const val = e.target.value;
-                    editor.updateNodeDataFromId(nodeId, { ...node.data, text: val });
-                    const preview = document.getElementById(`preview-text-${nodeId}`);
+                    editor.updateNodeDataFromId(nodeId, { ...editor.getNodeFromId(nodeId).data, text: val });
+                    const preview = nodeCard.querySelector('.preview-text');
                     if (preview) preview.innerHTML = val || '<em>(Пустое сообщение)</em>';
                 });
 
+                // Синхронизация Картинки
                 document.getElementById('prop-msg-image').addEventListener('input', (e) => {
-                    editor.updateNodeDataFromId(nodeId, { ...node.data, image: e.target.value });
+                    editor.updateNodeDataFromId(nodeId, { ...editor.getNodeFromId(nodeId).data, image: e.target.value });
                 });
-            }
 
+            } 
+            
             // ЕСЛИ КЛИКНУЛИ НА БЛОК ТРИГГЕРА
             else if (node.name === 'trigger') {
                 title.innerHTML = `Условие #${nodeId}`;
                 content.innerHTML = `
-                        <div>
-                            <div class="prop-label">Если сообщение содержит текст:</div>
-                            <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
-                            <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит следующую цепочку, если клиент напишет это слово.</div>
-                        </div>
-                    `;
+                    <div>
+                        <div class="prop-label">Если сообщение содержит текст:</div>
+                        <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
+                        <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит цепочку, если клиент напишет это слово.</div>
+                    </div>
+                `;
 
+                const nodeCard = document.querySelector(`#node-${nodeId}`);
                 document.getElementById('prop-trigger-text').addEventListener('input', (e) => {
                     const val = e.target.value;
-                    editor.updateNodeDataFromId(nodeId, { ...node.data, trigger: val });
-                    const preview = document.getElementById(`preview-trigger-${nodeId}`);
+                    editor.updateNodeDataFromId(nodeId, { ...editor.getNodeFromId(nodeId).data, trigger: val });
+                    const preview = nodeCard.querySelector('.preview-text');
                     if (preview) preview.innerHTML = val || '<em>(Любое слово)</em>';
                 });
             }
