@@ -8955,21 +8955,36 @@
         window.addEventListener('hashchange', handleHashChange);
         async function handleHashChange() {
             const hash = window.location.hash;
-            // Если ссылка пустая (мы в списке чатов)
             if (!hash || hash === '#') {
                 performCloseUI();
                 return;
             }
-            // Если ссылка вида #chat/USER_ID
+
             if (hash.startsWith('#chat/')) {
                 const userId = hash.replace('#chat/', '');
-
-                // Если мы уже в этом чате, ничего не делаем
                 if (currentFriendId === userId) return;
-
                 if (!currentUser) return;
 
-                // Пытаемся найти в кэше или загрузить из базы
+                // --- PREMIUM ПРОВЕРКА ДОСТУПА ---
+                // Сначала проверяем, есть ли этот пользователь в списке ваших друзей
+                const friendsSnap = await db.collection('friends')
+                    .where('users', 'array-contains', currentUser.uid)
+                    .get();
+
+                let isFriend = false;
+                friendsSnap.forEach(doc => {
+                    if (doc.data().users.includes(userId)) isFriend = true;
+                });
+
+                // Если это не ваш друг — блокируем вход (даже если он знает ссылку)
+                if (!isFriend) {
+                    showToast("Ошибка доступа: пользователя нет в контактах");
+                    window.location.hash = ""; // Выкидываем на главную
+                    return;
+                }
+                // --------------------------------
+
+                // Если проверка прошла — загружаем данные и открываем чат
                 let userData = usersCache[userId];
                 if (!userData) {
                     try {
