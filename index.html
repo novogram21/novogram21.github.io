@@ -4135,6 +4135,46 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        /* --- АНИМАЦИЯ ПОЯВЛЕНИЯ СООБЩЕНИЙ --- */
+        @keyframes msgInMe {
+            0% {
+                opacity: 0;
+                transform: translateY(20px) scale(0.8);
+                transform-origin: right bottom;
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes msgInOther {
+            0% {
+                opacity: 0;
+                transform: translateY(20px) scale(0.8);
+                transform-origin: left bottom;
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Классы для анимации */
+        .msg-anim-me {
+            animation: msgInMe 0.3s cubic-bezier(0.1, 0.9, 0.2, 1.2) forwards;
+        }
+
+        .msg-anim-other {
+            animation: msgInOther 0.3s cubic-bezier(0.1, 0.9, 0.2, 1.2) forwards;
+        }
+
+        /* Плавность для самого контейнера, чтобы сообщения не прыгали */
+        .messages {
+            scroll-behavior: smooth;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -6545,39 +6585,49 @@
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
 
-                            if (m.sys) div.className = 'msg msg-sys';
-                            else if (m.from === currentUser.uid) div.className = 'msg msg-me';
-                            else div.className = 'msg msg-other';
+                            // 1. ОПРЕДЕЛЯЕМ ТИП И КЛАССЫ
+                            if (m.sys) {
+                                div.className = 'msg msg-sys';
+                            } else {
+                                const isMine = m.from === currentUser.uid;
+                                div.className = isMine ? 'msg msg-me' : 'msg msg-other';
 
-                            // На ПК оставляем клик правой кнопкой мыши
+                                // --- ПРЕМИУМ: Анимируем только новые сообщения в реальном времени ---
+                                if (!isChatInitialLoad) {
+                                    div.classList.add(isMine ? 'msg-anim-me' : 'msg-anim-other');
+                                }
+                            }
+
+                            // 2. КОНТЕКСТНОЕ МЕНЮ (ПКМ на десктопе)
                             div.oncontextmenu = (e) => {
-                                e.preventDefault(); e.stopPropagation();
+                                e.preventDefault();
+                                e.stopPropagation();
 
-                                // ИГНОРИРУЕМ НАТИВНЫЙ ВЫЗОВ НА ТЕЛЕФОНЕ (там работает наш touch-таймер)
-                                if ((window.innerWidth <= 850 || window.innerHeight <= 500)) return;
+                                // Игнорируем на мобилках (там работает long-press)
+                                if (window.innerWidth <= 850 || window.innerHeight <= 500) return;
 
-                                // --- НОВОЕ: Закрытие при повторном клике ---
                                 const menu = document.getElementById('contextMenu');
                                 if (menu && menu.classList.contains('active')) {
                                     if (selectedMsgId === msgId) {
-                                        closeAllSheets(); // Закрываем
+                                        closeAllSheets();
                                         return;
                                     }
                                 }
-
                                 openContextMenu(e, msgId, m.from === currentUser.uid);
                             };
-                            // Одиночный клик для мобилок удален, теперь работает только долгое зажатие!
+
+                            // 3. ДОБАВЛЯЕМ В СПИСОК
                             list.appendChild(div);
+
+                            // 4. УВЕДОМЛЕНИЯ (Только для новых входящих)
                             if (!isChatInitialLoad && m.from !== currentUser.uid) {
                                 try {
                                     playNotificationSound('in-chat');
-                                    // Проверяем, существует ли TitleNotifier, прежде чем его вызывать
                                     if (typeof window.TitleNotifier !== 'undefined' && typeof window.TitleNotifier.onNewMessage === 'function') {
                                         TitleNotifier.onNewMessage();
                                     }
                                 } catch (notificationError) {
-                                    console.warn("[NOVOGRAM_LOG] Ошибка при воспроизведении уведомления:", notificationError);
+                                    console.warn("[NOVOGRAM_LOG] Ошибка уведомления:", notificationError);
                                 }
                             }
                         }
@@ -9296,8 +9346,12 @@
 
             // --- НОВОЕ: Плавный скролл при прикреплении файла ---
             setTimeout(() => {
-                list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
-            }, 50);
+                // Используем плавный скролл, чтобы видеть, как сообщение "вылетает" снизу
+                list.scrollTo({
+                    top: list.scrollHeight,
+                    behavior: isChatInitialLoad ? 'auto' : 'smooth'
+                });
+            }, 60);
 
             return tempId; // Возвращаем ID, чтобы потом удалить это сообщение
         }
