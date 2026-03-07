@@ -9542,32 +9542,9 @@
             }
         }
         // Функции для просмотра фото
-        function openImageViewer(src) {
-            const viewer = document.getElementById('imageViewer');
-            const img = document.getElementById('imageViewerImg');
+        
 
-            // Сбрасываем зум перед открытием новой картинки
-            resetImageZoom();
-
-            let highResSrc = src;
-            if (src.includes('lh3.googleusercontent.com')) {
-                highResSrc = src.split('=')[0] + '=w2000';
-            }
-            img.src = highResSrc;
-            viewer.classList.add('active');
-        }
-
-        function closeImageViewer() {
-            const viewer = document.getElementById('imageViewer');
-            viewer.classList.remove('active');
-
-            // Мягко возвращаем картинку в центр перед скрытием
-            resetImageZoom();
-
-            setTimeout(() => {
-                document.getElementById('imageViewerImg').src = ''; // Очистка
-            }, 300);
-        }
+        
         function closeChat() {
             // 1. Проверяем, есть ли хеш (например, #chat/123)
             if (window.location.hash) {
@@ -10980,59 +10957,237 @@
         let isBackSwiping = false;
         let backSwipeCurrentX = 0;
 
-        function handleChatTouchStart(e) {
-            if (window.innerWidth > 850 && window.innerHeight > 500) return;
+        // =========================================================
+        // ПОЛНОСТЬЮ ОБНОВЛЕННАЯ ЛОГИКА ПРОСМОТРА ФОТО И ИНСТРУМЕНТОВ
+        // =========================================================
 
-            const touch = e.touches[0];
-            swipeStartX = touch.clientX;
-            swipeStartY = touch.clientY;
+        window.viewerState = {
+            scale: 1,
+            x: 0,
+            y: 0,
+            msgId: null,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            pinchDist: null,
+            initScale: 1,
+            lastTap: 0
+        };
 
-            // 🔥 ИСПРАВЛЕНИЕ: Если свайп начинается от левого края экрана (меньше 40px),
-            // мы полностью отключаем наш скрипт. Это позволит родному жесту
-            // "Назад" на iPhone работать идеально плавно и без лагов.
-            if (swipeStartX < 40) {
-                swipeTarget = null;
-                isBackSwiping = false;
-                isSwipeHorizontal = false;
-                isSwipeVertical = true; // Разрешаем родной скролл системы
-                return;
+        window.updateImageTransform = function (withTransition = false) {
+            const img = document.getElementById('imageViewerImg');
+            if (!img) return;
+            img.style.transition = withTransition ? 'transform 0.2s ease-out' : 'none';
+            img.style.transform = `translate(${window.viewerState.x}px, ${window.viewerState.y}px) scale(${window.viewerState.scale})`;
+        };
+
+        window.resetImageZoom = function () {
+            window.viewerState.scale = 1;
+            window.viewerState.x = 0;
+            window.viewerState.y = 0;
+            window.updateImageTransform(true);
+        };
+
+        // 1. Открытие картинки
+        window.openImageViewer = function (src, msgId = null, isMine = false) {
+            const viewer = document.getElementById('imageViewer');
+            const img = document.getElementById('imageViewerImg');
+            const deleteBtn = document.getElementById('viewerDeleteBtn');
+
+            window.viewerState.msgId = msgId;
+
+            // Кнопка удаления видна, только если это сообщение из чата и оно твое
+            if (deleteBtn) {
+                deleteBtn.style.display = (isMine && msgId) ? 'flex' : 'none';
             }
 
-            swipeTarget = e.target.closest('.msg');
-            swipeCurrentX = 0;
-            isSwipeHorizontal = false;
-            isSwipeVertical = false;
-            swipeHapticTriggered = false;
-            isLongPressTriggered = false;
+            window.resetImageZoom();
 
-            isBackSwiping = false;
-            backSwipeCurrentX = 0;
+            let highResSrc = src;
+            if (src.includes('lh3.googleusercontent.com')) {
+                highResSrc = src.split('=')[0] + '=w2000';
+            }
+            img.src = highResSrc;
+            viewer.classList.add('active');
+        };
 
-            if (swipeTarget) {
-                if (longPressTimer) clearTimeout(longPressTimer);
-                longPressTimer = setTimeout(() => {
-                    // Если палец не двигался и мы не делаем свайп назад
-                    if (!isSwipeHorizontal && !isSwipeVertical && swipeTarget && !isBackSwiping) {
-                        isLongPressTriggered = true;
-                        if (navigator.vibrate) navigator.vibrate(40);
+        // 2. Закрытие
+        window.closeImageViewer = function (e) {
+            if (e) e.stopPropagation();
+            const viewer = document.getElementById('imageViewer');
+            viewer.classList.remove('active');
+            window.resetImageZoom();
+            setTimeout(() => {
+                document.getElementById('imageViewerImg').src = '';
+            }, 300);
+        };
 
-                        const msgId = swipeTarget.id.replace('msg-', '');
-                        const isMine = swipeTarget.classList.contains('msg-me');
+        // 3. Кнопка "Приблизить"
+        window.zoomInViewer = function (e) {
+            if (e) e.stopPropagation();
+            window.viewerState.scale = Math.min(window.viewerState.scale + 0.5, 5);
+            window.updateImageTransform(true);
+        };
 
-                        openContextMenu(null, msgId, isMine, true);
-                        swipeTarget = null;
-                    }
-                }, 400);
+        // 4. Кнопка "Отдалить"
+        window.zoomOutViewer = function (e) {
+            if (e) e.stopPropagation();
+            window.viewerState.scale = Math.max(window.viewerState.scale - 0.5, 1);
+            if (window.viewerState.scale === 1) {
+                window.viewerState.x = 0;
+                window.viewerState.y = 0;
+            }
+            window.updateImageTransform(true);
+        };
 
-                let icon = swipeTarget.querySelector('.swipe-reply-icon');
-                if (!icon) {
-                    icon = document.createElement('div');
-                    icon.className = 'swipe-reply-icon';
-                    icon.innerHTML = '↩️';
-                    swipeTarget.appendChild(icon);
+        // 5. Кнопка "Удалить"
+        window.deleteViewerImage = function (e) {
+            if (e) e.stopPropagation();
+            if (!window.viewerState.msgId) return;
+            window.closeImageViewer();
+            selectedMsgId = window.viewerState.msgId;
+            openDeleteSheet(); // Вызываем твою родную функцию удаления
+        };
+
+        // 6. Кнопка "Переслать"
+        window.forwardViewerImage = function (e) {
+            if (e) e.stopPropagation();
+            const img = document.getElementById('imageViewerImg');
+            if (!img.src) return;
+            // Используем системное окно "Поделиться" на смартфонах
+            if (navigator.share) {
+                navigator.share({ title: 'Фото из Novogram', url: img.src })
+                    .catch(err => console.log("Шаринг отменен", err));
+            } else {
+                showToast("Ваш браузер не поддерживает быструю пересылку");
+            }
+        };
+
+        // 7. Кнопка "Скачать"
+        window.downloadViewerImage = async function (e) {
+            if (e) e.stopPropagation();
+            const img = document.getElementById('imageViewerImg');
+            if (!img.src) return;
+            try {
+                showToast("Начало загрузки...");
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'Novogram_Photo_' + Date.now() + '.jpg';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (error) {
+                // Запасной план, если сервер заблокирует прямое скачивание (CORS)
+                const a = document.createElement('a');
+                a.href = img.src;
+                a.download = 'Photo.jpg';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+        };
+
+        // --- ЖЕСТЫ И МЫШЬ ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const viewerImg = document.getElementById('imageViewerImg');
+            if (!viewerImg) return;
+
+            // Касания (Телефоны)
+            viewerImg.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    window.viewerState.isDragging = false;
+                    window.viewerState.pinchDist = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    window.viewerState.initScale = window.viewerState.scale;
+                } else if (e.touches.length === 1 && window.viewerState.scale > 1) {
+                    window.viewerState.isDragging = true;
+                    window.viewerState.startX = e.touches[0].pageX - window.viewerState.x;
+                    window.viewerState.startY = e.touches[0].pageY - window.viewerState.y;
                 }
-            }
-        }
+            }, { passive: false });
+
+            viewerImg.addEventListener('touchmove', (e) => {
+                if (window.viewerState.scale > 1 || e.touches.length === 2) e.preventDefault();
+
+                if (e.touches.length === 2 && window.viewerState.pinchDist) {
+                    const currentDist = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    const zoomDelta = currentDist / window.viewerState.pinchDist;
+                    window.viewerState.scale = Math.min(Math.max(1, window.viewerState.initScale * zoomDelta), 5);
+                    window.updateImageTransform(false);
+                } else if (e.touches.length === 1 && window.viewerState.isDragging && window.viewerState.scale > 1) {
+                    window.viewerState.x = e.touches[0].pageX - window.viewerState.startX;
+                    window.viewerState.y = e.touches[0].pageY - window.viewerState.startY;
+                    window.updateImageTransform(false);
+                }
+            }, { passive: false });
+
+            viewerImg.addEventListener('touchend', (e) => {
+                window.viewerState.isDragging = false;
+                window.viewerState.pinchDist = null;
+
+                if (window.viewerState.scale <= 1) window.resetImageZoom();
+
+                if (e.changedTouches.length === 1) {
+                    const currentTime = Date.now();
+                    const tapLength = currentTime - window.viewerState.lastTap;
+                    if (tapLength < 300 && tapLength > 0) {
+                        if (window.viewerState.scale > 1) window.resetImageZoom();
+                        else {
+                            window.viewerState.scale = 2.5;
+                            window.updateImageTransform(true);
+                        }
+                    }
+                    window.viewerState.lastTap = currentTime;
+                }
+            });
+
+            // Колесико и мышь (Компьютеры)
+            viewerImg.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) window.viewerState.scale = Math.min(window.viewerState.scale + 0.15, 5);
+                else window.viewerState.scale = Math.max(window.viewerState.scale - 0.15, 1);
+
+                if (window.viewerState.scale === 1) {
+                    window.viewerState.x = 0; window.viewerState.y = 0;
+                }
+                window.updateImageTransform(false);
+            }, { passive: false });
+
+            viewerImg.addEventListener('mousedown', (e) => {
+                if (window.viewerState.scale > 1) {
+                    e.preventDefault();
+                    window.viewerState.isDragging = true;
+                    window.viewerState.startX = e.clientX - window.viewerState.x;
+                    window.viewerState.startY = e.clientY - window.viewerState.y;
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (window.viewerState.isDragging && window.viewerState.scale > 1) {
+                    window.viewerState.x = e.clientX - window.viewerState.startX;
+                    window.viewerState.y = e.clientY - window.viewerState.startY;
+                    window.updateImageTransform(false);
+                }
+            });
+
+            window.addEventListener('mouseup', () => { window.viewerState.isDragging = false; });
+
+            viewerImg.addEventListener('dblclick', () => {
+                if (window.viewerState.scale > 1) window.resetImageZoom();
+                else { window.viewerState.scale = 2.5; window.updateImageTransform(true); }
+            });
+        });
 
         function handleChatTouchMove(e) {
             if (window.innerWidth > 850 && window.innerHeight > 500) return;
@@ -12429,26 +12584,26 @@
     </div>
 
 
-    <div id="imageViewer" class="image-viewer" onclick="closeImageViewer()">
+    <div id="imageViewer" class="image-viewer" onclick="closeImageViewer(event)">
         <div class="viewer-toolbar" onclick="event.stopPropagation()">
             <div class="viewer-actions">
-                <button class="viewer-icon-btn" id="viewerDeleteBtn" onclick="deleteViewerImage()" style="color: #ff595a;" title="Удалить">
+                <button class="viewer-icon-btn" id="viewerDeleteBtn" onclick="deleteViewerImage(event)" style="color: #ff595a;" title="Удалить">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
-                <button class="viewer-icon-btn" onclick="zoomOutViewer()" title="Отдалить">
+                <button class="viewer-icon-btn" onclick="zoomOutViewer(event)" title="Отдалить">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
                 </button>
-                <button class="viewer-icon-btn" onclick="zoomInViewer()" title="Приблизить">
+                <button class="viewer-icon-btn" onclick="zoomInViewer(event)" title="Приблизить">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
                 </button>
-                <button class="viewer-icon-btn" onclick="downloadViewerImage()" title="Скачать">
+                <button class="viewer-icon-btn" onclick="downloadViewerImage(event)" title="Скачать">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 </button>
-                <button class="viewer-icon-btn" onclick="forwardViewerImage()" title="Переслать">
+                <button class="viewer-icon-btn" onclick="forwardViewerImage(event)" title="Переслать">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
                 </button>
             </div>
-            <button class="close-viewer-btn" onclick="closeImageViewer()" title="Закрыть">
+            <button class="close-viewer-btn" onclick="closeImageViewer(event)" title="Закрыть">
                 <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
