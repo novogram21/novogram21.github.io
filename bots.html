@@ -753,11 +753,21 @@
             // ЕСЛИ КЛИКНУЛИ НА БЛОК СООБЩЕНИЯ
             if (node.name === 'message') {
                 title.innerHTML = `Сообщение #${nodeId}`;
+
+                // Генерируем HTML для сетки смайлов из массива EMOJI_LIST
+                const emojisHtml = EMOJI_LIST.map(emoji => `<div class="emoji-item">${emoji}</div>`).join('');
+
                 content.innerHTML = `
                         <div class="prop-textarea-wrapper">
                             <textarea id="prop-msg-text" placeholder="Введите сообщение...">${node.data.text || ''}</textarea>
                             <div class="textarea-tools">
-                                <span>🙂</span> <span>{..}</span> <span>📎</span>
+                                <span id="toggle-emoji" title="Смайлики">🙂</span> 
+                                <span title="Переменные">{..}</span> 
+                                <span title="Вложение">📎</span>
+                            </div>
+                            
+                            <div class="emoji-picker" id="emoji-picker-container">
+                                ${emojisHtml}
                             </div>
                         </div>
 
@@ -782,8 +792,41 @@
                         </div>
                     `;
 
-                // Вешаем слушатели для синхронизации Панель -> Холст
-                document.getElementById('prop-msg-text').addEventListener('input', (e) => {
+                const textArea = document.getElementById('prop-msg-text');
+                const emojiContainer = document.getElementById('emoji-picker-container');
+
+                // 1. Открытие/закрытие меню смайлов
+                document.getElementById('toggle-emoji').addEventListener('click', () => {
+                    emojiContainer.classList.toggle('active');
+                });
+
+                // 2. Клик по любому смайлу из списка
+                document.querySelectorAll('.emoji-item').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        const emoji = e.target.innerText;
+
+                        // Получаем позицию курсора
+                        const start = textArea.selectionStart;
+                        const end = textArea.selectionEnd;
+                        const text = textArea.value;
+
+                        // Вставляем смайл ровно туда, где стоит курсор
+                        const newText = text.substring(0, start) + emoji + text.substring(end);
+                        textArea.value = newText;
+
+                        // Возвращаем фокус и ставим курсор сразу после вставленного смайла
+                        textArea.focus();
+                        textArea.selectionStart = textArea.selectionEnd = start + emoji.length;
+
+                        // Синхронизируем изменения с холстом и сохраняем в базу блока
+                        editor.updateNodeDataFromId(nodeId, { ...node.data, text: newText });
+                        const preview = document.getElementById(`preview-text-${nodeId}`);
+                        if (preview) preview.innerHTML = newText || '<em>(Пустое сообщение)</em>';
+                    });
+                });
+
+                // 3. Обычный ввод текста с клавиатуры
+                textArea.addEventListener('input', (e) => {
                     const val = e.target.value;
                     editor.updateNodeDataFromId(nodeId, { ...node.data, text: val });
                     const preview = document.getElementById(`preview-text-${nodeId}`);
