@@ -4518,7 +4518,7 @@
         </div>
 
         <div id="friendsList" class="list-container"><div class="tg-spinner-container"><div class="tg-spinner"></div></div></div>
-        <div id="requestsList" class="list-container hidden"></div>
+        <div id="botsList" class="list-container hidden"></div> <div id="requestsList" class="list-container hidden"></div>
         <div id="noDataList" class="list-container hidden" style="display:flex; align-items:center; justify-content:center; flex-direction:column;"></div>
     </div>
     <div id="mainChatArea" class="chat-area">
@@ -5619,20 +5619,18 @@
         var currentTabIndex = 0;
 
         // Логика переключения вкладок с анимацией
+        // Логика переключения вкладок с анимацией
         function switchTab(t) {
             const friendsList = document.getElementById('friendsList');
+            const botsList = document.getElementById('botsList'); // Подключаем список ботов
             const requestsList = document.getElementById('requestsList');
             const noDataList = document.getElementById('noDataList');
 
-            // Проверяем, не открыто ли сейчас окно заявок
             const isRequestsOpen = !requestsList.classList.contains('hidden');
             const newIndex = tabOrder.indexOf(t);
 
-            // Если мы нажимаем на ту же папку, которая и так открыта, И при этом окно заявок скрыто — ничего не делаем.
-            // Но если открыты заявки, то нажатие на любую папку (включая Личные) должно сработать!
             if (t !== 'requests' && newIndex === currentTabIndex && !isRequestsOpen) return;
 
-            // 2. Вычисляем направление анимации
             let directionClass = 'slide-right';
             if (newIndex !== -1 && currentTabIndex !== -1) {
                 if (newIndex < currentTabIndex) {
@@ -5644,15 +5642,14 @@
                 currentTabIndex = newIndex;
             }
 
-            // 3. Скрываем все списки и сбрасываем анимации
-            [friendsList, requestsList, noDataList].forEach(el => {
+            // Прячем всё
+            [friendsList, botsList, requestsList, noDataList].forEach(el => {
                 if (el) {
                     el.classList.add('hidden');
                     el.classList.remove('slide-right', 'slide-left');
                 }
             });
 
-            // 4. Логика для кнопки Заявок (сверху)
             if (t === 'requests') {
                 document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
                 void requestsList.offsetWidth;
@@ -5661,7 +5658,6 @@
                 return;
             }
 
-            // 5. Подсветка активной папки
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
             const clickedTab = document.querySelector(`.tab[onclick="switchTab('${t}')"]`);
 
@@ -5670,18 +5666,21 @@
                 clickedTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
 
-            // 6. Показываем нужный контент
             let activeList;
             if (t === 'friends') {
                 activeList = friendsList;
+            } else if (t === 'bots') {
+                activeList = botsList; // Показываем ботов!
+                if (botsList.innerHTML.trim() === '') {
+                    botsList.innerHTML = `<div style="color:#8e8e93; font-size:15px; margin-top:40px; text-align:center;">У вас пока нет чатов с ботами</div>`;
+                }
             } else {
                 if (!noDataList) return;
-                const tabNames = { 'groups': 'Группы', 'channels': 'Каналы', 'bots': 'Боты' };
+                const tabNames = { 'groups': 'Группы', 'channels': 'Каналы' };
                 noDataList.innerHTML = `<div style="color:#8e8e93; font-size:15px; margin-top:40px; text-align:center;">Папка «${tabNames[t]}» пока пуста</div>`;
                 activeList = noDataList;
             }
 
-            // Фокус с анимацией
             void activeList.offsetWidth;
             activeList.classList.remove('hidden');
             activeList.classList.add(directionClass);
@@ -5927,10 +5926,12 @@
                         // ЗАМЕНИТЕ СТАРЫЙ IF/ELSE НА ЭТУ СТРОЧКУ:
                         dateEl.innerText = formatTelegramDate(new Date(timeToDisplay));
                     }
-                    // Обновляем сортировку списка
+                    // Обновляем сортировку списка (для правильной папки)
                     if (userDiv) {
                         userDiv.setAttribute('data-time', timeToDisplay);
-                        sortFriendsList();
+                        if (userDiv.parentElement) {
+                            sortChatItems(userDiv.parentElement.id);
+                        }
                     }
 
                 });
@@ -6262,58 +6263,50 @@
                     setTimeout(sortFriendsList, 100);
                 });
         }
-        function sortFriendsList() {
-            const list = document.getElementById('friendsList');
-            // Берем только элементы чатов (игнорируем крутилку загрузки, если она там есть)
+        // Универсальная функция сортировки ЛЮБОГО списка (друзей или ботов)
+        function sortChatItems(listId) {
+            const list = document.getElementById(listId);
+            if (!list) return;
             const items = Array.from(list.querySelectorAll('.user-item'));
 
-            // 1. ЗАПОМИНАЕМ старые позиции элементов (до сортировки)
             const oldPositions = new Map();
             items.forEach(item => {
                 oldPositions.set(item.id, item.getBoundingClientRect().top);
             });
 
-            // 2. СОРТИРУЕМ элементы по времени
             items.sort((a, b) => {
                 const timeA = parseInt(a.getAttribute('data-time') || 0);
                 const timeB = parseInt(b.getAttribute('data-time') || 0);
                 return timeB - timeA;
             });
 
-            // Мгновенно перемещаем их в HTML (глаз это не заметит)
             items.forEach(item => list.appendChild(item));
 
-            // 3. АНИМИРУЕМ переход (FLIP техника)
             items.forEach(item => {
                 const oldTop = oldPositions.get(item.id);
-                // Если элемент уже был в списке (не новый)
                 if (oldTop !== undefined) {
                     const newTop = item.getBoundingClientRect().top;
                     const delta = oldTop - newTop;
 
-                    // Если позиция изменилась
                     if (delta !== 0) {
-                        // "Телепортируем" элемент визуально обратно на его старое место
                         item.style.transform = `translateY(${delta}px)`;
                         item.style.transition = 'none';
 
-                        // Ждем один кадр браузера и запускаем плавный спуск на новое место
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
                                 item.style.transform = '';
-                                // Плавная кривая движения (как в iOS/Telegram)
                                 item.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
-
-                                // Убираем анимацию после ее завершения, чтобы не мешала hover-эффектам
-                                setTimeout(() => {
-                                    item.style.transition = '';
-                                }, 400);
+                                setTimeout(() => { item.style.transition = ''; }, 400);
                             });
                         });
                     }
                 }
             });
         }
+
+        // Внутри startMessageListener мы вызываем правильную сортировку
+        // Найди место в startMessageListener, где было написано sortFriendsList()
+        // и убедись, что там теперь такой код:
         function updateTotalFriendsBadge() {
             const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
             const el = document.getElementById('friendsBadge');
