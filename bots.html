@@ -591,44 +591,54 @@
             padding: 5px 0;
         }
 
-        /* --- СТИЛИ ДЛЯ КНОПОК --- */
         /* --- PREMIUM BUTTONS UI --- */
         .preview-buttons-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
             margin-top: 12px;
         }
 
         .preview-btn {
-            background: rgba(42, 171, 238, 0.08);
-            border: 1px solid rgba(42, 171, 238, 0.2);
-            border-radius: 10px;
-            padding: 10px;
-            font-size: 11px;
+            background: rgba(42, 171, 238, 0.1);
+            border: 1px solid rgba(42, 171, 238, 0.3);
+            border-radius: 8px;
+            padding: 8px 4px;
+            font-size: 10px;
             color: var(--primary);
             font-weight: 700;
             text-align: center;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(5px);
+            box-sizing: border-box;
         }
 
-            .preview-btn.w-full {
+            /* Динамическая ширина кнопок на холсте */
+            .preview-btn.w-25 {
+                width: calc(25% - 5px);
+            }
+
+            .preview-btn.w-50 {
+                width: calc(50% - 3px);
+            }
+
+            .preview-btn.w-75 {
+                width: calc(75% - 2px);
+            }
+
+            .preview-btn.w-100 {
                 width: 100%;
             }
 
-            .preview-btn.w-half {
-                width: calc(50% - 4px);
-            }
-
-        /* Стили для перетаскиваемых элементов в панели */
+        /* Карточка кнопки в панели управления */
         .prop-button-item {
             background: #252528;
             border: 1px solid rgba(255,255,255,0.05);
-            padding: 14px;
-            border-radius: 14px;
-            margin-bottom: 8px;
+            padding: 16px;
+            border-radius: 16px;
+            margin-bottom: 10px;
             cursor: grab;
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
 
             .prop-button-item:active {
@@ -637,25 +647,32 @@
             }
 
             .prop-button-item.dragging {
-                opacity: 0.3;
+                opacity: 0.2;
                 border: 1px dashed var(--primary);
-                transform: scale(0.95);
             }
 
+        .width-control-label {
+            font-size: 10px;
+            color: #666;
+            margin-top: 10px;
+            display: block;
+            text-transform: uppercase;
+        }
+
         .add-tg-btn {
-            width: 44px;
-            height: 44px;
+            width: 50px;
+            height: 50px;
             background: var(--primary);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            margin: 20px auto 0;
-            box-shadow: 0 4px 15px rgba(42, 171, 238, 0.3);
+            font-size: 28px;
+            margin: 20px auto;
             border: none;
             cursor: pointer;
+            box-shadow: 0 8px 25px rgba(42, 171, 238, 0.4);
         }
 
     </style>
@@ -939,7 +956,7 @@
         function generateMessageCardHtml(nodeId, nodeData) {
             let blocksPreview = '';
             (nodeData.blocks || []).forEach(blk => {
-                if (blk.type === 'text') blocksPreview += `<div class="preview-text">${blk.content || '<em>(Пустое)</em>'}</div>`;
+                if (blk.type === 'text') blocksPreview += `<div class="preview-text">${blk.content || '...'}</div>`;
                 else if (blk.type === 'pause') blocksPreview += `<div style="font-size: 10px; color: #2AABEE;">⏱ ${blk.duration}с</div>`;
             });
 
@@ -947,15 +964,15 @@
             if (nodeData.buttons && nodeData.buttons.length > 0) {
                 buttonsPreview = '<div class="preview-buttons-container">';
                 nodeData.buttons.forEach(btn => {
-                    // Добавляем класс в зависимости от ширины
-                    const widthClass = btn.width === 'half' ? 'w-half' : 'w-full';
-                    buttonsPreview += `<div class="preview-btn ${widthClass}">${btn.text || 'Кнопка'}</div>`;
+                    // Используем ширину из данных или 100 по умолчанию
+                    const w = btn.width || 100;
+                    buttonsPreview += `<div class="preview-btn w-${w}">${btn.text || 'Кнопка'}</div>`;
                 });
                 buttonsPreview += '</div>';
             }
 
             return `<div class="node-card">
-                <div class="node-card-header header-msg"><span>Сообщение</span></div>
+                <div class="node-card-header header-msg"><span>Сообщение #${nodeId}</span></div>
                 <div class="node-card-body" id="node-body-content-${nodeId}">${blocksPreview}${buttonsPreview}</div>
             </div>`;
         }
@@ -1092,24 +1109,21 @@
                 });
 
                 // Формируем HTML для списка кнопок
-                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки меню</div><div id="msg-buttons-container">';
+                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки (Drag & Drop)</div><div id="msg-buttons-container">';
                 (node.data.buttons || []).forEach((btn, index) => {
                     buttonsHtml += `
-                        <div class="prop-button-item" data-index="${index}">
+                        <div class="prop-button-item" data-index="${index}" draggable="true">
                             <div class="btn-settings-row">
-                                <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст" value="${btn.text}">
-                                <select class="prop-input btn-width-input" data-index="${index}" style="width: 70px;">
-                                    <option value="full" ${btn.width === 'full' ? 'selected' : ''}>1/1</option>
-                                    <option value="half" ${btn.width === 'half' ? 'selected' : ''}>1/2</option>
-                                </select>
-                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer; padding: 0 5px;">✕</span>
+                                <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст кнопки" value="${btn.text}">
+                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer; font-size:18px;">✕</span>
                             </div>
-                            <input type="text" class="prop-input btn-target-input" style="font-size:10px; opacity:0.6;" data-index="${index}" placeholder="ID перехода" value="${btn.targetNodeId || ''}">
+                            <input type="text" class="prop-input btn-target-input" style="font-size:11px; margin-top:8px; opacity:0.5;" data-index="${index}" placeholder="ID перехода (цель)" value="${btn.targetNodeId || ''}">
+                            
+                            <span class="width-control-label">Ширина кнопки: ${btn.width || 100}%</span>
+                            <input type="range" class="btn-width-slider" data-index="${index}" min="25" max="100" step="25" value="${btn.width || 100}" style="width:100%; accent-color:#2AABEE;">
                         </div>`;
                 });
-                buttonsHtml += '</div>';
-                // Чистая кнопка с плюсом без лишнего текста
-                buttonsHtml += `<button class="add-tg-btn" onclick="addNewButtonToNode(${nodeId})">+</button>`;
+                buttonsHtml += '</div><button class="add-tg-btn" onclick="addNewButtonToNode(' + nodeId + ')">+</button>';
 
                 content.innerHTML = `
                         <div id="msg-blocks-container">
@@ -1169,11 +1183,14 @@
             const btnContainer = document.getElementById('msg-buttons-container'); // Контейнер для кнопок
             const emojiContainer = document.getElementById('emoji-picker-container');
 
-            // --- 1. УДАЛЕНИЕ И ТЕКСТ (ДЛЯ ОСНОВНЫХ БЛОКОВ) ---
+            // --- 1. ЛОГИКА ОСНОВНЫХ БЛОКОВ (ТЕКСТ И ЗАДЕРЖКИ) ---
+
+            // Удаление блоков (текст или пауза)
             document.querySelectorAll('.delete-block-btn').forEach(btn => {
                 btn.onclick = () => deleteBlockFromNode(nodeId, parseInt(btn.dataset.index));
             });
 
+            // Ввод текста в сообщениях
             document.querySelectorAll('.prop-msg-text-dynamic').forEach(ta => {
                 ta.onfocus = function () { window.currentActiveTextArea = this; };
                 ta.oninput = function () {
@@ -1183,45 +1200,54 @@
                 };
             });
 
-            // --- 2. ЛОГИКА КНОПОК (ПРЕМИУМ DRAG-AND-DROP) ---
+            // Настройка длительности паузы
+            document.querySelectorAll('.pause-duration-input').forEach(inp => {
+                inp.oninput = function () {
+                    node.data.blocks[this.dataset.index].duration = parseInt(this.value) || 1;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    updateCanvasCard(nodeId);
+                };
+            });
+
+            // Чекбокс эффекта печати
+            document.querySelectorAll('.pause-typing-checkbox').forEach(chk => {
+                chk.onchange = function () {
+                    node.data.blocks[this.dataset.index].typing = this.checked;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                };
+            });
+
+            // --- 2. ПРЕМИУМ ЛОГИКА КНОПОК (DRAG-AND-DROP + СЛАЙДЕРЫ) ---
+
             if (btnContainer) {
-                const btnItems = btnContainer.querySelectorAll('.prop-button-item');
-
-                btnItems.forEach(btnItem => {
-                    btnItem.setAttribute('draggable', true);
-
-                    // Захват кнопки
-                    btnItem.ondragstart = (e) => {
-                        btnItem.classList.add('dragging');
-                        e.dataTransfer.effectAllowed = 'move';
-                    };
-
-                    // Конец перетаскивания - сохраняем новый порядок
-                    btnItem.ondragend = () => {
-                        btnItem.classList.remove('dragging');
-                        const newOrder = [];
+                // ПЕРЕТАСКИВАНИЕ КНОПОК
+                btnContainer.querySelectorAll('.prop-button-item').forEach(item => {
+                    item.setAttribute('draggable', true);
+                    item.ondragstart = () => setTimeout(() => item.classList.add('dragging'), 0);
+                    item.ondragend = () => {
+                        item.classList.remove('dragging');
+                        const newButtons = [];
+                        // Собираем данные в новом порядке по DOM-элементам
                         btnContainer.querySelectorAll('.prop-button-item').forEach(el => {
-                            newOrder.push(node.data.buttons[parseInt(el.dataset.index)]);
+                            newButtons.push(node.data.buttons[parseInt(el.dataset.index)]);
                         });
-                        node.data.buttons = newOrder;
+                        node.data.buttons = newButtons;
                         editor.updateNodeDataFromId(nodeId, node.data);
-                        renderPropertiesPanel(nodeId); // Перерисовываем панель, чтобы обновить индексы
+                        renderPropertiesPanel(nodeId); // Перерисовываем панель для сброса индексов
                         updateCanvasCard(nodeId);
                     };
                 });
 
-                // Логика перемещения в списке
+                // Сортировка при наведении
                 btnContainer.ondragover = (e) => {
                     e.preventDefault();
                     const draggingItem = btnContainer.querySelector('.dragging');
                     const siblings = [...btnContainer.querySelectorAll('.prop-button-item:not(.dragging)')];
-                    let nextSibling = siblings.find(sibling => {
-                        return e.clientY <= sibling.getBoundingClientRect().top + sibling.getBoundingClientRect().height / 2;
-                    });
+                    let nextSibling = siblings.find(sib => e.clientY <= sib.getBoundingClientRect().top + sib.getBoundingClientRect().height / 2);
                     btnContainer.insertBefore(draggingItem, nextSibling);
                 };
 
-                // Ввод текста в кнопки и выбор ширины
+                // ТЕКСТ КНОПКИ И ID ПЕРЕХОДА
                 document.querySelectorAll('.btn-text-input').forEach(inp => {
                     inp.oninput = function () {
                         node.data.buttons[this.dataset.index].text = this.value;
@@ -1237,27 +1263,26 @@
                     };
                 });
 
-                document.querySelectorAll('.btn-width-input').forEach(sel => {
-                    sel.onchange = function () {
-                        node.data.buttons[this.dataset.index].width = this.value;
+                // ПРЕМИУМ СЛАЙДЕР ШИРИНЫ (25%, 50%, 75%, 100%)
+                document.querySelectorAll('.btn-width-slider').forEach(slider => {
+                    slider.oninput = function () {
+                        const idx = this.dataset.index;
+                        const val = this.value;
+                        node.data.buttons[idx].width = val;
+                        // Обновляем текст в лейбле над слайдером
+                        this.previousElementSibling.innerText = `Ширина кнопки: ${val}%`;
                         editor.updateNodeDataFromId(nodeId, node.data);
                         updateCanvasCard(nodeId);
                     };
                 });
             }
 
-            // --- 3. ПАУЗЫ И ЭМОДЗИ (ОСТАВЛЯЕМ КАК БЫЛО) ---
-            document.querySelectorAll('.pause-duration-input').forEach(inp => {
-                inp.oninput = function () {
-                    node.data.blocks[this.dataset.index].duration = parseInt(this.value) || 1;
-                    editor.updateNodeDataFromId(nodeId, node.data);
-                    updateCanvasCard(nodeId);
-                };
-            });
+            // --- 3. ДОПОЛНИТЕЛЬНО (ЭМОДЗИ И ПРОЧЕЕ) ---
 
-            document.querySelectorAll('.toggle-emoji-btn').forEach(btn => {
-                btn.onclick = () => emojiContainer.classList.toggle('active');
-            });
+            const emojiBtn = document.querySelector('.toggle-emoji-btn');
+            if (emojiBtn) {
+                emojiBtn.onclick = () => emojiContainer.classList.toggle('active');
+            }
         }
 
 
@@ -1313,7 +1338,7 @@
 
         // 7. СОХРАНЕНИЕ
         async function saveGraphToFirebase() {
-            const btn = document.getElementById('saveBtn');
+            const btn = document.getElementById('saveBtn');ф
             btn.innerText = "Сохранение...";
             const exportedData = editor.export();
             try {
