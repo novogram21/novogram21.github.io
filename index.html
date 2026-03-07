@@ -7878,27 +7878,34 @@
             // О себе
             document.getElementById('friendProfileBio').innerText = uData.bio || 'Информация не указана';
 
-            // Статус (был(а) недавно / в сети)
-            // Статус (был(а) недавно / в сети) - берем из быстрой базы (RTDB)
+            // --- ОБНОВЛЕННЫЙ БЛОК СТАТУСА ---
             const profileStatusEl = document.getElementById('friendProfileStatus');
-            profileStatusEl.innerText = 'загрузка...';
-            profileStatusEl.style.color = '#8e8e93';
 
-            rtdb.ref(`status/${currentFriendId}`).once('value', snap => {
-                const data = snap.val();
-                if (data && data.state === 'online') {
-                    profileStatusEl.innerText = 'в сети';
-                    profileStatusEl.style.color = '#736AF0';
-                } else if (data && data.last_seen) {
-                    // Передаем true, так как это профиль
-                    profileStatusEl.innerText = formatLastSeenRTDB(data.last_seen, true);
-                    profileStatusEl.style.color = '#8e8e93';
-                } else {
-                    // Передаем true, так как это профиль
-                    profileStatusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen, true) : 'был(а) недавно';
-                    profileStatusEl.style.color = '#8e8e93';
-                }
-            });
+            if (uData.isBot === true) {
+                // Если это бот — сразу пишем "бот" и не запрашиваем время последнего входа
+                profileStatusEl.innerText = 'бот';
+                profileStatusEl.style.color = '#8e8e93';
+            } else {
+                // Логика для обычных пользователей
+                profileStatusEl.innerText = 'загрузка...';
+                profileStatusEl.style.color = '#8e8e93';
+
+                rtdb.ref(`status/${currentFriendId}`).once('value', snap => {
+                    const data = snap.val();
+                    if (data && data.state === 'online') {
+                        profileStatusEl.innerText = 'в сети';
+                        profileStatusEl.style.color = '#736AF0';
+                    } else if (data && data.last_seen) {
+                        // Передаем true, так как это профиль (будет написано "был(а) в сети...")
+                        profileStatusEl.innerText = formatLastSeenRTDB(data.last_seen, true);
+                        profileStatusEl.style.color = '#8e8e93';
+                    } else {
+                        profileStatusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen, true) : 'был(а) недавно';
+                        profileStatusEl.style.color = '#8e8e93';
+                    }
+                });
+            }
+            // --------------------------------
 
             // Аватарка
             const img = document.getElementById('friendProfileAvatarPreview');
