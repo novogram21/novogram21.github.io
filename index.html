@@ -7150,8 +7150,11 @@
                 const steps = -sheetHistoryStack;
                 sheetHistoryStack = 0;
                 history.go(steps);
+
             }
 
+            document.getElementById('editContactSheet')?.classList.remove('open'); // Добавь эту строку, если её нет
+            document.getElementById('removeFriendModalOverlay').style.display = 'none';
             document.getElementById('botsListSheet')?.classList.remove('open');
             document.getElementById('botEditorSheet')?.classList.remove('open');
             document.getElementById('actionSheet')?.classList.remove('open');
@@ -11374,7 +11377,7 @@
 
         // 3. Само удаление из базы
         async function executeRemoveFriend() {
-            // 1. Сразу прячем само окно подтверждения
+            // 1. Мгновенно прячем модалку подтверждения
             const modal = document.getElementById('removeFriendModalOverlay');
             if (modal) modal.style.display = 'none';
 
@@ -11383,7 +11386,6 @@
             try {
                 showToast("Удаление...");
 
-                // Ищем документ дружбы в базе
                 const snap = await db.collection('friends')
                     .where('users', 'array-contains', currentUser.uid)
                     .get();
@@ -11400,15 +11402,25 @@
 
                     showToast("Контакт удален ✓");
 
-                    // 2. ГЛАВНОЕ: Закрываем абсолютно все открытые шторки и чат
-                    closeAllSheets();
+                    // 2. ЗАКРЫВАЕМ ВСЁ ПРИНУДИТЕЛЬНО
+                    // Убираем класс 'open' у всех шторок, включая "Изменить контакт"
+                    document.getElementById('editContactSheet')?.classList.remove('open');
+                    document.getElementById('friendProfileSheet')?.classList.remove('open');
+                    document.getElementById('profileSheet')?.classList.remove('open');
+
+                    // Убираем блюр и оверлей
+                    document.body.classList.remove('chat-blur-active');
+                    const overlay = document.getElementById('overlaySheet');
+                    if (overlay) overlay.style.display = 'none';
+
+                    // 3. Выходим из чата в список
                     closeChat();
                 } else {
-                    showToast("Контакт уже удален");
+                    showToast("Ошибка: контакт не найден");
                 }
             } catch (e) {
-                console.error("Ошибка при удалении:", e);
-                showToast("Ошибка удаления");
+                console.error("Ошибка удаления:", e);
+                showToast("Ошибка при удалении");
             }
         }
 
