@@ -648,12 +648,17 @@
                 loadMyBotsList(); // Загружаем список ботов в фоне
 
                 // Читаем ссылку: есть ли там токен бота?
+                // Читаем ссылку: ищем зашифрованный ID
                 const urlParams = new URLSearchParams(window.location.search);
-                const botFromUrl = urlParams.get('bot');
+                const encodedBotId = urlParams.get('id');
 
-                if (botFromUrl) {
-                    // Если нажали F5 и токен есть в ссылке — сразу открываем редактор
-                    openEditor(botFromUrl, null);
+                if (encodedBotId) {
+                    try {
+                        const decodedToken = atob(encodedBotId); // atob() расшифровывает обратно
+                        openEditor(decodedToken, null);
+                    } catch (e) {
+                        goToHome(); // Если попытались ввести бред в ссылку
+                    }
                 } else {
                     switchView('viewList');
                 }
@@ -935,8 +940,8 @@
                     `;
 
                 // Сохранение картинки
-                document.getElementById('prop-msg-image').addEventListener('input', (e) => {
-                    node.data.image = e.target.value; editor.updateNodeDataFromId(nodeId, node.data);
+                document.getElementById('prop-msg-trigger').addEventListener('input', (e) => {
+                    node.data.trigger = e.target.value; editor.updateNodeDataFromId(nodeId, node.data); updateCanvasCard(nodeId);
                 });
 
                 // ФИКС КНОПКИ УДАЛЕНИЯ (Теперь крестик работает железобетонно)
@@ -1013,26 +1018,36 @@
 
 
         // 6. ОТКРЫТИЕ РЕДАКТОРА
-        // 6. ОТКРЫТИЕ РЕДАКТОРА
         async function openEditor(token, name) {
+            // 1. ПРОВЕРКА ДОСТУПА (Безопасность)
+            try {
+                const snap = await db.collection('users').where('botToken', '==', token).get();
+                if (snap.empty) throw new Error("Бот не найден");
+
+                const botData = snap.docs[0].data();
+                if (botData.ownerId !== currentUser.uid) {
+                    alert("У вас нет доступа к редактированию этого бота!");
+                    goToHome();
+                    return; // Блокируем загрузку и выкидываем!
+                }
+
+                if (!name) name = botData.name || "Бот";
+            } catch (e) {
+                alert("Ошибка доступа.");
+                goToHome();
+                return;
+            }
+
             currentBotToken = token;
             switchView('viewEditor');
             editor.clear();
 
-            // 🔥 Добавляем токен бота в URL, чтобы работал F5
+            // 2. МАСКИРОВКА ССЫЛКИ (Base64 шифрование)
             const newUrl = new URL(window.location);
-            newUrl.searchParams.set('bot', token);
+            newUrl.searchParams.set('id', btoa(token)); // btoa() шифрует токен в непонятную строку
+            newUrl.searchParams.delete('bot'); // Убираем старый параметр
             window.history.replaceState({}, '', newUrl);
 
-            // Если загрузились по F5 (передано null вместо name), ищем имя в базе
-            if (!name) {
-                document.getElementById('editorBotName').innerText = "Загрузка...";
-                try {
-                    const snap = await db.collection('users').where('botToken', '==', token).get();
-                    if (!snap.empty) name = snap.docs[0].data().name;
-                    else name = "Бот";
-                } catch (e) { name = "Бот"; }
-            }
             document.getElementById('editorBotName').innerText = name;
 
             try {
