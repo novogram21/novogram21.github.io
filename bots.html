@@ -541,6 +541,55 @@
             color: white;
             font-weight: bold;
         }
+
+        /* --- СТИЛИ ДЛЯ БЛОКОВ И ПЕРЕТАСКИВАНИЯ --- */
+        .draggable-block {
+            background: #1c1c1e;
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 10px;
+            transition: 0.2s;
+            position: relative;
+        }
+
+            .draggable-block:focus-within {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.15);
+                background: #222226;
+            }
+
+            .draggable-block.dragging {
+                opacity: 0.5;
+                border: 1px dashed var(--primary);
+            }
+
+        .drag-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 8px;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: #888;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .pause-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -789,14 +838,15 @@
         // ==========================================================
 
         function addMessageNode(data = null, posX = 100, posY = 200) {
-            // Форсируем использование массива
-            let textsArray = [""];
+            let blocksArray = [{ type: 'text', content: "" }];
+            // Миграция старых данных (texts/text) в новый универсальный формат blocks
             if (data) {
-                if (data.texts && Array.isArray(data.texts)) textsArray = data.texts;
-                else if (data.text) textsArray = [data.text];
+                if (data.blocks) blocksArray = data.blocks;
+                else if (data.texts) blocksArray = data.texts.map(t => ({ type: 'text', content: t }));
+                else if (data.text) blocksArray = [{ type: 'text', content: data.text }];
             }
-            const nodeData = data || { type: 'message', texts: textsArray, image: "", trigger: "" };
-            nodeData.texts = textsArray;
+            const nodeData = data || { type: 'message', blocks: blocksArray, image: "" };
+            nodeData.blocks = blocksArray;
 
             editor.addNode('message', 1, 1, posX, posY, 'message-node', nodeData, generateMessageCardHtml(editor.nodeId, nodeData));
         }
@@ -804,36 +854,39 @@
         function addTriggerNode(data = null, posX = 50, posY = 200) {
             const nodeData = data || { type: 'trigger', trigger: "" };
             const html = `
-                        <div class="node-card">
-                            <div class="node-card-header header-trigger">
-                                <span>Условие</span>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </div>
-                            <div class="node-card-body">
-                                <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
-                                <div class="preview-text" style="font-weight:bold;">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
-                            </div>
+                    <div class="node-card">
+                        <div class="node-card-header header-trigger">
+                            <span>Условие</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </div>
-                    `;
+                        <div class="node-card-body">
+                            <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
+                            <div class="preview-text" style="font-weight:bold;">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
+                        </div>
+                    </div>
+                `;
             editor.addNode('trigger', 0, 1, posX, posY, 'trigger-node', nodeData, html);
         }
 
         function generateMessageCardHtml(nodeId, nodeData) {
-            let textsPreview = '';
-            nodeData.texts.forEach(txt => {
-                textsPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${txt || '<em>(Пустое сообщение)</em>'}</div>`;
+            let blocksPreview = '';
+            (nodeData.blocks || []).forEach(blk => {
+                if (blk.type === 'text') {
+                    blocksPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${blk.content || '<em>(Пустое сообщение)</em>'}</div>`;
+                } else if (blk.type === 'pause') {
+                    blocksPreview += `<div style="font-size: 11px; color: #2AABEE; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">⏱ Пауза: ${blk.duration || 1} сек.</div>`;
+                }
             });
             return `
-                    <div class="node-card">
-                        <div class="node-card-header header-msg">
-                            <span>Сообщение</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </div>
-                        <div class="node-card-body" id="node-body-content-${nodeId}">
-                            <div class="preview-trigger">${nodeData.trigger ? '⚡ ' + nodeData.trigger : ''}</div>
-                            ${textsPreview}
-                        </div>
-                    </div>`;
+                <div class="node-card">
+                    <div class="node-card-header header-msg">
+                        <span>Сообщение</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </div>
+                    <div class="node-card-body" id="node-body-content-${nodeId}">
+                        ${blocksPreview}
+                    </div>
+                </div>`;
         }
 
         function updateCanvasCard(nodeId) {
@@ -844,12 +897,12 @@
             if (node.name === 'message') {
                 const bodyContainer = document.getElementById(`node-body-content-${nodeId}`);
                 if (bodyContainer) {
-                    let textsPreview = '';
-                    let textsArr = node.data.texts || [node.data.text || ""];
-                    textsArr.forEach(txt => {
-                        textsPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${txt || '<em>(Пустое сообщение)</em>'}</div>`;
+                    let blocksPreview = '';
+                    (node.data.blocks || []).forEach(blk => {
+                        if (blk.type === 'text') blocksPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${blk.content || '<em>(Пустое сообщение)</em>'}</div>`;
+                        else if (blk.type === 'pause') blocksPreview += `<div style="font-size: 11px; color: #2AABEE; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">⏱ Пауза: ${blk.duration || 1} сек.</div>`;
                     });
-                    bodyContainer.innerHTML = textsPreview;
+                    bodyContainer.innerHTML = blocksPreview;
                 }
             } else if (node.name === 'trigger') {
                 const preview = nodeCard.querySelector('.preview-text');
@@ -859,20 +912,29 @@
 
         window.addNewTextToNode = function (nodeId) {
             const node = editor.getNodeFromId(nodeId);
-            node.data.texts.push(""); // Добавляем пустую строку
+            if (!node.data.blocks) node.data.blocks = [];
+            node.data.blocks.push({ type: 'text', content: "" });
             editor.updateNodeDataFromId(nodeId, node.data);
             renderPropertiesPanel(nodeId);
             updateCanvasCard(nodeId);
         };
 
-        window.deleteTextFromNode = function (nodeId, index) {
+        window.addNewPauseToNode = function (nodeId) {
             const node = editor.getNodeFromId(nodeId);
-            node.data.texts.splice(index, 1); // Удаляем строку по индексу
+            if (!node.data.blocks) node.data.blocks = [];
+            node.data.blocks.push({ type: 'pause', duration: 3, typing: true });
             editor.updateNodeDataFromId(nodeId, node.data);
             renderPropertiesPanel(nodeId);
             updateCanvasCard(nodeId);
         };
 
+        window.deleteBlockFromNode = function (nodeId, index) {
+            const node = editor.getNodeFromId(nodeId);
+            node.data.blocks.splice(index, 1);
+            editor.updateNodeDataFromId(nodeId, node.data);
+            renderPropertiesPanel(nodeId);
+            updateCanvasCard(nodeId);
+        };
 
         // ==========================================================
         // 5. ЛОГИКА ПРАВОЙ ПАНЕЛИ СВОЙСТВ (PROPERTIES PANEL)
@@ -887,121 +949,97 @@
             panel.classList.add('open');
             document.getElementById('floatControls').classList.add('shifted');
 
-            // ЕСЛИ КЛИКНУЛИ НА БЛОК СООБЩЕНИЯ
             if (node.name === 'message') {
                 title.innerHTML = `Сообщение #${nodeId}`;
                 const emojisHtml = EMOJI_LIST.map(emoji => `<div class="emoji-item">${emoji}</div>`).join('');
 
-                if (!node.data.texts) { node.data.texts = [node.data.text || ""]; editor.updateNodeDataFromId(nodeId, node.data); }
+                // Авто-миграция для старых блоков
+                if (!node.data.blocks) {
+                    node.data.blocks = [];
+                    if (node.data.texts) node.data.texts.forEach(t => node.data.blocks.push({ type: 'text', content: t }));
+                    else node.data.blocks.push({ type: 'text', content: node.data.text || "" });
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                }
 
-                let textAreasHtml = '';
-                node.data.texts.forEach((txt, index) => {
-                    textAreasHtml += `
-                            <div class="prop-textarea-wrapper" style="margin-bottom: 10px;">
-                                <textarea class="prop-msg-text-dynamic" data-index="${index}" placeholder="Введите сообщение...">${txt}</textarea>
+                let blocksHtml = '';
+                node.data.blocks.forEach((blk, index) => {
+                    if (blk.type === 'text') {
+                        blocksHtml += `
+                            <div class="draggable-block" data-index="${index}" draggable="true">
+                                <div class="drag-header">
+                                    <span class="drag-handle">☰ Текст</span>
+                                    <span class="delete-block-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>
+                                </div>
+                                <textarea class="prop-msg-text-dynamic" data-index="${index}" placeholder="Введите сообщение..." style="width: 100%; background: transparent; border: none; color: white; font-size: 14px; resize: none; outline: none; font-family: inherit; min-height: 60px;">${blk.content || ''}</textarea>
                                 <div class="textarea-tools">
                                     <div>
                                         <span class="toggle-emoji-btn" title="Смайлики">🙂</span>
                                         <span title="Переменные">{..}</span>
                                         <span title="Вложение">📎</span>
                                     </div>
-                                    ${index > 0 ? `<span class="delete-text-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>` : ''}
                                 </div>
                             </div>`;
+                    } else if (blk.type === 'pause') {
+                        blocksHtml += `
+                            <div class="draggable-block" data-index="${index}" draggable="true" style="border-color: #2AABEE;">
+                                <div class="drag-header">
+                                    <span class="drag-handle" style="color:#2AABEE;">☰ ⏱ Задержка</span>
+                                    <span class="delete-block-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>
+                                </div>
+                                <div class="pause-body">
+                                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                                        <span style="font-size:12px; color:#aaa;">Длительность (секунд)</span>
+                                        <input type="number" min="1" max="60" class="pause-duration-input prop-input" style="width:70px; padding:8px; text-align:center;" data-index="${index}" value="${blk.duration || 1}">
+                                    </div>
+                                    <label style="font-size:12px; color:#aaa; display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:5px;">
+                                        <input type="checkbox" class="pause-typing-checkbox" data-index="${index}" ${blk.typing ? 'checked' : ''}>
+                                        Добавить эффект печати
+                                    </label>
+                                </div>
+                            </div>`;
+                    }
                 });
 
-                // ФИКС: Удалили кусок "Команда (Триггер)" полностью из HTML
                 content.innerHTML = `
-                            <div id="msg-blocks-container">
-                                ${textAreasHtml}
-                            </div>
+                        <div id="msg-blocks-container">
+                            ${blocksHtml}
+                        </div>
 
-                            <div class="emoji-picker" id="emoji-picker-container">
-                                ${emojisHtml}
-                            </div>
+                        <div class="emoji-picker" id="emoji-picker-container">
+                            ${emojisHtml}
+                        </div>
 
-                            <div style="margin-top: 15px;">
-                                <div class="prop-label">Добавить блок</div>
-                                <div class="blocks-grid">
-                                    <div class="block-btn" onclick="addNewTextToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
-                                    <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
-                                    <div class="block-btn" onclick="alert('Доступно в Pro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Пауза</span></div>
-                                    <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
-                                </div>
+                        <div style="margin-top: 15px;">
+                            <div class="prop-label">Добавить блок</div>
+                            <div class="blocks-grid">
+                                <div class="block-btn" onclick="addNewTextToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
+                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
+                                <div class="block-btn" onclick="addNewPauseToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Задержка</span></div>
+                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
                             </div>
+                        </div>
 
-                            <div style="margin-top: 15px;">
-                                <div class="prop-label">Ссылка на картинку (Опционально)</div>
-                                <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
-                            </div>
-                        `;
+                        <div style="margin-top: 15px;">
+                            <div class="prop-label">Ссылка на картинку (Опционально)</div>
+                            <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
+                        </div>
+                    `;
 
-                // Сохранение картинки
                 document.getElementById('prop-msg-image').addEventListener('input', (e) => {
                     node.data.image = e.target.value; editor.updateNodeDataFromId(nodeId, node.data);
                 });
 
-                // ФИКС КНОПКИ УДАЛЕНИЯ
-                document.querySelectorAll('.delete-text-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const idx = parseInt(e.currentTarget.dataset.index);
-                        deleteTextFromNode(nodeId, idx);
-                    });
-                });
+                bindBlockEvents(nodeId);
 
-                // Настройка полей ввода и эмодзи
-                const textAreas = document.querySelectorAll('.prop-msg-text-dynamic');
-                const emojiContainer = document.getElementById('emoji-picker-container');
-
-                document.querySelectorAll('.toggle-emoji-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        emojiContainer.classList.toggle('active');
-                    });
-                });
-
-                textAreas.forEach(ta => {
-                    ta.addEventListener('focus', function () { window.currentActiveTextArea = this; });
-                    ta.addEventListener('input', function () {
-                        node.data.texts[this.dataset.index] = this.value;
-                        editor.updateNodeDataFromId(nodeId, node.data);
-                        updateCanvasCard(nodeId);
-                    });
-                });
-
-                document.querySelectorAll('.emoji-item').forEach(el => {
-                    const newEl = el.cloneNode(true);
-                    el.parentNode.replaceChild(newEl, el);
-
-                    newEl.addEventListener('click', (e) => {
-                        const emoji = e.target.innerText;
-                        const ta = window.currentActiveTextArea || document.querySelector('.prop-msg-text-dynamic');
-                        if (!ta) return;
-
-                        const start = ta.selectionStart, end = ta.selectionEnd, text = ta.value;
-                        const newText = text.substring(0, start) + emoji + text.substring(end);
-
-                        ta.value = newText;
-                        ta.focus();
-                        ta.selectionStart = ta.selectionEnd = start + emoji.length;
-
-                        node.data.texts[ta.dataset.index] = newText;
-                        editor.updateNodeDataFromId(nodeId, node.data);
-                        updateCanvasCard(nodeId);
-                    });
-                });
-
-            }
-
-            // ЕСЛИ КЛИКНУЛИ НА БЛОК ТРИГГЕРА
-            else if (node.name === 'trigger') {
+            } else if (node.name === 'trigger') {
                 title.innerHTML = `Условие #${nodeId}`;
                 content.innerHTML = `
-                            <div>
-                                <div class="prop-label">Если сообщение содержит текст:</div>
-                                <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
-                                <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит цепочку, если клиент напишет это слово.</div>
-                            </div>
-                        `;
+                        <div>
+                            <div class="prop-label">Если сообщение содержит текст:</div>
+                            <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
+                            <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит цепочку, если клиент напишет это слово.</div>
+                        </div>
+                    `;
 
                 const nodeCard = document.querySelector(`#node-${nodeId}`);
                 document.getElementById('prop-trigger-text').addEventListener('input', (e) => {
@@ -1011,6 +1049,101 @@
                     if (preview) preview.innerHTML = val || '<em>(Любое слово)</em>';
                 });
             }
+        }
+
+        // Привязка всех событий (Удаление, Ввод, Эмодзи, Перетаскивание)
+        function bindBlockEvents(nodeId) {
+            const node = editor.getNodeFromId(nodeId);
+            const container = document.getElementById('msg-blocks-container');
+            const emojiContainer = document.getElementById('emoji-picker-container');
+
+            // 1. Удаление
+            document.querySelectorAll('.delete-block-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteBlockFromNode(nodeId, parseInt(e.currentTarget.dataset.index)));
+            });
+
+            // 2. Ввод текста
+            document.querySelectorAll('.prop-msg-text-dynamic').forEach(ta => {
+                ta.addEventListener('focus', function () { window.currentActiveTextArea = this; });
+                ta.addEventListener('input', function () {
+                    node.data.blocks[this.dataset.index].content = this.value;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    updateCanvasCard(nodeId);
+                });
+            });
+
+            // 3. Настройка паузы
+            document.querySelectorAll('.pause-duration-input').forEach(inp => {
+                inp.addEventListener('input', function () {
+                    node.data.blocks[this.dataset.index].duration = parseInt(this.value) || 1;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    updateCanvasCard(nodeId);
+                });
+            });
+            document.querySelectorAll('.pause-typing-checkbox').forEach(chk => {
+                chk.addEventListener('change', function () {
+                    node.data.blocks[this.dataset.index].typing = this.checked;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                });
+            });
+
+            // 4. Эмодзи
+            document.querySelectorAll('.toggle-emoji-btn').forEach(btn => {
+                btn.addEventListener('click', () => emojiContainer.classList.toggle('active'));
+            });
+            document.querySelectorAll('.emoji-item').forEach(el => {
+                const newEl = el.cloneNode(true);
+                el.parentNode.replaceChild(newEl, el);
+                newEl.addEventListener('click', (e) => {
+                    const emoji = e.target.innerText;
+                    const ta = window.currentActiveTextArea || document.querySelector('.prop-msg-text-dynamic');
+                    if (!ta) return;
+                    const start = ta.selectionStart, end = ta.selectionEnd, text = ta.value;
+                    ta.value = text.substring(0, start) + emoji + text.substring(end);
+                    ta.focus();
+                    ta.selectionStart = ta.selectionEnd = start + emoji.length;
+                    node.data.blocks[ta.dataset.index].content = ta.value;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    updateCanvasCard(nodeId);
+                });
+            });
+
+            // 5. DRAG AND DROP (Перетаскивание)
+            let draggedItem = null;
+            container.querySelectorAll('.draggable-block').forEach(item => {
+                item.addEventListener('dragstart', function (e) {
+                    draggedItem = this;
+                    setTimeout(() => this.classList.add('dragging'), 0);
+                });
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('dragging');
+                    draggedItem = null;
+
+                    // Сохраняем новый порядок после броска
+                    const newBlocks = [];
+                    container.querySelectorAll('.draggable-block').forEach(el => {
+                        newBlocks.push(node.data.blocks[parseInt(el.dataset.index)]);
+                    });
+                    node.data.blocks = newBlocks;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    renderPropertiesPanel(nodeId); // Перерисовываем индексы
+                    updateCanvasCard(nodeId);
+                });
+            });
+
+            container.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                const afterElement = [...container.querySelectorAll('.draggable-block:not(.dragging)')].reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = e.clientY - box.top - box.height / 2;
+                    if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+                    else return closest;
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+
+                const currentItem = document.querySelector('.dragging');
+                if (afterElement == null) container.appendChild(currentItem);
+                else container.insertBefore(currentItem, afterElement);
+            });
         }
 
 
