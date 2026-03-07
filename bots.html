@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Novogram - Управление Ботами</title>
+    <title>Novogram - Конструктор Ботов</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* ПРЕМИУМ ДИЗАЙН NOVOGRAM */
+        /* ПРЕМИУМ ДИЗАЙН NOVOGRAM + ROBOCHAT STYLE */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -23,26 +23,16 @@
             overflow: hidden;
         }
 
-        /* Шапка */
+        /* --- ШАПКА --- */
         .premium-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
             padding: calc(env(safe-area-inset-top) + 20px) 20px 15px;
-            background: rgba(18, 19, 22, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(18, 19, 22, 0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             z-index: 100;
         }
-
-        .header-title {
-            font-weight: 600;
-            font-size: 18px;
-            color: white;
-            letter-spacing: -0.3px;
-        }
-
+        .header-title { font-weight: 600; font-size: 18px; color: white; letter-spacing: -0.3px; }
         .header-icon-btn {
             background: none; border: none; padding: 8px; border-radius: 50%;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -50,62 +40,47 @@
         }
         .header-icon-btn:active { background: rgba(115, 106, 240, 0.15); }
 
-        /* Основной контейнер */
+        /* --- ОСНОВНОЙ КОНТЕЙНЕР --- */
         .content-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
+            flex: 1; overflow-y: auto; padding: 20px;
+            max-width: 800px; margin: 0 auto; width: 100%;
         }
 
-        /* Карточки */
+        /* --- КАРТОЧКИ (ДЛЯ СПИСКА БОТОВ И ПРИВЯЗКИ) --- */
         .premium-section-title {
             font-size: 13px; font-weight: 600; color: #8e8e93;
             text-transform: uppercase; letter-spacing: 0.8px; margin: 0 0 10px 15px;
         }
-
         .premium-card {
-            background: #1c1c1e;
-            border-radius: 20px;
+            background: #1c1c1e; border-radius: 20px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            margin-bottom: 25px;
-            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.03); margin-bottom: 25px; overflow: hidden;
         }
-
         .bot-item {
             display: flex; align-items: center; padding: 16px 20px;
-            cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03);
-            transition: background 0.2s;
+            cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;
         }
         .bot-item:last-child { border-bottom: none; }
+        .bot-item:hover { background: rgba(255,255,255,0.02); }
         .bot-item:active { background: rgba(255,255,255,0.05); }
 
         .bot-avatar {
             width: 46px; height: 46px; border-radius: 50%; background: #2b2d31;
             display: flex; align-items: center; justify-content: center;
-            font-size: 22px; margin-right: 15px; flex-shrink: 0;
+            font-size: 22px; margin-right: 15px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);
         }
-
         .bot-info { flex: 1; overflow: hidden; }
-        .bot-name { font-size: 16px; color: white; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bot-name { font-size: 16px; color: white; font-weight: 600; margin-bottom: 2px; }
         .bot-nick { font-size: 13px; color: #8e8e93; }
-        
-        .arrow-icon { color: #555; font-size: 20px; margin-left: 10px; }
 
-        /* Поля ввода */
-        .input-box { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .input-box:last-child { border-bottom: none; }
+        /* Поля ввода (Привязка) */
+        .input-box { padding: 15px 20px; }
         .input-box label { display: block; font-size: 12px; color: #8e8e93; margin-bottom: 8px; text-transform: uppercase; font-weight: 600; }
-        .input-box input, .input-box textarea {
-            width: 100%; background: transparent; border: none; color: white;
-            font-size: 16px; outline: none; font-family: inherit; resize: none;
+        .input-box input {
+            width: 100%; background: transparent; border: none; color: white; font-size: 16px; font-family: inherit;
         }
-        .input-box input::placeholder, .input-box textarea::placeholder { color: #555; }
 
-        /* Кнопки */
+        /* --- КНОПКИ --- */
         .btn-primary {
             background: #736AF0; color: white; border: none; padding: 15px;
             border-radius: 14px; font-weight: 600; font-size: 16px; width: 100%;
@@ -113,22 +88,105 @@
         }
         .btn-primary:active { transform: scale(0.97); }
 
-        /* Правила */
-        .rule-row {
-            background: #252528; padding: 15px; border-radius: 14px;
-            margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.03); position: relative;
-        }
-        .rule-del-btn {
-            position: absolute; top: 12px; right: 12px; background: rgba(255,89,90,0.15);
-            color: #ff595a; border: none; border-radius: 50%; width: 28px; height: 28px;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        /* ==========================================
+           ВИЗУАЛЬНЫЙ КОНСТРУКТОР (ROBOCHAT STYLE)
+           ========================================== */
+        
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 60px;
         }
 
-        /* Загрузочный экран */
+        .flow-block {
+            background: #1c1c1e;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            position: relative;
+            animation: slideIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .block-header {
+            background: #252528;
+            padding: 12px 16px;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .block-title {
+            font-size: 13px; font-weight: bold; color: #736AF0; text-transform: uppercase;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .delete-block-btn {
+            background: rgba(255,89,90,0.1); color: #ff595a; border: none; border-radius: 8px;
+            padding: 6px 10px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .delete-block-btn:hover { background: rgba(255,89,90,0.2); }
+
+        .block-body { padding: 16px; }
+
+        .logic-group {
+            background: #121316;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .logic-group:last-child { margin-bottom: 0; }
+        
+        .logic-group:focus-within { border-color: #736AF0; box-shadow: 0 0 0 2px rgba(115,106,240,0.2); }
+
+        .logic-label {
+            font-size: 11px; color: #8e8e93; font-weight: bold; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 5px; text-transform: uppercase;
+        }
+
+        .logic-input {
+            width: 100%; background: transparent; border: none; color: white;
+            font-size: 15px; font-family: inherit; resize: none; outline: none;
+        }
+
+        .connection-arrow {
+            text-align: center; color: #555; font-size: 24px; margin: -10px 0;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .connection-arrow::before, .connection-arrow::after {
+            content: ''; height: 1px; width: 30px; background: #333; display: inline-block; margin: 0 10px;
+        }
+
+        .add-block-wrapper {
+            display: flex; justify-content: center; position: relative; margin-top: 10px;
+        }
+        .add-block-wrapper::before {
+            content: ''; position: absolute; top: -20px; left: 50%; width: 2px; height: 20px; background: #333; transform: translateX(-50%);
+        }
+        .add-block-btn {
+            background: rgba(115, 106, 240, 0.1); border: 1px dashed #736AF0; color: #736AF0;
+            padding: 12px 24px; border-radius: 20px; font-weight: bold; font-size: 14px;
+            cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .add-block-btn:hover { background: rgba(115, 106, 240, 0.2); transform: scale(1.05); }
+        .add-block-btn:active { transform: scale(0.95); }
+
+        /* --- ВЬЮХИ --- */
+        .view { display: none; height: 100%; flex-direction: column; }
+        .view.active { display: flex; }
+        
         #loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #121316; display: flex; align-items: center; justify-content: center;
-            z-index: 9999; flex-direction: column; gap: 15px;
+            background: #121316; display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 15px;
         }
         .spinner {
             width: 40px; height: 40px; border: 3px solid rgba(115, 106, 240, 0.2);
@@ -136,22 +194,19 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Вьюхи */
-        .view { display: none; height: 100%; flex-direction: column; }
-        .view.active { display: flex; }
     </style>
 </head>
 <body>
 
     <div id="loader">
         <div class="spinner"></div>
-        <div style="color: #8e8e93; font-weight: 500;">Подключение...</div>
+        <div style="color: #8e8e93; font-weight: 500;">Подключение к аккаунту...</div>
     </div>
 
     <div id="viewList" class="view">
         <div class="premium-header">
             <div style="width: 40px;"></div>
-            <div class="header-title">Управление ботами</div>
+            <div class="header-title">Платформа Ботов</div>
             <button class="header-icon-btn" onclick="openLinkModal()" title="Привязать бота">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
@@ -178,35 +233,40 @@
             <button class="header-icon-btn" onclick="switchView('viewList')" style="color: #aaa;">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <div class="header-title" id="editorHeaderTitle">Настройка</div>
-            <button class="header-icon-btn" onclick="saveBotRules()">
+            <div class="header-title" id="editorHeaderTitle">Конструктор Сценариев</div>
+            <button class="header-icon-btn" onclick="saveBotRules()" id="saveIconBtn">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
             </button>
         </div>
+        
         <div class="content-area">
-            
             <div style="text-align: center; margin-bottom: 25px;">
-                <div class="bot-avatar" style="width: 80px; height: 80px; margin: 0 auto 10px; font-size: 40px;">🤖</div>
-                <div style="font-weight: 600; font-size: 20px;" id="editorBotName">Имя бота</div>
-                <div style="color: #736AF0; font-size: 15px; margin-top: 2px;" id="editorBotNick">@username</div>
+                <div class="bot-avatar" style="width: 70px; height: 70px; margin: 0 auto 10px; font-size: 35px; box-shadow: 0 4px 15px rgba(115,106,240,0.3); border-color:#736AF0;">🤖</div>
+                <div style="font-weight: 600; font-size: 18px;" id="editorBotName">Имя бота</div>
+                <div style="color: #736AF0; font-size: 14px; margin-top: 2px;" id="editorBotNick">@username</div>
             </div>
 
-            <div class="premium-section-title">Базовый ответ</div>
-            <div class="premium-card">
-                <div class="input-box">
-                    <label>Если команда не распознана</label>
-                    <textarea id="defaultReply" rows="2" placeholder="Я не понимаю. Напишите 'помощь'."></textarea>
+            <div class="flow-container">
+                <div class="flow-block" style="border-color: rgba(255,255,255,0.1);">
+                    <div class="block-header" style="background: rgba(255,255,255,0.02);">
+                        <div class="block-title" style="color: #8e8e93;"><span>🟢</span> Стартовый шаг (По умолчанию)</div>
+                    </div>
+                    <div class="block-body">
+                        <div class="logic-group">
+                            <div class="logic-label">🤖 ЕСЛИ КОМАНДА НЕ НАЙДЕНА, БОТ ОТВЕТИТ:</div>
+                            <textarea id="defaultReply" class="logic-input" rows="2" placeholder="Напишите 'помощь', чтобы увидеть меню."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="rulesList" style="display: flex; flex-direction: column; gap: 20px;"></div>
+
+                <div class="add-block-wrapper">
+                    <button class="add-block-btn" onclick="addRuleBlock('', '')">+ Добавить шаг</button>
                 </div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; padding: 0 15px;">
-                <div class="premium-section-title" style="margin:0;">Сценарии (Триггеры)</div>
-                <button onclick="addRuleRow('', '')" style="background:rgba(115,106,240,0.15); border:none; color:#736AF0; font-weight:bold; cursor:pointer; padding:6px 12px; border-radius:8px;">+ Добавить</button>
-            </div>
-            
-            <div id="rulesList"></div>
-
-            <button class="btn-primary" style="margin-top: 10px; margin-bottom: 40px;" id="saveRulesBtn" onclick="saveBotRules()">Сохранить изменения</button>
+            <button class="btn-primary" style="position: sticky; bottom: 20px; z-index: 10;" id="saveRulesBtn" onclick="saveBotRules()">Опубликовать сценарий</button>
         </div>
     </div>
 
@@ -215,28 +275,28 @@
             <button class="header-icon-btn" onclick="switchView('viewList')" style="color: #aaa;">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <div class="header-title">Привязка бота</div>
+            <div class="header-title">Добавление бота</div>
             <div style="width:40px;"></div>
         </div>
         <div class="content-area" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-            <div style="font-size: 60px; margin-bottom: 20px;">🔗</div>
+            <div style="font-size: 60px; margin-bottom: 20px; text-shadow: 0 10px 20px rgba(115,106,240,0.5);">🔗</div>
             <h2 style="margin: 0 0 10px 0;">Подключение API</h2>
-            <p style="color: #8e8e93; font-size: 15px; margin: 0 0 30px 0; line-height: 1.5;">Вставьте API Токен, который вы получили при создании бота в Novogram, чтобы закрепить его за вашим аккаунтом.</p>
+            <p style="color: #8e8e93; font-size: 15px; margin: 0 0 30px 0; line-height: 1.5;">Вставьте API Токен, сгенерированный в приложении Novogram, чтобы начать программировать логику.</p>
             
             <div class="premium-card" style="width: 100%;">
                 <div class="input-box">
                     <label>Секретный API Токен</label>
-                    <input type="text" id="linkTokenInput" placeholder="nvg_...">
+                    <input type="text" id="linkTokenInput" placeholder="nvg_..." autocomplete="off">
                 </div>
             </div>
 
-            <button class="btn-primary" id="btnLinkBot" onclick="executeLinkBot()">Привязать бота</button>
+            <button class="btn-primary" id="btnLinkBot" onclick="executeLinkBot()">Подключить бота</button>
         </div>
     </div>
 
 
     <script>
-        // ВСТАВЬ СЮДА СВОИ КЛЮЧИ FIREBASE
+        // === ВСТАВЬ СВОИ ДАННЫЕ FIREBASE СЮДА ===
         const firebaseConfig = {
             apiKey: "AIzaSyBncXLA4D1JdsqQtA8_8rPqQioq2XRfic4",
             authDomain: "mycoolmessenger.firebaseapp.com",
@@ -252,25 +312,27 @@
 
         let currentUser = null;
         let currentBotToken = null;
+        let ruleBlockCounter = 1; // Для визуальной нумерации
 
-        // ПРОВЕРКА АВТОРИЗАЦИИ (Берет сессию из основного сайта)
+        // 1. АВТОРИЗАЦИЯ
         auth.onAuthStateChanged(async user => {
             if (user) {
                 currentUser = user;
-                
-                // Загружаем профиль создателя
                 const doc = await db.collection('users').doc(user.uid).get();
                 if(doc.exists) {
-                    document.getElementById('myName').innerText = doc.data().name || 'Пользователь';
+                    const d = doc.data();
+                    document.getElementById('myName').innerText = `${d.name || ''} ${d.surname || ''}`.trim() || 'Пользователь';
                     document.getElementById('myEmail').innerText = user.email;
+                    if(d.avatar) {
+                        document.getElementById('myAvatar').innerHTML = `<img src="${d.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                    }
                 }
 
                 document.getElementById('loader').style.display = 'none';
                 switchView('viewList');
                 loadMyBotsList();
             } else {
-                // Если не авторизован - выкидываем в мессенджер
-                alert("Сначала войдите в аккаунт в приложении Novogram!");
+                alert("Сначала авторизуйтесь в приложении Novogram!");
                 window.location.href = "index.html";
             }
         });
@@ -280,11 +342,10 @@
             document.getElementById(viewId).classList.add('active');
         }
 
-        // ЗАГРУЗКА СПИСКА ПРИВЯЗАННЫХ БОТОВ
+        // 2. ЗАГРУЗКА БОТОВ ВЛАДЕЛЬЦА
         async function loadMyBotsList() {
             const container = document.getElementById('botsContainer');
             try {
-                // Ищем всех ботов, у которых ownerId равен нашему UID
                 const snap = await db.collection('users')
                     .where('ownerId', '==', currentUser.uid)
                     .where('isBot', '==', true)
@@ -293,8 +354,8 @@
                 if (snap.empty) {
                     container.innerHTML = `
                         <div style="padding: 30px 20px; text-align: center;">
-                            <div style="color: #8e8e93; font-size: 15px; margin-bottom: 20px;">У вас пока нет привязанных ботов.</div>
-                            <button onclick="openLinkModal()" style="background:rgba(115,106,240,0.15); border:none; color:#736AF0; font-weight:bold; cursor:pointer; padding:10px 20px; border-radius:10px; font-size:15px;">+ Привязать бота</button>
+                            <div style="color: #8e8e93; font-size: 15px; margin-bottom: 20px;">Нет привязанных проектов.</div>
+                            <button onclick="openLinkModal()" style="background:rgba(115,106,240,0.15); border:none; color:#736AF0; font-weight:bold; cursor:pointer; padding:10px 20px; border-radius:10px; font-size:15px;">Подключить токен</button>
                         </div>`;
                     return;
                 }
@@ -302,7 +363,6 @@
                 let html = '';
                 snap.forEach(doc => {
                     const b = doc.data();
-                    // Передаем токен при клике (мы его знаем, так как он лежит в профиле бота)
                     const token = b.botToken || '';
                     html += `
                         <div class="bot-item" onclick="openEditor('${token}', '${b.name}', '${b.username}')">
@@ -323,13 +383,12 @@
             }
         }
 
-        // ОТКРЫТИЕ ОКНА ПРИВЯЗКИ
         function openLinkModal() {
             document.getElementById('linkTokenInput').value = '';
             switchView('viewLink');
         }
 
-        // ПРИВЯЗКА БОТА ПО ТОКЕНУ
+        // 3. ПРИВЯЗКА НОВОГО БОТА (ПО ТОКЕНУ)
         async function executeLinkBot() {
             const token = document.getElementById('linkTokenInput').value.trim();
             if (!token) return alert("Введите токен!");
@@ -339,33 +398,28 @@
             btn.disabled = true;
 
             try {
-                // Ищем бота по этому токену в коллекции users
                 const snap = await db.collection('users').where('botToken', '==', token).get();
                 
                 if (snap.empty) {
                     alert("Бот с таким токеном не найден!");
                 } else {
                     const botDoc = snap.docs[0];
-                    // Если у бота еще нет владельца или владелец другой, перезаписываем на нас
-                    await db.collection('users').doc(botDoc.id).update({
-                        ownerId: currentUser.uid
-                    });
-                    
-                    alert("Бот успешно привязан к вашему аккаунту!");
+                    await db.collection('users').doc(botDoc.id).update({ ownerId: currentUser.uid });
+                    alert("Бот успешно добавлен в ваш список!");
                     switchView('viewList');
                     loadMyBotsList();
                 }
             } catch (e) {
                 alert("Ошибка: " + e.message);
             } finally {
-                btn.innerText = "Привязать бота";
+                btn.innerText = "Подключить бота";
                 btn.disabled = false;
             }
         }
 
-        // ОТКРЫТИЕ РЕДАКТОРА ПРАВИЛ
+        // 4. ЗАГРУЗКА РЕДАКТОРА (FLOW BUILDER)
         async function openEditor(token, name, username) {
-            if (!token) return alert("У этого бота нет API Токена (Старый бот). Пересоздайте его.");
+            if (!token) return alert("Ошибка: токен отсутствует.");
             
             currentBotToken = token;
             document.getElementById('editorBotName').innerText = name;
@@ -373,11 +427,11 @@
             
             document.getElementById('rulesList').innerHTML = '';
             document.getElementById('defaultReply').value = 'Загрузка...';
+            ruleBlockCounter = 1;
 
             switchView('viewEditor');
 
             try {
-                // Загружаем правила бота из коллекции bot_rules (по токену!)
                 const ruleDoc = await db.collection('bot_rules').doc(token).get();
                 document.getElementById('rulesList').innerHTML = '';
 
@@ -385,40 +439,54 @@
                     const data = ruleDoc.data();
                     document.getElementById('defaultReply').value = data.defaultReply || '';
                     if (data.rules && data.rules.length > 0) {
-                        data.rules.forEach(r => addRuleRow(r.trigger, r.response));
+                        data.rules.forEach(r => addRuleBlock(r.trigger, r.response));
                     } else {
-                        addRuleRow('привет', 'Здравствуйте!');
+                        addRuleBlock('привет', 'Здравствуйте! Я бот.');
                     }
                 } else {
                     document.getElementById('defaultReply').value = 'Я бот. Команда не распознана.';
-                    addRuleRow('привет', 'Здравствуйте!');
+                    addRuleBlock('привет', 'Здравствуйте! Я бот.');
                 }
             } catch(e) {
-                alert("Ошибка загрузки правил");
+                alert("Ошибка загрузки сценария");
                 switchView('viewList');
             }
         }
 
-        // ДОБАВЛЕНИЕ СТРОКИ ПРАВИЛА
-        function addRuleRow(triggerText, responseText) {
+        // 5. ДОБАВЛЕНИЕ БЛОКА (UI)
+        function addRuleBlock(triggerText, responseText) {
             const list = document.getElementById('rulesList');
             const div = document.createElement('div');
-            div.className = 'rule-row';
+            div.className = 'flow-block rule-row-item';
             div.innerHTML = `
-                <button class="rule-del-btn" onclick="this.parentElement.remove()" title="Удалить">✖</button>
-                <div class="input-box" style="padding: 0 0 10px 0; padding-right: 30px;">
-                    <label>Если написали слово:</label>
-                    <input type="text" class="trigger-input" value="${triggerText}" placeholder="напр. цена">
+                <div class="block-header">
+                    <div class="block-title"><span>⚡</span> Шаг ${ruleBlockCounter}</div>
+                    <button class="delete-block-btn" onclick="this.parentElement.parentElement.remove()" title="Удалить шаг">Удалить</button>
                 </div>
-                <div class="input-box" style="padding: 0;">
-                    <label>Бот ответит:</label>
-                    <textarea class="response-input" rows="2" placeholder="Текст ответа...">${responseText}</textarea>
+                <div class="block-body">
+                    <div class="logic-group">
+                        <div class="logic-label"><span>📥</span> ЕСЛИ СООБЩЕНИЕ СОДЕРЖИТ:</div>
+                        <input type="text" class="logic-input trigger-input" value="${triggerText}" placeholder="Введите слово (например: цена)">
+                    </div>
+                    
+                    <div class="connection-arrow">⬇</div>
+                    
+                    <div class="logic-group" style="border-color: #4a9eff;">
+                        <div class="logic-label" style="color: #4a9eff;"><span>📤</span> ТО ОТПРАВИТЬ СООБЩЕНИЕ:</div>
+                        <textarea class="logic-input response-input" rows="2" placeholder="Введите текст ответа...">${responseText}</textarea>
+                    </div>
                 </div>
             `;
             list.appendChild(div);
+            ruleBlockCounter++;
+            
+            // Плавный скролл вниз, если добавили новый блок руками
+            if(!triggerText) {
+                div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
 
-        // СОХРАНЕНИЕ ПРАВИЛ В БАЗУ
+        // 6. СОХРАНЕНИЕ СЦЕНАРИЯ
         async function saveBotRules() {
             if (!currentBotToken) return;
 
@@ -436,32 +504,34 @@
                 }
             }
 
-            const btn = document.getElementById('saveRulesBtn');
-            const originalText = btn.innerText;
-            btn.innerText = "Сохранение...";
-            btn.disabled = true;
+            const btn1 = document.getElementById('saveRulesBtn');
+            const btn2 = document.getElementById('saveIconBtn');
+            
+            btn1.innerText = "Публикация..."; btn1.disabled = true;
+            btn2.style.pointerEvents = "none";
 
             try {
-                // Пишем правила в bot_rules, ID документа = Токен бота!
                 await db.collection('bot_rules').doc(currentBotToken).set({
                     defaultReply: defaultReply,
                     rules: rules,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                btn.style.background = "#10b981"; // Зеленый
-                btn.innerText = "Сохранено ✓";
+                btn1.style.background = "#10b981"; // Изумрудный успех
+                btn1.innerText = "Сценарий опубликован ✓";
+                
                 setTimeout(() => {
-                    btn.style.background = "#736AF0";
-                    btn.innerText = originalText;
+                    btn1.style.background = "#736AF0";
+                    btn1.innerText = "Опубликовать сценарий";
                 }, 2000);
                 
             } catch (e) {
                 console.error(e);
-                alert("Ошибка сохранения правил.");
-                btn.innerText = originalText;
+                alert("Ошибка сохранения. Проверьте права Firebase.");
+                btn1.innerText = "Опубликовать сценарий";
             } finally {
-                btn.disabled = false;
+                btn1.disabled = false;
+                btn2.style.pointerEvents = "auto";
             }
         }
     </script>
