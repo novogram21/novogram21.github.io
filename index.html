@@ -4567,7 +4567,7 @@
                 <div class="chat-option-item" onclick="closeChatOptionsMenu(); alert('История чата скоро можно будет очистить!');">
                     <span class="chat-option-icon">🧹</span> Очистить историю
                 </div>
-                <div class="chat-option-item danger" onclick="closeChatOptionsMenu(); alert('Удаление чата в разработке!');">
+                <div class="chat-option-item danger" onclick="closeChatOptionsMenu(); deleteChatAction();">
                     <span class="chat-option-icon">🗑️</span> Удалить чат
                 </div>
             </div>
@@ -5927,8 +5927,12 @@
                             }
                         }
                     } else {
-                        if (lastEl) lastEl.innerHTML = "Нет сообщений";
+                        // Если сообщений в базе нет — значит чат либо новый, либо очищен
+                        if (lastEl) {
+                            lastEl.innerHTML = `<span style="font-style: italic; opacity: 0.6;">диалог очищен</span>`;
+                        }
                         if (statusEl) statusEl.style.display = 'none';
+                        if (dateEl) dateEl.innerText = ""; // Скрываем дату, так как сообщений нет
                     }
                     // Обновляем дату
                     if (dateEl && timeToDisplay > 0) {
@@ -7277,6 +7281,45 @@
                 }
             };
         }
+
+
+        async function deleteChatAction() {
+            if (!currentChatId) return;
+
+            const confirmClear = confirm("Вы уверены, что хотите полностью очистить историю сообщений? Контакт останется в списке, но все сообщения исчезнут.");
+            if (!confirmClear) return;
+
+            try {
+                showToast("Очистка чата...");
+
+                // Получаем все сообщения в подколлекции msgs
+                const msgsRef = db.collection('chats').doc(currentChatId).collection('msgs');
+                const snap = await msgsRef.get();
+
+                if (snap.empty) {
+                    showToast("Чат уже пуст");
+                    return;
+                }
+
+                // Удаляем сообщения батчем (пачкой)
+                const batch = db.batch();
+                snap.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+
+                await batch.commit();
+
+                // Если мы сейчас находимся в этом чате, визуально очищаем экран
+                const activeList = document.getElementById('msgList_' + currentChatId);
+                if (activeList) activeList.innerHTML = '';
+
+                showToast("История очищена ✓");
+            } catch (e) {
+                console.error("Ошибка при очистке чата:", e);
+                showToast("Ошибка при удалении");
+            }
+        }
+
         function startPing() {
             const el = document.getElementById('callPing');
             if (pingInterval) clearInterval(pingInterval);
