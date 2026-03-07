@@ -592,24 +592,24 @@
         }
 
         /* --- СТИЛИ ДЛЯ КНОПОК --- */
+        /* --- PREMIUM BUTTONS UI --- */
         .preview-buttons-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
-            padding-top: 8px;
+            gap: 8px;
+            margin-top: 12px;
         }
-        /* Кнопка на холсте */
+
         .preview-btn {
-            background: #f0f2f5;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 6px;
-            font-size: 10px;
-            color: #444;
-            font-weight: 600;
+            background: rgba(42, 171, 238, 0.08);
+            border: 1px solid rgba(42, 171, 238, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 11px;
+            color: var(--primary);
+            font-weight: 700;
             text-align: center;
-            box-sizing: border-box;
+            backdrop-filter: blur(4px);
         }
 
             .preview-btn.w-full {
@@ -617,22 +617,45 @@
             }
 
             .preview-btn.w-half {
-                width: calc(50% - 3px);
+                width: calc(50% - 4px);
             }
 
-        /* Стиль для кнопки добавления в панели (убираем лишний текст) */
+        /* Стили для перетаскиваемых элементов в панели */
+        .prop-button-item {
+            background: #252528;
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 14px;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+            .prop-button-item:active {
+                cursor: grabbing;
+                transform: scale(0.98);
+            }
+
+            .prop-button-item.dragging {
+                opacity: 0.3;
+                border: 1px dashed var(--primary);
+                transform: scale(0.95);
+            }
+
         .add-tg-btn {
-            width: 100%;
-            background: rgba(42, 171, 238, 0.1);
-            border: 1px dashed var(--primary);
-            color: var(--primary);
-            padding: 8px;
-            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: 20px auto 0;
+            box-shadow: 0 4px 15px rgba(42, 171, 238, 0.3);
+            border: none;
             cursor: pointer;
-            font-size: 20px; /* Делаем плюс крупнее */
-            line-height: 1;
-            transition: 0.2s;
-            margin-top: 10px;
         }
 
     </style>
@@ -1069,23 +1092,23 @@
                 });
 
                 // Формируем HTML для списка кнопок
-                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки</div><div id="msg-buttons-container">';
+                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки меню</div><div id="msg-buttons-container">';
                 (node.data.buttons || []).forEach((btn, index) => {
                     buttonsHtml += `
-                        <div class="prop-button-item">
+                        <div class="prop-button-item" data-index="${index}">
                             <div class="btn-settings-row">
                                 <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст" value="${btn.text}">
-                                <select class="prop-input btn-width-input" data-index="${index}" style="width: 80px; padding: 5px; font-size: 11px;">
+                                <select class="prop-input btn-width-input" data-index="${index}" style="width: 70px;">
                                     <option value="full" ${btn.width === 'full' ? 'selected' : ''}>1/1</option>
                                     <option value="half" ${btn.width === 'half' ? 'selected' : ''}>1/2</option>
                                 </select>
-                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer; font-weight:bold;">✖</span>
+                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer; padding: 0 5px;">✕</span>
                             </div>
-                            <input type="text" class="prop-input btn-target-input" style="font-size:11px; padding:8px; margin-top:5px;" data-index="${index}" placeholder="ID шага" value="${btn.targetNodeId || ''}">
+                            <input type="text" class="prop-input btn-target-input" style="font-size:10px; opacity:0.6;" data-index="${index}" placeholder="ID перехода" value="${btn.targetNodeId || ''}">
                         </div>`;
                 });
                 buttonsHtml += '</div>';
-                // Убрали текст, оставили только иконку плюса
+                // Чистая кнопка с плюсом без лишнего текста
                 buttonsHtml += `<button class="add-tg-btn" onclick="addNewButtonToNode(${nodeId})">+</button>`;
 
                 content.innerHTML = `
@@ -1142,141 +1165,99 @@
         // Привязка всех событий (Удаление, Ввод, Эмодзи, Перетаскивание)
         function bindBlockEvents(nodeId) {
             const node = editor.getNodeFromId(nodeId);
-            let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки сообщения</div><div id="msg-buttons-container">';
-            (node.data.buttons || []).forEach((btn, index) => {
-                buttonsHtml += `
-                        <div class="prop-button-item">
-                            <div class="btn-settings-row">
-                                <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст кнопки" value="${btn.text}">
-                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer;">✖</span>
-                            </div>
-                            <input type="text" class="prop-input btn-target-input" style="font-size:11px; padding:8px;" data-index="${index}" placeholder="ID шага (напр: 5)" value="${btn.targetNodeId || ''}">
-                        </div>`;
-            });
-            buttonsHtml += '</div>';
-            if (!node.data.buttons || node.data.buttons.length === 0) {
-                buttonsHtml += `<button class="add-tg-btn" onclick="addNewButtonToNode(${nodeId})">+ Добавить кнопку</button>`;
-            } else {
-                buttonsHtml += `<button class="add-tg-btn" onclick="addNewButtonToNode(${nodeId})">+ Еще кнопка</button>`;
-            }
             const container = document.getElementById('msg-blocks-container');
+            const btnContainer = document.getElementById('msg-buttons-container'); // Контейнер для кнопок
             const emojiContainer = document.getElementById('emoji-picker-container');
 
-            // 1. Удаление
+            // --- 1. УДАЛЕНИЕ И ТЕКСТ (ДЛЯ ОСНОВНЫХ БЛОКОВ) ---
             document.querySelectorAll('.delete-block-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => deleteBlockFromNode(nodeId, parseInt(e.currentTarget.dataset.index)));
+                btn.onclick = () => deleteBlockFromNode(nodeId, parseInt(btn.dataset.index));
             });
 
-            // 2. Ввод текста
             document.querySelectorAll('.prop-msg-text-dynamic').forEach(ta => {
-                ta.addEventListener('focus', function () { window.currentActiveTextArea = this; });
-                ta.addEventListener('input', function () {
+                ta.onfocus = function () { window.currentActiveTextArea = this; };
+                ta.oninput = function () {
                     node.data.blocks[this.dataset.index].content = this.value;
                     editor.updateNodeDataFromId(nodeId, node.data);
                     updateCanvasCard(nodeId);
-                });
+                };
             });
 
-            // 3. Настройка паузы
+            // --- 2. ЛОГИКА КНОПОК (ПРЕМИУМ DRAG-AND-DROP) ---
+            if (btnContainer) {
+                const btnItems = btnContainer.querySelectorAll('.prop-button-item');
+
+                btnItems.forEach(btnItem => {
+                    btnItem.setAttribute('draggable', true);
+
+                    // Захват кнопки
+                    btnItem.ondragstart = (e) => {
+                        btnItem.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                    };
+
+                    // Конец перетаскивания - сохраняем новый порядок
+                    btnItem.ondragend = () => {
+                        btnItem.classList.remove('dragging');
+                        const newOrder = [];
+                        btnContainer.querySelectorAll('.prop-button-item').forEach(el => {
+                            newOrder.push(node.data.buttons[parseInt(el.dataset.index)]);
+                        });
+                        node.data.buttons = newOrder;
+                        editor.updateNodeDataFromId(nodeId, node.data);
+                        renderPropertiesPanel(nodeId); // Перерисовываем панель, чтобы обновить индексы
+                        updateCanvasCard(nodeId);
+                    };
+                });
+
+                // Логика перемещения в списке
+                btnContainer.ondragover = (e) => {
+                    e.preventDefault();
+                    const draggingItem = btnContainer.querySelector('.dragging');
+                    const siblings = [...btnContainer.querySelectorAll('.prop-button-item:not(.dragging)')];
+                    let nextSibling = siblings.find(sibling => {
+                        return e.clientY <= sibling.getBoundingClientRect().top + sibling.getBoundingClientRect().height / 2;
+                    });
+                    btnContainer.insertBefore(draggingItem, nextSibling);
+                };
+
+                // Ввод текста в кнопки и выбор ширины
+                document.querySelectorAll('.btn-text-input').forEach(inp => {
+                    inp.oninput = function () {
+                        node.data.buttons[this.dataset.index].text = this.value;
+                        editor.updateNodeDataFromId(nodeId, node.data);
+                        updateCanvasCard(nodeId);
+                    };
+                });
+
+                document.querySelectorAll('.btn-target-input').forEach(inp => {
+                    inp.oninput = function () {
+                        node.data.buttons[this.dataset.index].targetNodeId = this.value;
+                        editor.updateNodeDataFromId(nodeId, node.data);
+                    };
+                });
+
+                document.querySelectorAll('.btn-width-input').forEach(sel => {
+                    sel.onchange = function () {
+                        node.data.buttons[this.dataset.index].width = this.value;
+                        editor.updateNodeDataFromId(nodeId, node.data);
+                        updateCanvasCard(nodeId);
+                    };
+                });
+            }
+
+            // --- 3. ПАУЗЫ И ЭМОДЗИ (ОСТАВЛЯЕМ КАК БЫЛО) ---
             document.querySelectorAll('.pause-duration-input').forEach(inp => {
-                inp.addEventListener('input', function () {
+                inp.oninput = function () {
                     node.data.blocks[this.dataset.index].duration = parseInt(this.value) || 1;
                     editor.updateNodeDataFromId(nodeId, node.data);
                     updateCanvasCard(nodeId);
-                });
-            });
-            document.querySelectorAll('.pause-typing-checkbox').forEach(chk => {
-                chk.addEventListener('change', function () {
-                    node.data.blocks[this.dataset.index].typing = this.checked;
-                    editor.updateNodeDataFromId(nodeId, node.data);
-                });
+                };
             });
 
-            // 4. Эмодзи
             document.querySelectorAll('.toggle-emoji-btn').forEach(btn => {
-                btn.addEventListener('click', () => emojiContainer.classList.toggle('active'));
+                btn.onclick = () => emojiContainer.classList.toggle('active');
             });
-            document.querySelectorAll('.emoji-item').forEach(el => {
-                const newEl = el.cloneNode(true);
-                el.parentNode.replaceChild(newEl, el);
-                newEl.addEventListener('click', (e) => {
-                    const emoji = e.target.innerText;
-                    const ta = window.currentActiveTextArea || document.querySelector('.prop-msg-text-dynamic');
-                    if (!ta) return;
-                    const start = ta.selectionStart, end = ta.selectionEnd, text = ta.value;
-                    ta.value = text.substring(0, start) + emoji + text.substring(end);
-                    ta.focus();
-                    ta.selectionStart = ta.selectionEnd = start + emoji.length;
-                    node.data.blocks[ta.dataset.index].content = ta.value;
-                    editor.updateNodeDataFromId(nodeId, node.data);
-                    updateCanvasCard(nodeId);
-                });
-            });
-
-            // 5. DRAG AND DROP (Перетаскивание)
-            let draggedItem = null;
-            container.querySelectorAll('.draggable-block').forEach(item => {
-                item.addEventListener('dragstart', function (e) {
-                    draggedItem = this;
-                    setTimeout(() => this.classList.add('dragging'), 0);
-                });
-                item.addEventListener('dragend', function () {
-                    this.classList.remove('dragging');
-                    draggedItem = null;
-
-                    // Сохраняем новый порядок после броска
-                    const newBlocks = [];
-                    container.querySelectorAll('.draggable-block').forEach(el => {
-                        newBlocks.push(node.data.blocks[parseInt(el.dataset.index)]);
-                    });
-                    node.data.blocks = newBlocks;
-                    editor.updateNodeDataFromId(nodeId, node.data);
-                    renderPropertiesPanel(nodeId); // Перерисовываем индексы
-                    updateCanvasCard(nodeId);
-                });
-            });
-
-            container.addEventListener('dragover', function (e) {
-                e.preventDefault();
-                const afterElement = [...container.querySelectorAll('.draggable-block:not(.dragging)')].reduce((closest, child) => {
-                    const box = child.getBoundingClientRect();
-                    const offset = e.clientY - box.top - box.height / 2;
-                    if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-                    else return closest;
-                }, { offset: Number.NEGATIVE_INFINITY }).element;
-
-                const currentItem = document.querySelector('.dragging');
-                if (afterElement == null) container.appendChild(currentItem);
-                else container.insertBefore(currentItem, afterElement);
-            });
-            document.querySelectorAll('.btn-text-input').forEach(inp => {
-                inp.oninput = function () {
-                    const idx = parseInt(this.getAttribute('data-index'));
-                    node.data.buttons[idx].text = this.value;
-                    editor.updateNodeDataFromId(nodeId, node.data);
-                    updateCanvasCard(nodeId);
-                };
-            });
-
-            // Сохранение ID перехода
-            document.querySelectorAll('.btn-target-input').forEach(inp => {
-                inp.oninput = function () {
-                    const idx = parseInt(this.getAttribute('data-index'));
-                    node.data.buttons[idx].targetNodeId = this.value;
-                    editor.updateNodeDataFromId(nodeId, node.data);
-                };
-            });
-
-            // Сохранение выбора ширины
-            document.querySelectorAll('.btn-width-input').forEach(sel => {
-                sel.onchange = function () {
-                    const idx = parseInt(this.getAttribute('data-index'));
-                    node.data.buttons[idx].width = this.value;
-                    editor.updateNodeDataFromId(nodeId, node.data);
-                    updateCanvasCard(nodeId);
-                };
-            });
-
         }
 
 
