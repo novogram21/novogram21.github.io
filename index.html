@@ -11575,49 +11575,63 @@
 
                 // 4. УМНАЯ ОТПРАВКА БЛОКОВ (ТЕКСТ + ПАУЗЫ)
                 const processBlocks = async () => {
-                    // А. Сначала отправляем картинку (если есть)
-                    if (replyImage) {
-                        await new Promise(r => setTimeout(r, 500));
-                        const encryptedImg = encryptText(replyImage, chatId);
-                        await db.collection('chats').doc(chatId).collection('msgs').add({
-                            txt: encryptedImg,
-                            from: receiverId, to: currentUser.uid, sys: false, type: 'image', read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        await new Promise(r => setTimeout(r, 500));
-                    }
+                    // Функция для безопасного удаления статуса
+                    const stopTyping = () => rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
+                    const startTyping = () => rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
 
-                    // Б. Проходимся по всем блокам строго по очереди
-                    for (let i = 0; i < finalBlocks.length; i++) {
-                        const blk = finalBlocks[i];
-
-                        if (blk.type === 'text') {
-                            if (!blk.content || !blk.content.trim()) continue;
-
-                            // Эффект печатания перед обычным сообщением (1 сек)
-                            rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
-                            await new Promise(r => setTimeout(r, 1000));
-                            rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
-
-                            // Отправка текста
-                            const encryptedReply = encryptText(blk.content, chatId);
+                    try {
+                        // А. Картинка
+                        if (replyImage) {
+                            await new Promise(r => setTimeout(r, 500));
+                            const encryptedImg = encryptText(replyImage, chatId);
                             await db.collection('chats').doc(chatId).collection('msgs').add({
-                                txt: encryptedReply, from: receiverId, to: currentUser.uid, sys: false, type: 'text', read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
+                                txt: encryptedImg, from: receiverId, to: currentUser.uid, sys: false, type: 'image', read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
                             });
+                            await new Promise(r => setTimeout(r, 800));
+                        }
 
-                        } else if (blk.type === 'pause') {
-                            // Отработка блока "Пауза"
-                            const durationMs = (parseInt(blk.duration) || 1) * 1000;
+                        // Б. Проходим по блокам
+                        for (let i = 0; i < finalBlocks.length; i++) {
+                            const blk = finalBlocks[i];
 
-                            if (blk.typing) {
-                                rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
-                            }
+                            if (blk.type === 'text') {
+                                if (!blk.content || !blk.content.trim()) continue;
 
-                            await new Promise(r => setTimeout(r, durationMs)); // Ждем указанное время
+                                startTyping(); // Включаем перед текстом
+                                await new Promise(r => setTimeout(r, 1500)); // Имитация набора
 
-                            if (blk.typing) {
-                                rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
+                                const encryptedReply = encryptText(blk.content, chatId);
+                                await db.collection('chats').doc(chatId).collection('msgs').add({
+                                    txt: encryptedReply, from: receiverId, to: currentUser.uid, sys: false, type: 'text', read: false, ts: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+
+                                // После текста выключаем, если следующий блок НЕ пауза с эффектом печати
+                                const nextBlock = finalBlocks[i + 1];
+                                if (!nextBlock || nextBlock.type !== 'pause' || !nextBlock.typing) {
+                                    stopTyping();
+                                }
+
+                            } else if (blk.type === 'pause') {
+                                const durationMs = (parseInt(blk.duration) || 1) * 1000;
+
+                                if (blk.typing) {
+                                    startTyping();
+                                } else {
+                                    stopTyping();
+                                }
+
+                                await new Promise(r => setTimeout(r, durationMs));
+
+                                // Если это был последний блок — выключаем статус в любом случае
+                                if (i === finalBlocks.length - 1) {
+                                    stopTyping();
+                                }
                             }
                         }
+                    } finally {
+                        // ФИНАЛЬНЫЙ ПРЕДОХРАНИТЕЛЬ:
+                        // Что бы ни случилось (ошибка или конец цикла), статус ДОЛЖЕН быть удален
+                        stopTyping();
                     }
                 };
 
