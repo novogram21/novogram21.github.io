@@ -11500,116 +11500,102 @@
 
                 const flowDoc = await db.collection('bot_flows').doc(botData.botToken).get();
 
-                let replyText = "";
+                let textsArray = [];
                 let replyImage = "";
 
-                // 2. Читаем визуальный граф (с узлами и связями)
+                // 2. Читаем визуальный граф
                 if (flowDoc.exists && flowDoc.data().flowData) {
-                    const data = flowDoc.data();
-                    const drawflowData = data.flowData.drawflow.Home.data;
-                    const lowerMsg = messageText.toLowerCase();
+                    const drawflowData = flowDoc.data().flowData.drawflow.Home.data;
+                    const lowerMsg = messageText.toLowerCase().trim();
 
                     let matchedTriggerNode = null;
                     let matchedMessageNode = null;
 
-                    // ШАГ А: Ищем совпадение слова-триггера ВО ВСЕХ блоках
+                    // ШАГ А: Ищем блок с подходящим триггером (командой)
                     for (const nodeId in drawflowData) {
                         const node = drawflowData[nodeId];
                         const triggerWord = (node.data.trigger || "").toLowerCase().trim();
 
                         if (triggerWord && lowerMsg.includes(triggerWord)) {
-                            // Нашли триггер! Смотрим, какой это тип блока
                             if (node.name === 'message') {
-                                // Юзер вписал триггер прямо в блок сообщения (одиночный режим)
                                 matchedMessageNode = node;
                                 break;
                             } else if (node.name === 'trigger') {
-                                // Юзер использовал отдельный зеленый блок "Условие"
                                 matchedTriggerNode = node;
                                 break;
                             }
                         }
                     }
 
-                    // ШАГ Б: Если нашли отдельный блок "Условие", идем по стрелочке к ответу
-                    if (matchedTriggerNode) {
-                        const outputs = matchedTriggerNode.outputs;
-                        // Проверяем, есть ли исходящие связи
-                        const connections = (outputs && outputs["output_1"] && outputs["output_1"].connections) ? outputs["output_1"].connections : [];
-
-                        if (connections.length > 0) {
-                            const nextNodeId = connections[0].node;
-                            const nextNode = drawflowData[nextNodeId];
-
-                            // Если стрелочка ведет к блоку сообщения, запоминаем его
-                            if (nextNode && nextNode.name === 'message') {
-                                matchedMessageNode = nextNode;
+                    // ШАГ Б: Если нашли зеленый блок-условие (но не сообщение напрямую), идем по стрелочке
+                    if (matchedTriggerNode && !matchedMessageNode) {
+                        try {
+                            const connections = matchedTriggerNode.outputs["output_1"].connections;
+                            if (connections && connections.length > 0) {
+                                const nextNodeId = connections[0].node;
+                                const nextNode = drawflowData[nextNodeId];
+                                if (nextNode && nextNode.name === 'message') {
+                                    matchedMessageNode = nextNode;
+                                }
                             }
-                        }
+                        } catch (err) { console.log("Связь оборвана", err); }
                     }
 
-                    // ШАГ В: Если мы успешно нашли блок сообщения (напрямую или по стрелочке) - берем текст
+                    // ШАГ В: Извлекаем данные из найденного блока сообщения
                     if (matchedMessageNode) {
-                        replyText = matchedMessageNode.data.text || "";
-                        replyImage = matchedMessageNode.data.image || "";
-                    }
-
-                    // Если ничего не подошло или связи оборваны
-                    if (!replyText && !replyImage) {
-                        replyText = "Команда не распознана. Воспользуйтесь меню.";
-                    }
-
-                } else {
-                    // Фоллбэк: для старых ботов без визуального редактора
-                    const rulesDoc = await db.collection('bot_rules').doc(botData.botToken).get();
-                    if (rulesDoc.exists) {
-                        const botConfig = rulesDoc.data();
-                        const rules = botConfig.rules || [];
-                        replyText = botConfig.defaultReply || "Команда не распознана.";
-
-                        for (let rule of rules) {
-                            if (lowerMsg.includes(rule.trigger)) {
-                                replyText = rule.response;
-                                break;
-                            }
+                        // Берем новый массив texts, либо старую строку text (если блок старый)
+                        if (matchedMessageNode.data.texts && matchedMessageNode.data.texts.length > 0) {
+                            textsArray = matchedMessageNode.data.texts;
+                        } else if (matchedMessageNode.data.text) {
+                            textsArray = [matchedMessageNode.data.text];
                         }
-                    } else {
-                        replyText = "Сценарий для этого бота еще не опубликован.";
+                        replyImage = matchedMessageNode.data.image || "";
                     }
                 }
 
-                if (!replyText && !replyImage) return; // Нечего отвечать
+                // Если бот ничего не понял или граф пустой
+                if (textsArray.length === 0 && !replyImage) {
+                    textsArray = ["Я не знаю такую команду 🤖"];
+                }
 
-                // 3. Имитация (Бот думает и пишет)
-                setTimeout(async () => {
-                    rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
+                // 3. Отмечаем входящее сообщение прочитанным
+                const msgsSnap = await db.collection('chats').doc(chatId).collection('msgs')
+                    .where('to', '==', receiverId).where('read', '==', false).get();
+                const batch = db.batch();
+                msgsSnap.docs.forEach(d => batch.update(d.ref, { read: true }));
+                await batch.commit();
 
-                    const msgsSnap = await db.collection('chats').doc(chatId).collection('msgs')
-                        .where('to', '==', receiverId).where('read', '==', false).get();
-                    const batch = db.batch();
-                    msgsSnap.docs.forEach(d => batch.update(d.ref, { read: true }));
-                    await batch.commit();
+                // 4. УМНАЯ ОТПРАВКА СЕРИИ СООБЩЕНИЙ
+                let delay = 500; // Стартовая задержка
 
+                // Сначала шлем картинку, если она есть
+                if (replyImage) {
                     setTimeout(async () => {
-                        rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
+                        const encryptedImg = encryptText(replyImage, chatId);
+                        await db.collection('chats').doc(chatId).collection('msgs').add({
+                            txt: encryptedImg,
+                            from: receiverId,
+                            to: currentUser.uid,
+                            sys: false,
+                            type: 'image',
+                            read: false,
+                            ts: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }, delay);
+                    delay += 1000; // Увеличиваем задержку для следующих сообщений
+                }
 
-                        // А. Сначала отправляем картинку (если она была в блоке)
-                        if (replyImage) {
-                            const encryptedImg = encryptText(replyImage, chatId);
-                            await db.collection('chats').doc(chatId).collection('msgs').add({
-                                txt: encryptedImg,
-                                from: receiverId,
-                                to: currentUser.uid,
-                                sys: false,
-                                type: 'image',
-                                read: false,
-                                ts: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        }
+                // Затем по очереди шлем текстовые пузыри
+                textsArray.forEach((txt) => {
+                    if (!txt || !txt.trim()) return; // Пропускаем пустые поля
 
-                        // Б. Затем отправляем сам текст
-                        if (replyText) {
-                            const encryptedReply = encryptText(replyText, chatId);
+                    setTimeout(() => {
+                        rtdb.ref(`typing/${chatId}/${receiverId}`).set(true); // Включаем статус "печатает..."
+
+                        setTimeout(async () => {
+                            rtdb.ref(`typing/${chatId}/${receiverId}`).remove(); // Выключаем "печатает..."
+
+                            const encryptedReply = encryptText(txt, chatId);
                             await db.collection('chats').doc(chatId).collection('msgs').add({
                                 txt: encryptedReply,
                                 from: receiverId,
@@ -11619,10 +11605,11 @@
                                 read: false,
                                 ts: firebase.firestore.FieldValue.serverTimestamp()
                             });
-                        }
+                        }, 1000); // 1 секунда имитации набора текста
+                    }, delay);
 
-                    }, 1000 + Math.random() * 1000);
-                }, 500);
+                    delay += 1500; // Каждое следующее сообщение из списка ждет своей очереди
+                });
 
             } catch (e) {
                 console.error("Ошибка ИИ бота:", e);
