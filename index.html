@@ -11485,7 +11485,7 @@
         }
 
         // =====================================
-        // ИИ БОТА: СРАБАТЫВАНИЕ НА ВИЗУАЛЬНЫЕ БЛОКИ (DRAWFLOW)
+        // ИИ БОТА: ЧТЕНИЕ ГРАФА И СВЯЗЕЙ БЛОКОВ
         // =====================================
         async function checkAndTriggerBot(receiverId, messageText, chatId) {
             try {
@@ -11498,49 +11498,60 @@
 
                 if (!botData || !botData.isBot || !botData.botToken) return;
 
-                // 2. Идем в НОВУЮ базу визуальных сценариев (bot_flows)
                 const flowDoc = await db.collection('bot_flows').doc(botData.botToken).get();
 
-                let replyText = "Команда не распознана.";
+                let replyText = "";
                 let replyImage = "";
 
+                // 2. Читаем новый визуальный граф (с узлами и связями)
                 if (flowDoc.exists && flowDoc.data().flowData) {
                     const data = flowDoc.data();
-                    const drawflowData = data.flowData.drawflow.Home.data; // Достаем все блоки с холста
+                    const drawflowData = data.flowData.drawflow.Home.data;
                     const lowerMsg = messageText.toLowerCase();
 
-                    let matchedNode = null;
+                    let matchedTriggerNode = null;
 
-                    // 3. Ищем блок, у которого "Триггер" совпадает с сообщением пользователя
+                    // ШАГ А: Ищем блок-триггер (условие)
                     for (const nodeId in drawflowData) {
                         const node = drawflowData[nodeId];
-                        const trigger = (node.data.trigger || "").toLowerCase().trim();
-
-                        // Если триггер не пустой и содержится в сообщении
-                        if (trigger && lowerMsg.includes(trigger)) {
-                            matchedNode = node;
-                            break; // Нашли совпадение - останавливаем поиск
+                        if (node.name === 'trigger') {
+                            const triggerWord = (node.data.trigger || "").toLowerCase().trim();
+                            if (triggerWord && lowerMsg.includes(triggerWord)) {
+                                matchedTriggerNode = node;
+                                break; // Триггер найден!
+                            }
                         }
                     }
 
-                    // 4. Формируем ответ
-                    if (matchedNode) {
-                        replyText = matchedNode.data.text || "";
-                        replyImage = matchedNode.data.image || "";
+                    // ШАГ Б: Если нашли триггер, идем по "проводу" (стрелочке) к следующему блоку
+                    if (matchedTriggerNode) {
+                        // Смотрим, куда ведет выход (output_1) из блока триггера
+                        const connections = matchedTriggerNode.outputs["output_1"].connections;
 
-                        // В будущем здесь мы будем обрабатывать кнопки (btn1, btn2), 
-                        // но пока бот просто ждет, что юзер напишет текст с кнопки
-                    } else {
-                        // Если совпадений нет, берем ответ по умолчанию
-                        replyText = data.defaultReply || "Я вас не понимаю. Напишите команду из меню.";
+                        if (connections && connections.length > 0) {
+                            const nextNodeId = connections[0].node; // ID блока, к которому пришла стрелочка
+                            const messageNode = drawflowData[nextNodeId];
+
+                            // Если следующий блок — это блок сообщения, берем данные из него
+                            if (messageNode && messageNode.name === 'message') {
+                                replyText = messageNode.data.text || "";
+                                replyImage = messageNode.data.image || "";
+                            }
+                        }
                     }
+
+                    // Если ничего не нашли или стрелочка никуда не ведет
+                    if (!replyText && !replyImage) {
+                        replyText = "Я бот, но для этой команды еще не настроен ответ.";
+                    }
+
                 } else {
-                    // Фоллбэк: если визуального сценария нет, пробуем старый способ
+                    // Фоллбэк: если это совсем старый бот без визуального графа
                     const rulesDoc = await db.collection('bot_rules').doc(botData.botToken).get();
                     if (rulesDoc.exists) {
                         const botConfig = rulesDoc.data();
                         const rules = botConfig.rules || [];
-                        replyText = botConfig.defaultReply || replyText;
+                        replyText = botConfig.defaultReply || "Команда не распознана.";
 
                         const lowerMsg = messageText.toLowerCase();
                         for (let rule of rules) {
@@ -11550,17 +11561,16 @@
                             }
                         }
                     } else {
-                        replyText = "Бот в разработке (сценарий не опубликован).";
+                        replyText = "Сценарий для этого бота не опубликован.";
                     }
                 }
 
-                if (!replyText && !replyImage) return; // Нечего отвечать
+                if (!replyText && !replyImage) return;
 
-                // 5. Имитация (Бот думает и пишет)
+                // 3. Имитация (Бот думает и пишет)
                 setTimeout(async () => {
                     rtdb.ref(`typing/${chatId}/${receiverId}`).set(true);
 
-                    // Помечаем твое сообщение прочитанным
                     const msgsSnap = await db.collection('chats').doc(chatId).collection('msgs')
                         .where('to', '==', receiverId).where('read', '==', false).get();
                     const batch = db.batch();
@@ -11570,7 +11580,7 @@
                     setTimeout(async () => {
                         rtdb.ref(`typing/${chatId}/${receiverId}`).remove();
 
-                        // А. Если в блоке была картинка - бот сначала кидает картинку
+                        // Отправка картинки (если есть в блоке)
                         if (replyImage) {
                             const encryptedImg = encryptText(replyImage, chatId);
                             await db.collection('chats').doc(chatId).collection('msgs').add({
@@ -11578,13 +11588,13 @@
                                 from: receiverId,
                                 to: currentUser.uid,
                                 sys: false,
-                                type: 'image', // Тип картинка!
+                                type: 'image',
                                 read: false,
                                 ts: firebase.firestore.FieldValue.serverTimestamp()
                             });
                         }
 
-                        // Б. Затем бот отправляет текст (если он есть)
+                        // Отправка текста
                         if (replyText) {
                             const encryptedReply = encryptText(replyText, chatId);
                             await db.collection('chats').doc(chatId).collection('msgs').add({
