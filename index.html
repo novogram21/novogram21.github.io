@@ -4715,10 +4715,8 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.17 8 15.33 8 13.83 8.67 13.83 9.5 14.5 11 15.33 11zm-6.66 0c.83 0 1.5-.67 1.5-1.5S9.5 8 8.67 8 7.17 8.67 7.17 9.5 7.84 11 8.67 11zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
                     </button>
 
-                    <div class="input-inner-container">
-                        <div id="fakeInput" class="fake-input"></div>
-                        <textarea id="msgInput" placeholder="Сообщение" spellcheck="true" wrap="soft" oninput="animateInput(this); autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)" onscroll="document.getElementById('fakeInput').scrollTop = this.scrollTop;"></textarea>
-                    </div>
+                    <textarea id="msgInput" placeholder="Сообщение" spellcheck="true" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
+
                     <div class="tg-icon-btn-input">
                         <input type="file" id="fileInput" onchange="uploadFile(this)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; padding: 0; margin: 0;">
                         <svg viewBox="0 0 24 24" style="transform: rotate(45deg); position: relative; z-index: 1; pointer-events: none;"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" /></svg>
@@ -5957,53 +5955,6 @@
                     });
                 });
         }
-
-        let previousInputValue = "";
-
-        function animateInput(textarea) {
-            const fakeInput = document.getElementById('fakeInput');
-            const currentValue = textarea.value;
-
-            // Если поле полностью стерто, очищаем фейковый инпут
-            if (currentValue === "") {
-                fakeInput.innerHTML = "";
-                previousInputValue = "";
-                return;
-            }
-
-            let html = "";
-
-            // Если юзер плавно печатает (добавился ровно 1 символ в конец)
-            if (currentValue.startsWith(previousInputValue) && currentValue.length === previousInputValue.length + 1) {
-                const baseText = escapeHtml(currentValue.slice(0, -1));
-                const lastChar = escapeHtml(currentValue.slice(-1));
-
-                // Пробелы и переносы строк не анимируем, чтобы верстка не прыгала
-                if (lastChar.trim() === '') {
-                    html = baseText + lastChar;
-                } else {
-                    // Оборачиваем последнюю букву в класс с анимацией выдавливания
-                    html = baseText + `<span class="pop-letter">${lastChar}</span>`;
-                }
-            } else {
-                // Если вставили текст куском, стерли или правим в середине — просто выводим как есть
-                html = escapeHtml(currentValue);
-            }
-
-            fakeInput.innerHTML = html;
-            previousInputValue = currentValue;
-        }
-
-        // Защита от XSS и поломки HTML-тегов при вводе спецсимволов
-        function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
         // Вспомогательная функция для обновления текста последнего сообщения в списке
         function startMessageListener(chatId, fid, createdTime) {
             let isListInitialLoad = true;
@@ -7049,10 +7000,7 @@
 
             if (!txt) {
                 inputEl.value = '';
-                inputEl.style.height = '40px';
-                // --- ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ ---
-                document.getElementById('fakeInput').innerHTML = '';
-                previousInputValue = '';
+                inputEl.style.height = '40px'; // Сброс высоты
                 checkInputState(); // Обновление кнопок
                 inputEl.focus();
 
@@ -7306,10 +7254,7 @@
 
             const inp = document.getElementById('msgInput');
             inp.value = '';
-            inp.style.height = '40px';
-            // --- ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ ---
-            document.getElementById('fakeInput').innerHTML = '';
-            previousInputValue = '';
+            inp.style.height = '40px'; // <-- ДОБАВИТЬ ЭТУ СТРОЧКУ (Сброс высоты)
             checkInputState(); // <-- ДОБАВИТЬ ЭТУ СТРОЧКУ (Вернуть микрофон)
         }
 
