@@ -11374,13 +11374,16 @@
 
         // 3. Само удаление из базы
         async function executeRemoveFriend() {
-            closeRemoveFriendModal(); // Сразу закрываем окно
+            // 1. Сразу прячем само окно подтверждения
+            const modal = document.getElementById('removeFriendModalOverlay');
+            if (modal) modal.style.display = 'none';
+
             if (!currentFriendId || !currentUser) return;
 
             try {
                 showToast("Удаление...");
 
-                // Ищем документ дружбы
+                // Ищем документ дружбы в базе
                 const snap = await db.collection('friends')
                     .where('users', 'array-contains', currentUser.uid)
                     .get();
@@ -11395,14 +11398,13 @@
                 if (friendDocId) {
                     await db.collection('friends').doc(friendDocId).delete();
 
-                    showToast("Удалено из контактов ✓");
+                    showToast("Контакт удален ✓");
 
-                    // Закрываем все шторки настроек и сам чат
-                    closeEditContactSheet();
-                    closeFriendProfile();
+                    // 2. ГЛАВНОЕ: Закрываем абсолютно все открытые шторки и чат
+                    closeAllSheets();
                     closeChat();
                 } else {
-                    showToast("Ошибка: контакт не найден");
+                    showToast("Контакт уже удален");
                 }
             } catch (e) {
                 console.error("Ошибка при удалении:", e);
