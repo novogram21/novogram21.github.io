@@ -5938,12 +5938,18 @@
                             }
                         }
                     } else {
-                        // Если сообщений нет (чат очищен)
+                        // Если сообщений нет (чат очищен или новый)
                         if (lastEl) {
                             lastEl.innerHTML = `<span style="font-style: italic; opacity: 0.5; letter-spacing: 0.2px;">диалог очищен</span>`;
                         }
                         if (statusEl) statusEl.style.display = 'none';
-                        if (dateEl) dateEl.innerText = "";
+
+                        // ПРОВЕРКА: Если в атрибуте уже стоит "свежее" время (от очистки), не заменяем его на старое
+                        const currentTimeAttr = parseInt(userDiv.getAttribute('data-time') || 0);
+                        if (currentTimeAttr < createdTime) {
+                            userDiv.setAttribute('data-time', createdTime);
+                            if (dateEl) dateEl.innerText = formatTelegramDate(new Date(createdTime));
+                        }
                     }
                     // Обновляем дату
                     if (dateEl && timeToDisplay > 0) {
@@ -7324,6 +7330,22 @@
                 const batch = db.batch();
                 snap.docs.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
+                // --- НОВОЕ: Обновляем дату и позицию в боковом меню ---
+                const userDiv = document.getElementById('u-' + currentFriendId);
+                if (userDiv) {
+                    const now = Date.now();
+                    // Устанавливаем новое время для сортировки (чат взлетит вверх)
+                    userDiv.setAttribute('data-time', now);
+
+                    // Обновляем текст даты на "сегодня" (или текущее время)
+                    const dateEl = document.getElementById('date-' + currentChatId);
+                    if (dateEl) dateEl.innerText = formatTelegramDate(new Date(now));
+
+                    // Пересортировываем списки, чтобы чат поднялся на первое место
+                    sortChatItems('friendsList');
+                    sortChatItems('botsList');
+                }
+                // -------------------------------------------------------
 
                 const activeList = document.getElementById('msgList_' + currentChatId);
                 if (activeList) activeList.innerHTML = '';
