@@ -102,6 +102,232 @@
         
         /* Загрузчик */
         #loader { position: fixed; top:0; left:0; width:100%; height:100%; background:#121316; display:flex; align-items:center; justify-content:center; z-index:9999; }
+
+        /* ==========================================
+           КОНТЕКСТНОЕ МЕНЮ (ПО ПРАВОМУ КЛИКУ)
+           ========================================== */
+        #nodeContextMenu {
+            position: absolute;
+            background: #1c1c1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            z-index: 10000;
+            width: 220px;
+            display: none;
+            flex-direction: column;
+            padding: 6px 0;
+            user-select: none;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            color: #ccc;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.1s, color 0.1s;
+        }
+
+            .context-menu-item:hover {
+                background: #2a2a2d;
+                color: #fff;
+            }
+
+            .context-menu-item .icon {
+                font-size: 16px;
+                width: 20px;
+                text-align: center;
+            }
+
+        .icon-msg {
+            color: #4a9eff;
+        }
+
+        .icon-action {
+            color: #f59e0b;
+        }
+
+        .icon-cond {
+            color: #10b981;
+        }
+
+        .icon-timer {
+            color: #ec4899;
+        }
+
+        .icon-start {
+            color: #84cc16;
+        }
+
+        .icon-rand {
+            color: #8b5cf6;
+        }
+
+        .icon-key {
+            color: #0ea5e9;
+        }
+
+        .icon-event {
+            color: #06b6d4;
+        }
+
+        .icon-note {
+            color: #8e8e93;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: #333;
+            margin: 6px 16px;
+        }
+
+        .context-menu-cancel {
+            padding: 10px 16px;
+            color: #888;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+            .context-menu-cancel:hover {
+                color: #fff;
+                background: #2a2a2d;
+            }
+
+        /* ==========================================
+           ОБНОВЛЕННЫЙ ДИЗАЙН БЛОКОВ (ROBOCHAT STYLE)
+           ========================================== */
+        .drawflow .drawflow-node {
+            background: #ffffff; /* Белые карточки как в Robochat */
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            width: 280px;
+            color: #333;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* Темная тема для темного режима */
+        @media (prefers-color-scheme: dark) {
+            .drawflow .drawflow-node {
+                background: #1c1c1e;
+                border: 1px solid #333;
+                color: #fff;
+            }
+
+            .node-robo-header {
+                background: #252528 !important;
+                border-bottom: 1px solid #333 !important;
+            }
+
+            .node-robo-input {
+                background: #121316 !important;
+                border: 1px solid #333 !important;
+                color: white !important;
+            }
+
+            .node-robo-btn-add {
+                background: rgba(255,255,255,0.05) !important;
+                border: 1px dashed #555 !important;
+                color: #888 !important;
+            }
+        }
+
+        .drawflow .drawflow-node.selected {
+            box-shadow: 0 0 0 3px #736AF0, 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .node-robo-header {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .node-robo-body {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .node-robo-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+
+            .node-robo-input:focus {
+                border-color: #736AF0;
+            }
+
+        .node-robo-btn-add {
+            background: #f0f4f8;
+            border: 1px dashed #ccc;
+            color: #555;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+            .node-robo-btn-add:hover {
+                background: #e2e8f0;
+                color: #333;
+            }
+
+        .node-del-icon {
+            cursor: pointer;
+            color: #ff4444;
+            font-size: 16px;
+            opacity: 0.5;
+            transition: 0.2s;
+        }
+
+            .node-del-icon:hover {
+                opacity: 1;
+            }
+
+        /* Красивые соединения */
+        .drawflow .connection .main-path {
+            stroke: #736AF0;
+            stroke-width: 3px;
+        }
+
+        .drawflow .inputs .input {
+            left: -14px;
+            background: #fff;
+            border: 2px solid #10b981;
+            width: 16px;
+            height: 16px;
+        }
+
+        .drawflow .outputs .output {
+            right: -14px;
+            background: #fff;
+            border: 2px solid #736AF0;
+            width: 16px;
+            height: 16px;
+        }
+    
     </style>
 </head>
 <body>
@@ -122,18 +348,31 @@
 
     <div id="viewEditor" class="view" style="flex:1;">
         <div class="premium-header">
-            <button class="header-icon-btn" onclick="switchView('viewList')">🔙</button>
+            <button class="header-icon-btn" onclick="switchView('viewList')">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
             <div class="header-title" id="editorBotName">Сценарий</div>
-            <button class="header-icon-btn" onclick="saveGraphToFirebase()" id="saveBtn">💾</button>
+            <button class="header-icon-btn" onclick="saveGraphToFirebase()" id="saveBtn">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+            </button>
         </div>
-        
-        <div style="position: relative; flex: 1;">
-            <div class="editor-top-bar">
-                <button class="toolbar-btn" onclick="addMessageNode()">+ Добавить Сообщение</button>
-                <div style="color:#888; font-size:12px; align-self:center;">Удерживайте 'Space' для перемещения холста. Del - удалить выделенное.</div>
+
+        <div style="position: relative; flex: 1; overflow: hidden;">
+            <div style="position: absolute; top: 15px; left: 15px; color:#888; font-size:12px; z-index: 5; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 8px; backdrop-filter: blur(5px);">
+                ПКМ (Правый клик) - открыть меню. Space + ЛКМ - перемещение. Del - удалить.
             </div>
-            
+
             <div id="drawflow"></div>
+
+            <div id="nodeContextMenu">
+                <div class="context-menu-item" onclick="addNodeFromMenu('message')"><span class="icon icon-msg">Тт</span> Сообщение</div>
+                <div class="context-menu-item" onclick="alert('В разработке')"><span class="icon icon-action">⚡</span> Действие</div>
+                <div class="context-menu-item" onclick="alert('В разработке')"><span class="icon icon-cond">⚗️</span> Условие</div>
+                <div class="context-menu-item" onclick="alert('В разработке')"><span class="icon icon-timer">🕒</span> Таймер</div>
+                <div class="context-menu-item" onclick="addNodeFromMenu('trigger')"><span class="icon icon-key">✏️</span> Ключевые слова</div>
+                <div class="context-menu-divider"></div>
+                <div class="context-menu-cancel" onclick="closeContextMenu()">Отмена</div>
+            </div>
         </div>
     </div>
 
@@ -225,59 +464,114 @@
         }
 
         // === 3. ИНИЦИАЛИЗАЦИЯ ВИЗУАЛЬНОГО РЕДАКТОРА ===
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
         function initDrawflow() {
             const id = document.getElementById("drawflow");
             editor = new Drawflow(id);
-            
-            // Настройки движка
-            editor.reroute = true; // Кривые линии
+
+            editor.reroute = true;
             editor.start();
 
-            // Если удалили ноду/связь (кнопка Del)
-            editor.on('nodeRemoved', function(id) { console.log("Удален блок " + id); });
+            // Обработка правого клика по холсту
+            id.addEventListener('contextmenu', function (e) {
+                e.preventDefault(); // Блокируем стандартное меню браузера
+
+                // Получаем точные координаты внутри холста с учетом зума
+                const rect = id.getBoundingClientRect();
+                lastMouseX = (e.clientX - rect.left - editor.canvas_x) / editor.zoom;
+                lastMouseY = (e.clientY - rect.top - editor.canvas_y) / editor.zoom;
+
+                // Показываем наше меню под мышкой
+                const menu = document.getElementById('nodeContextMenu');
+                menu.style.display = 'flex';
+                menu.style.left = e.clientX + 'px';
+                menu.style.top = e.clientY + 'px';
+            });
+
+            // Закрытие меню при клике в любое другое место
+            document.addEventListener('click', closeContextMenu);
         }
 
-        // === 4. СОЗДАНИЕ БЛОКА СООБЩЕНИЯ В РЕДАКТОРЕ ===
+        function closeContextMenu() {
+            document.getElementById('nodeContextMenu').style.display = 'none';
+        }
+
+        // Вызывается из контекстного меню
+        function addNodeFromMenu(type) {
+            closeContextMenu();
+
+            if (type === 'message') {
+                addMessageNode(null, lastMouseX, lastMouseY);
+            } else if (type === 'trigger') {
+                addTriggerNode(null, lastMouseX, lastMouseY);
+            }
+        }
+
+        // === 4. СОЗДАНИЕ БЛОКОВ В СТИЛЕ ROBOCHAT ===
+
+        // БЛОК "СООБЩЕНИЕ" (То, что отправляет бот)
         function addMessageNode(data = null, posX = 100, posY = 200) {
-            // Если данные не переданы (создаем новый пустой блок)
-            const nodeData = data || {
-                trigger: "",
-                text: "Новое сообщение",
-                image: "",
-                btn1: "", btn2: ""
-            };
+            const nodeData = data || { text: "", image: "" };
 
             const html = `
-                <div class="node-header">💬 Блок ответа</div>
-                <div class="node-content">
-                    <div>
-                        <div style="font-size:11px; color:#888; margin-bottom:5px;">ТРИГГЕР (ЕСЛИ НАПИШУТ):</div>
-                        <input type="text" df-trigger class="node-input" placeholder="Слово, напр: старт">
-                    </div>
-                    <div>
-                        <div style="font-size:11px; color:#888; margin-bottom:5px;">ТЕКСТ ОТВЕТА:</div>
-                        <textarea df-text class="node-input" rows="3" placeholder="Текст..."></textarea>
-                    </div>
-                    <div>
-                        <div style="font-size:11px; color:#888; margin-bottom:5px;">КАРТИНКА (URL):</div>
-                        <input type="text" df-image class="node-input" placeholder="https://...">
-                    </div>
-                    <div class="node-buttons-container">
-                        <div style="font-size:11px; color:#888;">КНОПКИ (Следующие шаги):</div>
-                        <div class="node-btn-item">
-                            <input type="text" df-btn1 class="node-btn-input" placeholder="+ Кнопка 1">
-                        </div>
-                        <div class="node-btn-item">
-                            <input type="text" df-btn2 class="node-btn-input" placeholder="+ Кнопка 2">
-                        </div>
-                    </div>
+                <div class="node-robo-header">
+                    <span>Сообщение #${ruleBlockCounter}</span>
+                    <span class="node-del-icon" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))">✖</span>
+                </div>
+                <div class="node-robo-body">
+                    <textarea df-text class="node-robo-input" rows="3" placeholder="Добавьте текст...">${nodeData.text}</textarea>
+                    <input type="text" df-image class="node-robo-input" placeholder="URL картинки (опционально)" value="${nodeData.image}">
+                    <div class="node-robo-btn-add">+ Добавить кнопку</div>
                 </div>
             `;
-            
-            // editor.addNode(name, inputs, outputs, posX, posY, class, data, html);
-            // 1 вход (слева) для связи с кнопкой предыдущего блока. 
-            // 2 выхода (справа) для двух наших кнопок, чтобы вести к следующим блокам.
-            editor.addNode('message', 1, 2, posX, posY, 'message-node', nodeData, html);
+
+            // 1 вход (для подключения триггера), 1 выход (для следующего шага)
+            editor.addNode('message', 1, 1, posX, posY, 'message-node', nodeData, html);
+            ruleBlockCounter++;
+        }
+
+        // БЛОК "КЛЮЧЕВЫЕ СЛОВА" (То, на что реагирует бот)
+        function addTriggerNode(data = null, posX = 50, posY = 200) {
+            const nodeData = data || { trigger: "" };
+
+            const html = `
+                <div class="node-robo-header" style="border-top: 3px solid #10b981;">
+                    <span style="color:#10b981;">Условие (Триггер)</span>
+                    <span class="node-del-icon" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))">✖</span>
+                </div>
+                <div class="node-robo-body">
+                    <div style="font-size:11px; color:#888; margin-bottom:-5px;">ЕСЛИ НАПИСАЛИ:</div>
+                    <input type="text" df-trigger class="node-robo-input" placeholder="напр: привет" value="${nodeData.trigger}">
+                </div>
+            `;
+
+            // 0 входов (это начало цепочки), 1 выход (ведет к сообщению)
+            editor.addNode('trigger', 0, 1, posX, posY, 'trigger-node', nodeData, html);
+        }
+
+        // === 5. ОТКРЫТИЕ РЕДАКТОРА ===
+        async function openEditor(token, name) {
+            currentBotToken = token;
+            document.getElementById('editorBotName').innerText = name;
+            switchView('viewEditor');
+
+            editor.clear();
+            ruleBlockCounter = 1;
+
+            try {
+                const doc = await db.collection('bot_flows').doc(token).get();
+                if (doc.exists && doc.data().flowData) {
+                    editor.import(doc.data().flowData);
+                } else {
+                    // Если пусто - кидаем стартовые блоки для примера
+                    addTriggerNode({ trigger: "старт" }, 100, 200);
+                    addMessageNode({ text: "Добро пожаловать в бота!" }, 450, 200);
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки", e);
+            }
         }
 
         // === 5. ОТКРЫТИЕ РЕДАКТОРА ДЛЯ ВЫБРАННОГО БОТА ===
