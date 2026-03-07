@@ -630,7 +630,7 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // 🔥 МАССИВ ЭМОДЗИ ДЛЯ ПИКЕРА (Его не хватало в твоем коде)
+        // 🔥 МАССИВ ЭМОДЗИ ДЛЯ ПИКЕРА
         const EMOJI_LIST = "😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😋 😎 😍 😘 🥰 😗 😙 😚 🙂 🤗 🤩 🤔 🤨 😐 😑 😶 🙄 😏 😣 😥 😮 🤐 😯 😪 😫 🥱 😴 😌 😛 😜 😝 🤤 😒 😓 😔 😕 🙃 🤑 😲 ☹️ 🙁 😖 😞 😟 😤 😢 😭 😦 😧 😨 😩 🤯 😬 😰 😱 🥵 🥶 😳 🤪 😵 😡 😠 🤬 😷 🤒 🤕 🤢 🤮 🤧 😇 🥳 🥺 🤠 🤡 🤥 🤫 🤭 🧐 🤓 😈 👿 👹 👺 💀 👻 👽 🤖 💩 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊 💋 💌 💘 💝 💖 💗 💓 💞 💕 💟 ❣️ 💔 ❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 💯 💢 💥 💫 💦 💨 🕳️ 💣 💬 👁️‍🗨️ 🗨️ 🗯️ 💭 💤 👋 🤚 🖐️ ✋ 🖖 👌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏".split(" ");
 
         let currentUser = null;
@@ -647,7 +647,6 @@
                 initDrawflow(); // Запускаем холст заранее
                 loadMyBotsList(); // Загружаем список ботов в фоне
 
-                // Читаем ссылку: есть ли там токен бота?
                 // Читаем ссылку: ищем зашифрованный ID
                 const urlParams = new URLSearchParams(window.location.search);
                 const encodedBotId = urlParams.get('id');
@@ -689,10 +688,10 @@
                 snap.forEach(doc => {
                     const b = doc.data();
                     html += `
-                            <div style="background:var(--bg-panel); border:1px solid #333; padding:20px; border-radius:16px; margin-bottom:15px; cursor:pointer; display:flex; align-items:center;" onclick="openEditor('${b.botToken}', '${b.name}')">
-                                <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px; margin-right:15px;">🤖</div>
-                                <div style="font-size:16px; font-weight:bold;">${b.name} <span style="color:#888; font-weight:normal; font-size:13px; margin-left:10px;">@${b.username}</span></div>
-                            </div>`;
+                                <div style="background:var(--bg-panel); border:1px solid #333; padding:20px; border-radius:16px; margin-bottom:15px; cursor:pointer; display:flex; align-items:center;" onclick="openEditor('${b.botToken}', '${b.name}')">
+                                    <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px; margin-right:15px;">🤖</div>
+                                    <div style="font-size:16px; font-weight:bold;">${b.name} <span style="color:#888; font-weight:normal; font-size:13px; margin-left:10px;">@${b.username}</span></div>
+                                </div>`;
                 });
                 container.innerHTML = html;
             } catch (e) { console.error(e); }
@@ -790,7 +789,7 @@
         // ==========================================================
 
         function addMessageNode(data = null, posX = 100, posY = 200) {
-            // Форсируем использование массива (даже если раньше была просто строка)
+            // Форсируем использование массива
             let textsArray = [""];
             if (data) {
                 if (data.texts && Array.isArray(data.texts)) textsArray = data.texts;
@@ -805,37 +804,36 @@
         function addTriggerNode(data = null, posX = 50, posY = 200) {
             const nodeData = data || { type: 'trigger', trigger: "" };
             const html = `
-                    <div class="node-card">
-                        <div class="node-card-header header-trigger">
-                            <span>Условие</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <div class="node-card">
+                            <div class="node-card-header header-trigger">
+                                <span>Условие</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </div>
+                            <div class="node-card-body">
+                                <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
+                                <div class="preview-text" style="font-weight:bold;">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
+                            </div>
                         </div>
-                        <div class="node-card-body">
-                            <div style="font-size:11px; color:#888; margin-bottom:4px;">ЕСЛИ СОДЕРЖИТ:</div>
-                            <div class="preview-text" style="font-weight:bold;">${nodeData.trigger || '<em>(Любое слово)</em>'}</div>
-                        </div>
-                    </div>
-                `;
+                    `;
             editor.addNode('trigger', 0, 1, posX, posY, 'trigger-node', nodeData, html);
         }
 
-        // --- НОВЫЕ ФУНКЦИИ ДЛЯ МНОЖЕСТВЕННЫХ СООБЩЕНИЙ ---
         function generateMessageCardHtml(nodeId, nodeData) {
             let textsPreview = '';
             nodeData.texts.forEach(txt => {
                 textsPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${txt || '<em>(Пустое сообщение)</em>'}</div>`;
             });
             return `
-                <div class="node-card">
-                    <div class="node-card-header header-msg">
-                        <span>Сообщение</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </div>
-                    <div class="node-card-body" id="node-body-content-${nodeId}">
-                        <div class="preview-trigger">${nodeData.trigger ? '⚡ ' + nodeData.trigger : ''}</div>
-                        ${textsPreview}
-                    </div>
-                </div>`;
+                    <div class="node-card">
+                        <div class="node-card-header header-msg">
+                            <span>Сообщение</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </div>
+                        <div class="node-card-body" id="node-body-content-${nodeId}">
+                            <div class="preview-trigger">${nodeData.trigger ? '⚡ ' + nodeData.trigger : ''}</div>
+                            ${textsPreview}
+                        </div>
+                    </div>`;
         }
 
         function updateCanvasCard(nodeId) {
@@ -847,7 +845,6 @@
                 const bodyContainer = document.getElementById(`node-body-content-${nodeId}`);
                 if (bodyContainer) {
                     let textsPreview = '';
-                    // Защита: если блок старый, берем text, иначе texts
                     let textsArr = node.data.texts || [node.data.text || ""];
                     textsArr.forEach(txt => {
                         textsPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${txt || '<em>(Пустое сообщение)</em>'}</div>`;
@@ -900,51 +897,51 @@
                 let textAreasHtml = '';
                 node.data.texts.forEach((txt, index) => {
                     textAreasHtml += `
-                        <div class="prop-textarea-wrapper" style="margin-bottom: 10px;">
-                            <textarea class="prop-msg-text-dynamic" data-index="${index}" placeholder="Введите сообщение...">${txt}</textarea>
-                            <div class="textarea-tools">
-                                <div>
-                                    <span class="toggle-emoji-btn" title="Смайлики">🙂</span>
-                                    <span title="Переменные">{..}</span>
-                                    <span title="Вложение">📎</span>
+                            <div class="prop-textarea-wrapper" style="margin-bottom: 10px;">
+                                <textarea class="prop-msg-text-dynamic" data-index="${index}" placeholder="Введите сообщение...">${txt}</textarea>
+                                <div class="textarea-tools">
+                                    <div>
+                                        <span class="toggle-emoji-btn" title="Смайлики">🙂</span>
+                                        <span title="Переменные">{..}</span>
+                                        <span title="Вложение">📎</span>
+                                    </div>
+                                    ${index > 0 ? `<span class="delete-text-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>` : ''}
                                 </div>
-                                ${index > 0 ? `<span class="delete-text-btn" data-index="${index}" style="color:#ff595a; cursor:pointer;" title="Удалить">✖</span>` : ''}
-                            </div>
-                        </div>`;
+                            </div>`;
                 });
 
-                // Полностью убрали блок "Команда (Триггер)"
+                // ФИКС: Удалили кусок "Команда (Триггер)" полностью из HTML
                 content.innerHTML = `
-                        <div id="msg-blocks-container">
-                            ${textAreasHtml}
-                        </div>
-
-                        <div class="emoji-picker" id="emoji-picker-container">
-                            ${emojisHtml}
-                        </div>
-
-                        <div style="margin-top: 15px;">
-                            <div class="prop-label">Добавить блок</div>
-                            <div class="blocks-grid">
-                                <div class="block-btn" onclick="addNewTextToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
-                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
-                                <div class="block-btn" onclick="alert('Доступно в Pro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Пауза</span></div>
-                                <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
+                            <div id="msg-blocks-container">
+                                ${textAreasHtml}
                             </div>
-                        </div>
 
-                        <div style="margin-top: 15px;">
-                            <div class="prop-label">Ссылка на картинку (Опционально)</div>
-                            <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
-                        </div>
-                    `;
+                            <div class="emoji-picker" id="emoji-picker-container">
+                                ${emojisHtml}
+                            </div>
+
+                            <div style="margin-top: 15px;">
+                                <div class="prop-label">Добавить блок</div>
+                                <div class="blocks-grid">
+                                    <div class="block-btn" onclick="addNewTextToNode(${nodeId})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span>Текст</span></div>
+                                    <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg><span>Кнопки</span></div>
+                                    <div class="block-btn" onclick="alert('Доступно в Pro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Пауза</span></div>
+                                    <div class="block-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Фото</span></div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 15px;">
+                                <div class="prop-label">Ссылка на картинку (Опционально)</div>
+                                <input type="text" id="prop-msg-image" class="prop-input" placeholder="https://..." value="${node.data.image || ''}">
+                            </div>
+                        `;
 
                 // Сохранение картинки
-                document.getElementById('prop-msg-trigger').addEventListener('input', (e) => {
-                    node.data.trigger = e.target.value; editor.updateNodeDataFromId(nodeId, node.data); updateCanvasCard(nodeId);
+                document.getElementById('prop-msg-image').addEventListener('input', (e) => {
+                    node.data.image = e.target.value; editor.updateNodeDataFromId(nodeId, node.data);
                 });
 
-                // ФИКС КНОПКИ УДАЛЕНИЯ (Теперь крестик работает железобетонно)
+                // ФИКС КНОПКИ УДАЛЕНИЯ
                 document.querySelectorAll('.delete-text-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const idx = parseInt(e.currentTarget.dataset.index);
@@ -999,12 +996,12 @@
             else if (node.name === 'trigger') {
                 title.innerHTML = `Условие #${nodeId}`;
                 content.innerHTML = `
-                        <div>
-                            <div class="prop-label">Если сообщение содержит текст:</div>
-                            <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
-                            <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит цепочку, если клиент напишет это слово.</div>
-                        </div>
-                    `;
+                            <div>
+                                <div class="prop-label">Если сообщение содержит текст:</div>
+                                <input type="text" id="prop-trigger-text" class="prop-input" placeholder="Например: привет" value="${node.data.trigger || ''}">
+                                <div style="font-size:12px; color:#888; margin-top:10px;">Бот запустит цепочку, если клиент напишет это слово.</div>
+                            </div>
+                        `;
 
                 const nodeCard = document.querySelector(`#node-${nodeId}`);
                 document.getElementById('prop-trigger-text').addEventListener('input', (e) => {
@@ -1085,4 +1082,3 @@
     </script>
 </body>
 </html>
-
