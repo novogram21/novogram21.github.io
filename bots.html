@@ -595,55 +595,45 @@
         .preview-buttons-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
+            gap: 6px;
             margin-top: 10px;
-            border-top: 1px dashed #eee;
             padding-top: 8px;
         }
-
+        /* Кнопка на холсте */
         .preview-btn {
             background: #f0f2f5;
             border: 1px solid #d1d5db;
             border-radius: 6px;
-            padding: 4px 8px;
+            padding: 6px;
             font-size: 10px;
             color: #444;
             font-weight: 600;
             text-align: center;
-            flex-grow: 1;
+            box-sizing: border-box;
         }
 
-        .prop-button-item {
-            background: #252528;
-            border: 1px solid #333;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-        }
+            .preview-btn.w-full {
+                width: 100%;
+            }
 
-        .btn-settings-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-bottom: 8px;
-        }
+            .preview-btn.w-half {
+                width: calc(50% - 3px);
+            }
 
+        /* Стиль для кнопки добавления в панели (убираем лишний текст) */
         .add-tg-btn {
             width: 100%;
             background: rgba(42, 171, 238, 0.1);
             border: 1px dashed var(--primary);
             color: var(--primary);
-            padding: 10px;
+            padding: 8px;
             border-radius: 10px;
             cursor: pointer;
-            font-weight: bold;
+            font-size: 20px; /* Делаем плюс крупнее */
+            line-height: 1;
             transition: 0.2s;
             margin-top: 10px;
         }
-
-            .add-tg-btn:hover {
-                background: rgba(42, 171, 238, 0.2);
-            }
 
     </style>
 </head>
@@ -926,31 +916,25 @@
         function generateMessageCardHtml(nodeId, nodeData) {
             let blocksPreview = '';
             (nodeData.blocks || []).forEach(blk => {
-                if (blk.type === 'text') blocksPreview += `<div class="preview-text" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05);">${blk.content || '<em>(Пустое)</em>'}</div>`;
-                else if (blk.type === 'pause') blocksPreview += `<div style="font-size: 10px; color: #2AABEE; margin-bottom: 5px;">⏱ Пауза: ${blk.duration}с</div>`;
+                if (blk.type === 'text') blocksPreview += `<div class="preview-text">${blk.content || '<em>(Пустое)</em>'}</div>`;
+                else if (blk.type === 'pause') blocksPreview += `<div style="font-size: 10px; color: #2AABEE;">⏱ ${blk.duration}с</div>`;
             });
 
-            // Рендер кнопок
             let buttonsPreview = '';
             if (nodeData.buttons && nodeData.buttons.length > 0) {
                 buttonsPreview = '<div class="preview-buttons-container">';
                 nodeData.buttons.forEach(btn => {
-                    buttonsPreview += `<div class="preview-btn">${btn.text || 'Кнопка'}</div>`;
+                    // Добавляем класс в зависимости от ширины
+                    const widthClass = btn.width === 'half' ? 'w-half' : 'w-full';
+                    buttonsPreview += `<div class="preview-btn ${widthClass}">${btn.text || 'Кнопка'}</div>`;
                 });
                 buttonsPreview += '</div>';
             }
 
-            return `
-                <div class="node-card">
-                    <div class="node-card-header header-msg">
-                        <span>Сообщение</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </div>
-                    <div class="node-card-body" id="node-body-content-${nodeId}">
-                        ${blocksPreview}
-                        ${buttonsPreview}
-                    </div>
-                </div>`;
+            return `<div class="node-card">
+                <div class="node-card-header header-msg"><span>Сообщение</span></div>
+                <div class="node-card-body" id="node-body-content-${nodeId}">${blocksPreview}${buttonsPreview}</div>
+            </div>`;
         }
 
         
@@ -1005,7 +989,8 @@
         window.addNewButtonToNode = function (nodeId) {
             const node = editor.getNodeFromId(nodeId);
             if (!node.data.buttons) node.data.buttons = [];
-            node.data.buttons.push({ text: "Новая кнопка", targetNodeId: "" });
+            // По умолчанию кнопка на всю ширину (full)
+            node.data.buttons.push({ text: "Кнопка", targetNodeId: "", width: "full" });
             editor.updateNodeDataFromId(nodeId, node.data);
             renderPropertiesPanel(nodeId);
             updateCanvasCard(nodeId);
@@ -1084,18 +1069,24 @@
                 });
 
                 // Формируем HTML для списка кнопок
-                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки (Inline)</div><div id="msg-buttons-container">';
+                let buttonsHtml = '<div class="prop-label" style="margin-top:20px;">Кнопки</div><div id="msg-buttons-container">';
                 (node.data.buttons || []).forEach((btn, index) => {
                     buttonsHtml += `
                         <div class="prop-button-item">
                             <div class="btn-settings-row">
-                                <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст кнопки" value="${btn.text}">
-                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer;">✖</span>
+                                <input type="text" class="prop-input btn-text-input" data-index="${index}" placeholder="Текст" value="${btn.text}">
+                                <select class="prop-input btn-width-input" data-index="${index}" style="width: 80px; padding: 5px; font-size: 11px;">
+                                    <option value="full" ${btn.width === 'full' ? 'selected' : ''}>1/1</option>
+                                    <option value="half" ${btn.width === 'half' ? 'selected' : ''}>1/2</option>
+                                </select>
+                                <span onclick="deleteButtonFromNode(${nodeId}, ${index})" style="color:#ff595a; cursor:pointer; font-weight:bold;">✖</span>
                             </div>
-                            <input type="text" class="prop-input btn-target-input" style="font-size:11px; padding:8px;" data-index="${index}" placeholder="ID шага (напр: 5)" value="${btn.targetNodeId || ''}">
+                            <input type="text" class="prop-input btn-target-input" style="font-size:11px; padding:8px; margin-top:5px;" data-index="${index}" placeholder="ID шага" value="${btn.targetNodeId || ''}">
                         </div>`;
                 });
-                buttonsHtml += '</div><button class="add-tg-btn" onclick="addNewButtonToNode(' + nodeId + ')">+ Добавить кнопку</button>';
+                buttonsHtml += '</div>';
+                // Убрали текст, оставили только иконку плюса
+                buttonsHtml += `<button class="add-tg-btn" onclick="addNewButtonToNode(${nodeId})">+</button>`;
 
                 content.innerHTML = `
                         <div id="msg-blocks-container">
@@ -1273,6 +1264,16 @@
                     const idx = parseInt(this.getAttribute('data-index'));
                     node.data.buttons[idx].targetNodeId = this.value;
                     editor.updateNodeDataFromId(nodeId, node.data);
+                };
+            });
+
+            // Сохранение выбора ширины
+            document.querySelectorAll('.btn-width-input').forEach(sel => {
+                sel.onchange = function () {
+                    const idx = parseInt(this.getAttribute('data-index'));
+                    node.data.buttons[idx].width = this.value;
+                    editor.updateNodeDataFromId(nodeId, node.data);
+                    updateCanvasCard(nodeId);
                 };
             });
 
