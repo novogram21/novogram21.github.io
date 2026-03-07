@@ -6116,15 +6116,11 @@
                 listenForFriendRequests();
             }
 
-            const list = document.getElementById('friendsList');
-            if (list.innerHTML === '' || list.innerText.includes('Список друзей пуст')) {
-                list.innerHTML = '<div class="tg-spinner-container"><div class="tg-spinner"></div></div>';
-            }
+            const fList = document.getElementById('friendsList');
+            const bList = document.getElementById('botsList'); // Подключаем список ботов
 
-            if (window.mauiInterop) {
-                window.mauiInterop.postMessage("toggle_network");
-            } else {
-                window.needsNetworkReset = true; // Запасной вариант
+            if (fList && (fList.innerHTML === '' || fList.innerText.includes('Список чатов пуст'))) {
+                fList.innerHTML = '<div class="tg-spinner-container"><div class="tg-spinner"></div></div>';
             }
 
             if (window.mauiInterop) {
@@ -6136,19 +6132,13 @@
 
             const localFriends = localStorage.getItem('novogram_cached_friends');
             if (localFriends) {
-                const parsed = JSON.parse(localFriends);
-                const list = document.getElementById('friendsList');
-                if (list.innerHTML === '' || list.innerText.includes('Список друзей пуст')) {
-                    list.innerHTML = ''; // Очищаем заглушку
+                try {
+                    const parsed = JSON.parse(localFriends);
                     parsed.forEach(p => {
-                        // Создаем div вручную, чтобы не дублировать код отрисовки
-                        // Или просто ждем пока Firebase обновит данные, но лучше отрисовать:
-                        // (Для простоты пока просто загрузим кэш в память, чтобы скрипт знал имена)
                         if (p.fid && p.data) usersCache[p.fid] = p.data;
                     });
-                    // Тут можно вызвать отрисовку, но чтобы не усложнять код дублированием render-функции,
-                    // Firebase Persistence из шага 1 обычно справляется с отрисовкой сам.
-                    // Но сохранение usersCache в память нам очень поможет для имен в заголовках!
+                } catch (e) {
+                    console.error("Ошибка парсинга кэша друзей", e);
                 }
             }
 
@@ -6156,76 +6146,73 @@
             db.collection('friends')
                 .where('users', 'array-contains', currentUser.uid)
                 .onSnapshot(async snap => {
-                    const list = document.getElementById('friendsList');
-
-                    // --- НОВОЕ: УДАЛЯЕМ КРУТИЛКУ, КАК ТОЛЬКО ПРИШЛИ ДАННЫЕ ---
-                    const spinner = list.querySelector('.tg-spinner-container');
-                    if (spinner) {
-                        spinner.remove();
-                    }
-                    // ---------------------------------------------------------
+                    const spinner = fList ? fList.querySelector('.tg-spinner-container') : null;
+                    if (spinner) spinner.remove();
 
                     if (snap.empty) {
-                        list.innerHTML = '<div class="empty-list-msg" style="padding:20px;text-align:center;color:#888">Список друзей пуст</div>';
+                        if (fList) fList.innerHTML = '<div class="empty-list-msg" style="padding:20px;text-align:center;color:#888">Список чатов пуст</div>';
                         return;
                     }
 
-                    // --- УДАЛЯЕМ НАДПИСЬ ПУСТОТЫ ПЕРЕД ДОБАВЛЕНИЕМ ДРУЗЕЙ ---
-                    const emptyMsg = list.querySelector('.empty-list-msg');
-                    if (emptyMsg) emptyMsg.remove();
-
-                    // Страховка на случай, если надпись подгрузилась из старого кэша
-                    if (list.innerHTML.includes('Список друзей пуст')) {
-                        list.innerHTML = '';
+                    if (fList) {
+                        const emptyMsg = fList.querySelector('.empty-list-msg');
+                        if (emptyMsg) emptyMsg.remove();
+                        if (fList.innerHTML.includes('Список чатов пуст')) fList.innerHTML = '';
                     }
-                    // ---------------------------------------------------------
 
-                    // Проходим только по ИЗМЕНЕНИЯМ
-                    snap.docChanges().forEach(async change => {
+                    // 🔥 ИСПРАВЛЕНИЕ: Используем for...of, чтобы await работал правильно!
+                    for (const change of snap.docChanges()) {
                         const d = change.doc.data();
                         const fid = d.users.find(id => id !== currentUser.uid);
-                        if (!fid) return;
+                        if (!fid) continue;
 
-                        // Если друга удалили
+                        // Если диалог удален
                         if (change.type === 'removed') {
                             const el = document.getElementById('u-' + fid);
                             if (el) el.remove();
-                            return;
+                            continue;
                         }
 
-                        // --- 🔥 ВАЖНОЕ ИЗМЕНЕНИЕ: ФОНОВАЯ ЗАГРУЗКА КЛЮЧА 🔥 ---
-                        // Вычисляем ID чата
+                        // Вычисляем ID чата и предзагружаем ключ
                         const preChatId = [currentUser.uid, fid].sort().join('_');
-                        // Тихо запрашиваем ключ. Мы не ставим await, чтобы не тормозить интерфейс.
-                        // Скрипт пойдет за ключом в фоне.
-                        fetchChatKey(preChatId).then(k => {
-                            if (k) console.log("🔑 Ключ предзагружен для:", fid);
-                        });
-                        // -----------------------------------------------------
+                        fetchChatKey(preChatId).then(k => { });
 
-                        // Получаем данные друга (из кэша или базы)
+                        // 🔥 ЖЕЛЕЗОБЕТОННАЯ ЗАГРУЗКА ПРОФИЛЯ
                         let friendData = usersCache[fid];
-                        if (!friendData) {
+                        if (!friendData || friendData.isBot === undefined) {
                             try {
                                 const userSnap = await db.collection('users').doc(fid).get();
                                 if (userSnap.exists) {
                                     friendData = userSnap.data();
-                                    usersCache[fid] = friendData;
+                                    usersCache[fid] = friendData; // Сохраняем в кэш
                                 }
                             } catch (e) {
-                                console.error("Ошибка загрузки профиля", e);
+                                console.error("Ошибка загрузки профиля:", e);
                             }
                         }
 
                         let fName = 'Загрузка...';
+                        let isBot = false;
+
                         if (friendData) {
-                            // Склеиваем имя и фамилию. Если фамилии нет, trim() уберет лишний пробел.
+                            // Склеиваем имя и фамилию
                             fName = `${friendData.name || ''} ${friendData.surname || ''}`.trim() || friendData.username || 'User';
+                            isBot = friendData.isBot === true; // Точно знаем, бот или нет
                         }
+
                         const fNick = friendData && friendData.username ? ('@' + friendData.username) : '';
                         const fAvatar = friendData ? friendData.avatar : null;
                         const createdTime = d.createdAt ? d.createdAt.toMillis() : 0;
-                        const chatId = preChatId; // Используем уже вычисленный ID
+                        const chatId = preChatId;
+
+                        // 🔥 МАГИЯ МАРШРУТИЗАЦИИ: ВЫБИРАЕМ ПАПКУ
+                        const targetList = isBot ? bList : fList;
+                        if (!targetList) continue; // Защита от ошибок
+
+                        // Убираем надпись "пусто" из папки ботов, если туда прилетел бот
+                        if (isBot && targetList.innerHTML.includes('У вас пока нет чатов')) {
+                            targetList.innerHTML = '';
+                        }
 
                         let div = document.getElementById('u-' + fid);
                         const isNew = !div;
@@ -6241,30 +6228,41 @@
 
                         const avatarHtml = fAvatar
                             ? `<img src="${fAvatar}" class="user-item-avatar">`
-                            : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
+                            : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">${isBot ? '🤖' : '👤'}</div>`;
 
                         div.innerHTML = `
-                                                            ${avatarHtml}
-                                                            <div class="user-name">${fName}</div>
-                                                            <div class="last-msg-row">
-                                                            <span class="last-msg" id="last-${chatId}">...</span>
-                                                            </div>
-                                                            <div class="meta-column">
-                                                            <span class="last-msg-date" id="date-${chatId}"></span>
-                                                            <div class="meta-bottom-row">
-                                                            <span id="status-${chatId}" class="list-ticks"></span>
-                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                            </div>
-                                                            </div>
-                                                            `;
+                            ${avatarHtml}
+                            <div class="user-name">${fName}</div>
+                            <div class="last-msg-row">
+                                <span class="last-msg" id="last-${chatId}">...</span>
+                            </div>
+                            <div class="meta-column">
+                                <span class="last-msg-date" id="date-${chatId}"></span>
+                                <div class="meta-bottom-row">
+                                    <span id="status-${chatId}" class="list-ticks"></span>
+                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                </div>
+                            </div>
+                        `;
 
                         if (isNew) {
-                            list.appendChild(div);
+                            targetList.appendChild(div); // Добавляем строго в нужную папку!
                             startMessageListener(chatId, fid, createdTime);
+                        } else {
+                            // Если карточка уже была, но оказалась не в той папке — переносим её
+                            if (div.parentElement !== targetList) {
+                                targetList.appendChild(div);
+                            }
                         }
-                    });
+                    }
 
-                    setTimeout(sortFriendsList, 100);
+                    // Сортируем обе папки после обновления
+                    setTimeout(() => {
+                        if (typeof sortChatItems === 'function') {
+                            sortChatItems('friendsList');
+                            sortChatItems('botsList');
+                        }
+                    }, 100);
                 });
         }
         // Универсальная функция сортировки ЛЮБОГО списка (друзей или ботов)
