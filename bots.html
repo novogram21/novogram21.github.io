@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Novogram - Visual Bot Builder</title>
+    <title>Novogram - Robochat Style Builder</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -13,384 +13,200 @@
     <script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
 
     <style>
-        /* ПРЕМИУМ ДИЗАЙН NOVOGRAM */
+        /* ==========================================
+           ROBOCHAT STYLE LAYOUT (DARK THEME)
+           ========================================== */
+        :root {
+            --bg-dark: #121316;
+            --bg-panel: #1c1c1e;
+            --bg-canvas: #0a0c10;
+            --border: rgba(255,255,255,0.05);
+            --primary: #736AF0;
+            --text-main: #ffffff;
+            --text-muted: #8e8e93;
+            --tg-blue: #2AABEE;
+        }
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #121316; color: #fff; margin: 0;
-            display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
-        }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); height: 100dvh; overflow: hidden; display: flex; }
 
-        /* Шапка */
-        .premium-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: calc(env(safe-area-inset-top) + 20px) 20px 15px;
-            background: rgba(18, 19, 22, 0.95);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05); z-index: 100;
-        }
-        .header-title { font-weight: 600; font-size: 18px; color: white; }
-        .header-icon-btn {
-            background: none; border: none; padding: 8px; border-radius: 50%;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            color: #736AF0; transition: 0.2s;
-        }
-
-        /* Вьюхи */
-        .view { display: none; height: 100%; flex-direction: column; }
+        /* --- ВЬЮХИ --- */
+        .view { display: none; width: 100%; height: 100%; }
         .view.active { display: flex; }
-        
-        .content-area { flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; }
 
-        .btn-primary {
-            background: #736AF0; color: white; border: none; padding: 15px;
-            border-radius: 14px; font-weight: 600; font-size: 16px; width: 100%; cursor: pointer; transition: 0.2s;
+        /* --- БОКОВОЕ МЕНЮ (ЛЕВОЕ) --- */
+        .sidebar {
+            width: 70px; background: var(--bg-panel); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; padding-top: 20px; z-index: 100;
         }
+        .sidebar-btn {
+            width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted); cursor: pointer; transition: 0.2s; margin-bottom: 10px;
+        }
+        .sidebar-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+        .sidebar-btn.active { background: rgba(115, 106, 240, 0.15); color: var(--primary); }
 
-        /* ==========================================
-           СТИЛИ ВИЗУАЛЬНОГО РЕДАКТОРА (DRAWFLOW)
-           ========================================== */
+        /* --- РАБОЧАЯ ОБЛАСТЬ --- */
+        .main-area { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+        /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
+        .topbar {
+            height: 65px; background: var(--bg-panel); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10;
+        }
+        
+        .bot-selector { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .bot-avatar { width: 36px; height: 36px; border-radius: 10px; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .bot-info-texts { display: flex; flex-direction: column; }
+        .bot-name { font-weight: 600; font-size: 15px; }
+        .bot-status { font-size: 12px; color: var(--text-muted); }
+
+        .topbar-actions { display: flex; align-items: center; gap: 15px; }
+        .btn { padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; border: none; display: flex; align-items: center; gap: 8px;}
+        .btn:active { transform: scale(0.95); }
+        
+        .btn-test { background: transparent; border: 1px solid var(--tg-blue); color: var(--tg-blue); }
+        .btn-test:hover { background: rgba(42, 171, 238, 0.1); }
+        
+        .btn-publish { background: var(--primary); color: white; }
+        .btn-publish:hover { filter: brightness(1.1); }
+
+        /* --- ХОЛСТ (CANVAS) --- */
         #drawflow {
-            position: relative; width: 100%; height: 100%; background: #0a0c10;
-            background-image: radial-gradient(#222 1px, transparent 0); background-size: 20px 20px;
+            flex: 1; position: relative; background: var(--bg-canvas);
+            background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 0); background-size: 20px 20px;
         }
 
-        .editor-top-bar {
-            position: absolute; top: 15px; left: 15px; right: 15px;
-            display: flex; justify-content: space-between; z-index: 5;
+        /* --- ПЛАВАЮЩИЕ КНОПКИ СПРАВА ВНИЗУ --- */
+        .floating-controls {
+            position: absolute; right: 25px; bottom: 25px; display: flex; align-items: flex-end; gap: 15px; z-index: 50;
         }
-
-        .toolbar-btn {
-            background: #1c1c1e; color: white; border: 1px solid #333; padding: 10px 15px;
-            border-radius: 10px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        .zoom-panel {
+            background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+            display: flex; align-items: center; padding: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
+        .zoom-btn { background: transparent; border: none; color: var(--text-muted); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;}
+        .zoom-btn:hover { background: rgba(255,255,255,0.05); color: white; }
+        .zoom-value { font-size: 13px; font-weight: 600; color: white; padding: 0 10px; }
 
-        /* Переопределение стилей самой библиотеки под твой дизайн */
-        .drawflow .drawflow-node {
-            background: #1c1c1e; border: 1px solid #333; border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 300px; padding: 0;
-            color: white; font-family: inherit;
+        .add-step-btn {
+            width: 50px; height: 50px; border-radius: 16px; background: var(--primary); color: white;
+            border: none; font-size: 28px; cursor: pointer; box-shadow: 0 10px 25px rgba(115, 106, 240, 0.4);
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
         }
-        .drawflow .drawflow-node.selected { border-color: #736AF0; box-shadow: 0 0 0 2px rgba(115,106,240,0.3); }
+        .add-step-btn:hover { transform: translateY(-3px); }
+        .add-step-btn:active { transform: scale(0.9); }
 
-        .node-header {
-            background: #252528; padding: 12px 15px; border-top-left-radius: 16px;
-            border-top-right-radius: 16px; font-weight: bold; font-size: 14px;
-            border-bottom: 1px solid #333; display: flex; justify-content: space-between;
-        }
-        .node-content { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        
-        .node-input {
-            background: #121316; border: 1px solid #333; color: white;
-            padding: 10px; border-radius: 8px; width: 100%; font-family: inherit; resize: vertical; outline: none;
-        }
-        .node-input:focus { border-color: #736AF0; }
-
-        /* Точки соединения */
-        .drawflow .inputs .input { left: -10px; background: #fff; border: 2px solid #736AF0; width: 16px; height: 16px; }
-        .drawflow .outputs .output { right: -10px; background: #fff; border: 2px solid #10b981; width: 16px; height: 16px; }
-        
-        /* Линии */
-        .drawflow .connection .main-path { stroke: #736AF0; stroke-width: 3px; }
-
-        /* Кнопки внутри блока */
-        .node-buttons-container { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
-        .node-btn-item {
-            background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;
-            display: flex; align-items: center; border: 1px solid #333; position: relative;
-        }
-        .node-btn-input { background: transparent; border: none; color: #4a9eff; width: 100%; outline: none; font-weight: bold; text-align: center; }
-        
-        /* Загрузчик */
-        #loader { position: fixed; top:0; left:0; width:100%; height:100%; background:#121316; display:flex; align-items:center; justify-content:center; z-index:9999; }
-
-        /* ==========================================
-           КОНТЕКСТНОЕ МЕНЮ (ПО ПРАВОМУ КЛИКУ)
-           ========================================== */
+        /* --- КОНТЕКСТНОЕ МЕНЮ (КАК В ПРОШЛОМ ШАГЕ) --- */
         #nodeContextMenu {
-            position: absolute;
-            background: #1c1c1e;
-            border: 1px solid #333;
-            border-radius: 12px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-            z-index: 10000;
-            width: 220px;
-            display: none;
-            flex-direction: column;
-            padding: 6px 0;
-            user-select: none;
+            position: absolute; background: #252528; border: 1px solid #333; border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6); z-index: 10000; width: 220px; display: none; flex-direction: column; padding: 6px 0; user-select: none;
         }
+        .context-menu-item { padding: 10px 16px; color: #ccc; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.1s; }
+        .context-menu-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
 
-        .context-menu-item {
-            padding: 10px 16px;
-            color: #ccc;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: background 0.1s, color 0.1s;
-        }
+        /* --- ДИЗАЙН БЛОКОВ DRAWFLOW --- */
+        .drawflow .drawflow-node { background: var(--bg-panel); border: 1px solid #333; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 280px; color: #fff; padding: 0; overflow: hidden; }
+        .drawflow .drawflow-node.selected { box-shadow: 0 0 0 3px var(--primary), 0 10px 25px rgba(0,0,0,0.5); border-color: var(--primary); }
+        .node-robo-header { background: #252528; padding: 12px 15px; font-size: 13px; font-weight: 600; color: #aaa; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        .node-robo-body { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .node-robo-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #121316; color: white; font-size: 14px; outline: none; font-family: inherit; }
+        .node-robo-input:focus { border-color: var(--primary); }
+        
+        .drawflow .connection .main-path { stroke: var(--primary); stroke-width: 3px; }
+        .drawflow .inputs .input { left: -14px; background: #1c1c1e; border: 2px solid #10b981; width: 16px; height: 16px; }
+        .drawflow .outputs .output { right: -14px; background: #1c1c1e; border: 2px solid var(--primary); width: 16px; height: 16px; }
 
-            .context-menu-item:hover {
-                background: #2a2a2d;
-                color: #fff;
-            }
-
-            .context-menu-item .icon {
-                font-size: 16px;
-                width: 20px;
-                text-align: center;
-            }
-
-        .icon-msg {
-            color: #4a9eff;
-        }
-
-        .icon-action {
-            color: #f59e0b;
-        }
-
-        .icon-cond {
-            color: #10b981;
-        }
-
-        .icon-timer {
-            color: #ec4899;
-        }
-
-        .icon-start {
-            color: #84cc16;
-        }
-
-        .icon-rand {
-            color: #8b5cf6;
-        }
-
-        .icon-key {
-            color: #0ea5e9;
-        }
-
-        .icon-event {
-            color: #06b6d4;
-        }
-
-        .icon-note {
-            color: #8e8e93;
-        }
-
-        .context-menu-divider {
-            height: 1px;
-            background: #333;
-            margin: 6px 16px;
-        }
-
-        .context-menu-cancel {
-            padding: 10px 16px;
-            color: #888;
-            font-size: 13px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-            .context-menu-cancel:hover {
-                color: #fff;
-                background: #2a2a2d;
-            }
-
-        /* ==========================================
-           ОБНОВЛЕННЫЙ ДИЗАЙН БЛОКОВ (ROBOCHAT STYLE)
-           ========================================== */
-        .drawflow .drawflow-node {
-            background: #ffffff; /* Белые карточки как в Robochat */
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            width: 280px;
-            color: #333;
-            padding: 0;
-            overflow: hidden;
-        }
-
-        /* Темная тема для темного режима */
-        @media (prefers-color-scheme: dark) {
-            .drawflow .drawflow-node {
-                background: #1c1c1e;
-                border: 1px solid #333;
-                color: #fff;
-            }
-
-            .node-robo-header {
-                background: #252528 !important;
-                border-bottom: 1px solid #333 !important;
-            }
-
-            .node-robo-input {
-                background: #121316 !important;
-                border: 1px solid #333 !important;
-                color: white !important;
-            }
-
-            .node-robo-btn-add {
-                background: rgba(255,255,255,0.05) !important;
-                border: 1px dashed #555 !important;
-                color: #888 !important;
-            }
-        }
-
-        .drawflow .drawflow-node.selected {
-            box-shadow: 0 0 0 3px #736AF0, 0 10px 25px rgba(0,0,0,0.3);
-        }
-
-        .node-robo-header {
-            background: #f8f9fa;
-            padding: 10px 15px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #888;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #eee;
-        }
-
-        .node-robo-body {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .node-robo-input {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            background: #fff;
-            font-size: 14px;
-            outline: none;
-            transition: 0.2s;
-            font-family: inherit;
-        }
-
-            .node-robo-input:focus {
-                border-color: #736AF0;
-            }
-
-        .node-robo-btn-add {
-            background: #f0f4f8;
-            border: 1px dashed #ccc;
-            color: #555;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-            .node-robo-btn-add:hover {
-                background: #e2e8f0;
-                color: #333;
-            }
-
-        .node-del-icon {
-            cursor: pointer;
-            color: #ff4444;
-            font-size: 16px;
-            opacity: 0.5;
-            transition: 0.2s;
-        }
-
-            .node-del-icon:hover {
-                opacity: 1;
-            }
-
-        /* Красивые соединения */
-        .drawflow .connection .main-path {
-            stroke: #736AF0;
-            stroke-width: 3px;
-        }
-
-        .drawflow .inputs .input {
-            left: -14px;
-            background: #fff;
-            border: 2px solid #10b981;
-            width: 16px;
-            height: 16px;
-        }
-
-        .drawflow .outputs .output {
-            right: -14px;
-            background: #fff;
-            border: 2px solid #736AF0;
-            width: 16px;
-            height: 16px;
-        }
-    
+        /* Загрузчик и списки */
+        #loader { position: fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); display:flex; align-items:center; justify-content:center; z-index:9999; color: white;}
+        .card-list { padding: 40px; max-width: 800px; margin: 0 auto; width: 100%; }
+        .bot-item { background: var(--bg-panel); border: 1px solid var(--border); padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; align-items: center; cursor: pointer; transition: 0.2s;}
+        .bot-item:hover { border-color: var(--primary); }
     </style>
 </head>
 <body>
 
-    <div id="loader"><div style="color:#8e8e93;">Подключение...</div></div>
+    <div id="loader">Подключение к аккаунту...</div>
 
-    <div id="viewList" class="view">
-        <div class="premium-header">
-            <div style="width: 40px;"></div>
-            <div class="header-title">Платформа Ботов</div>
-            <button class="header-icon-btn" onclick="switchView('viewLink')" title="Привязать">➕</button>
+    <div id="viewList" class="view" style="flex-direction: column; overflow-y: auto;">
+        <div class="topbar">
+            <div class="bot-name">Ваши боты</div>
+            <button class="btn btn-publish" onclick="switchView('viewLink')">Подключить токен</button>
         </div>
-        <div class="content-area">
-            <div id="botsContainer"><div style="text-align: center; color: #888; padding: 20px;">Загрузка...</div></div>
-            <button class="btn-primary" style="background: #252528; margin-top:20px;" onclick="window.location.href='index.html'">В мессенджер</button>
-        </div>
+        <div class="card-list" id="botsContainer">
+            </div>
     </div>
 
-    <div id="viewEditor" class="view" style="flex:1;">
-        <div class="premium-header">
-            <button class="header-icon-btn" onclick="switchView('viewList')">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-            </button>
-            <div class="header-title" id="editorBotName">Сценарий</div>
-            <button class="header-icon-btn" onclick="saveGraphToFirebase()" id="saveBtn">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-            </button>
-        </div>
-
-        <div style="position: relative; flex: 1; overflow: hidden;">
-            <div style="position: absolute; top: 15px; left: 15px; color:#888; font-size:12px; z-index: 5; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 8px; backdrop-filter: blur(5px);">
-                ПКМ (Правый клик) - открыть меню. Space + ЛКМ - перемещение. Del - удалить.
+    <div id="viewEditor" class="view">
+        
+        <aside class="sidebar">
+            <div class="sidebar-btn" onclick="switchView('viewList')" title="Назад к списку">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </div>
+            <div class="sidebar-btn active" title="Сценарии">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            </div>
+            <div class="sidebar-btn" title="Рассылки (В разработке)" onclick="alert('В разработке')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+            <div class="sidebar-btn" title="Настройки" onclick="window.location.href='index.html'">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8.98 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            
+            <header class="topbar">
+                <div class="bot-selector">
+                    <div class="bot-avatar">🤖</div>
+                    <div class="bot-info-texts">
+                        <div class="bot-name" id="editorBotName">Имя бота</div>
+                        <div class="bot-status" id="editorBotNick">@username</div>
+                    </div>
+                </div>
+                
+                <div class="topbar-actions">
+                    <button class="btn btn-test" onclick="alert('Чтобы проверить бота, зайдите в мессенджер и напишите ему кодовое слово!')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        Проверить
+                    </button>
+                    <button class="btn btn-publish" onclick="saveGraphToFirebase()" id="saveBtn">
+                        Опубликовать
+                    </button>
+                </div>
+            </header>
 
             <div id="drawflow"></div>
 
             <div id="nodeContextMenu">
-                <div class="context-menu-item" onclick="addNodeFromMenu('message')"><span class="icon icon-msg">Тт</span> Сообщение</div>
-                <div class="context-menu-item" onclick="alert('В разработке')"><span class="icon icon-action">⚡</span> Действие</div>
-                <div class="context-menu-item" onclick="alert('В разработке')"><span class="icon icon-cond">⚗️</span> Условие</div>
-                <div class="context-menu-item" onclick="alert('В разработке')"><span class="icon icon-timer">🕒</span> Таймер</div>
-                <div class="context-menu-item" onclick="addNodeFromMenu('trigger')"><span class="icon icon-key">✏️</span> Ключевые слова</div>
-                <div class="context-menu-divider"></div>
-                <div class="context-menu-cancel" onclick="closeContextMenu()">Отмена</div>
+                <div class="context-menu-item" onclick="addNodeFromMenu('message')">💬 Сообщение</div>
+                <div class="context-menu-item" onclick="addNodeFromMenu('trigger')">⚡ Условие (Триггер)</div>
+                <div class="context-menu-item" onclick="closeContextMenu()" style="color:#888; border-top: 1px solid #333; margin-top:5px;">Отмена</div>
             </div>
-        </div>
+
+            <div class="floating-controls">
+                <div class="zoom-panel">
+                    <button class="zoom-btn" onclick="editor.zoom_out()">-</button>
+                    <span class="zoom-value">Zoom</span>
+                    <button class="zoom-btn" onclick="editor.zoom_in()">+</button>
+                </div>
+                <button class="add-step-btn" onclick="showContextMenuAtCenter()">+</button>
+            </div>
+
+        </main>
     </div>
 
-    <div id="viewLink" class="view">
-        <div class="premium-header">
-            <button class="header-icon-btn" onclick="switchView('viewList')">🔙</button>
-            <div class="header-title">Добавление бота</div>
-            <div style="width:40px;"></div>
-        </div>
-        <div class="content-area" style="text-align: center; padding-top: 50px;">
-            <h2>Вставьте API Токен</h2>
-            <input type="text" id="linkTokenInput" placeholder="nvg_..." style="width:100%; padding:15px; background:#1c1c1e; border:1px solid #333; color:white; border-radius:12px; margin-bottom:20px; outline:none;">
-            <button class="btn-primary" onclick="executeLinkBot()">Подключить бота</button>
+    <div id="viewLink" class="view" style="flex-direction: column; align-items: center; justify-content: center;">
+        <h2>Подключение API Токена</h2>
+        <input type="text" id="linkTokenInput" placeholder="nvg_..." style="width: 300px; padding: 15px; border-radius: 10px; border: 1px solid #333; background: #1c1c1e; color: white; margin-bottom: 20px;">
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-test" onclick="switchView('viewList')">Отмена</button>
+            <button class="btn btn-publish" onclick="executeLinkBot()">Подключить</button>
         </div>
     </div>
 
     <script>
-        // === FIREBASE ИНИЦИАЛИЗАЦИЯ ===
+        // === ВСТАВЬ СВОИ ДАННЫЕ FIREBASE СЮДА ===
         const firebaseConfig = {
             apiKey: "AIzaSyBncXLA4D1JdsqQtA8_8rPqQioq2XRfic4",
             authDomain: "mycoolmessenger.firebaseapp.com",
@@ -406,16 +222,17 @@
 
         let currentUser = null;
         let currentBotToken = null;
-        let editor = null; // Экземпляр Drawflow
+        let editor = null;
+        let ruleBlockCounter = 1;
 
-        // === 1. АВТОРИЗАЦИЯ ===
+        // 1. АВТОРИЗАЦИЯ
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
                 document.getElementById('loader').style.display = 'none';
                 switchView('viewList');
                 loadMyBotsList();
-                initDrawflow(); // Инициализируем канвас
+                initDrawflow(); 
             } else {
                 window.location.href = "index.html";
             }
@@ -426,24 +243,24 @@
             document.getElementById(viewId).classList.add('active');
         }
 
-        // === 2. СПИСОК БОТОВ ===
+        // 2. СПИСОК БОТОВ
         async function loadMyBotsList() {
             const container = document.getElementById('botsContainer');
             try {
                 const snap = await db.collection('users').where('ownerId', '==', currentUser.uid).where('isBot', '==', true).get();
                 if (snap.empty) {
-                    container.innerHTML = `<div style="text-align:center; padding:30px; color:#888;">У вас нет ботов. Нажмите ➕ в шапке.</div>`;
+                    container.innerHTML = `<div style="text-align:center; color:#888;">У вас нет подключенных ботов.</div>`;
                     return;
                 }
                 let html = '';
                 snap.forEach(doc => {
                     const b = doc.data();
                     html += `
-                        <div class="bot-item" onclick="openEditor('${b.botToken}', '${b.name}')" style="background:#1c1c1e; margin-bottom:10px; border-radius:12px;">
-                            <div class="bot-avatar">🤖</div>
-                            <div class="bot-info">
-                                <div class="bot-name">${b.name}</div>
-                                <div class="bot-nick">@${b.username}</div>
+                        <div class="bot-item" onclick="openEditor('${b.botToken}', '${b.name}', '${b.username}')">
+                            <div class="bot-avatar" style="width: 50px; height: 50px; border-radius: 12px; background: #736AF0; display:flex; align-items:center; justify-content:center; font-size:24px; margin-right: 15px;">🤖</div>
+                            <div>
+                                <div style="font-size:18px; font-weight:bold;">${b.name}</div>
+                                <div style="color:#888;">@${b.username}</div>
                             </div>
                         </div>`;
                 });
@@ -463,34 +280,29 @@
             } catch (e) { alert(e.message); }
         }
 
-        // === 3. ИНИЦИАЛИЗАЦИЯ ВИЗУАЛЬНОГО РЕДАКТОРА ===
+        // 3. ИНИЦИАЛИЗАЦИЯ DRAWFLOW (ХОЛСТ)
         let lastMouseX = 0;
         let lastMouseY = 0;
 
         function initDrawflow() {
             const id = document.getElementById("drawflow");
             editor = new Drawflow(id);
-
-            editor.reroute = true;
+            editor.reroute = true; 
             editor.start();
 
-            // Обработка правого клика по холсту
-            id.addEventListener('contextmenu', function (e) {
-                e.preventDefault(); // Блокируем стандартное меню браузера
-
-                // Получаем точные координаты внутри холста с учетом зума
+            // Контекстное меню по правому клику
+            id.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
                 const rect = id.getBoundingClientRect();
                 lastMouseX = (e.clientX - rect.left - editor.canvas_x) / editor.zoom;
                 lastMouseY = (e.clientY - rect.top - editor.canvas_y) / editor.zoom;
 
-                // Показываем наше меню под мышкой
                 const menu = document.getElementById('nodeContextMenu');
                 menu.style.display = 'flex';
                 menu.style.left = e.clientX + 'px';
                 menu.style.top = e.clientY + 'px';
             });
 
-            // Закрытие меню при клике в любое другое место
             document.addEventListener('click', closeContextMenu);
         }
 
@@ -498,128 +310,102 @@
             document.getElementById('nodeContextMenu').style.display = 'none';
         }
 
-        // Вызывается из контекстного меню
-        function addNodeFromMenu(type) {
-            closeContextMenu();
+        // Открытие меню по кнопке "+" по центру экрана
+        function showContextMenuAtCenter() {
+            const id = document.getElementById("drawflow");
+            const rect = id.getBoundingClientRect();
+            
+            // Визуальный центр холста
+            lastMouseX = (rect.width / 2 - editor.canvas_x) / editor.zoom;
+            lastMouseY = (rect.height / 2 - editor.canvas_y) / editor.zoom;
 
-            if (type === 'message') {
-                addMessageNode(null, lastMouseX, lastMouseY);
-            } else if (type === 'trigger') {
-                addTriggerNode(null, lastMouseX, lastMouseY);
-            }
+            const menu = document.getElementById('nodeContextMenu');
+            menu.style.display = 'flex';
+            menu.style.left = (rect.width / 2) + 'px';
+            menu.style.top = (rect.height / 2) + 'px';
         }
 
-        // === 4. СОЗДАНИЕ БЛОКОВ В СТИЛЕ ROBOCHAT ===
+        function addNodeFromMenu(type) {
+            if (type === 'message') addMessageNode(null, lastMouseX, lastMouseY);
+            else if (type === 'trigger') addTriggerNode(null, lastMouseX, lastMouseY);
+        }
 
-        // БЛОК "СООБЩЕНИЕ" (То, что отправляет бот)
+        // 4. СОЗДАНИЕ УЗЛОВ (В СТИЛЕ ROBOCHAT)
         function addMessageNode(data = null, posX = 100, posY = 200) {
             const nodeData = data || { text: "", image: "" };
-
             const html = `
                 <div class="node-robo-header">
-                    <span>Сообщение #${ruleBlockCounter}</span>
-                    <span class="node-del-icon" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))">✖</span>
+                    <span>💬 Сообщение</span>
+                    <span style="color:#ff4444; cursor:pointer;" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))">✖</span>
                 </div>
                 <div class="node-robo-body">
-                    <textarea df-text class="node-robo-input" rows="3" placeholder="Добавьте текст...">${nodeData.text}</textarea>
-                    <input type="text" df-image class="node-robo-input" placeholder="URL картинки (опционально)" value="${nodeData.image}">
-                    <div class="node-robo-btn-add">+ Добавить кнопку</div>
+                    <textarea df-text class="node-robo-input" rows="3" placeholder="Текст ответа...">${nodeData.text}</textarea>
+                    <input type="text" df-image class="node-robo-input" placeholder="Ссылка на картинку (URL)" value="${nodeData.image}">
                 </div>
             `;
-
-            // 1 вход (для подключения триггера), 1 выход (для следующего шага)
             editor.addNode('message', 1, 1, posX, posY, 'message-node', nodeData, html);
-            ruleBlockCounter++;
         }
 
-        // БЛОК "КЛЮЧЕВЫЕ СЛОВА" (То, на что реагирует бот)
         function addTriggerNode(data = null, posX = 50, posY = 200) {
             const nodeData = data || { trigger: "" };
-
             const html = `
                 <div class="node-robo-header" style="border-top: 3px solid #10b981;">
-                    <span style="color:#10b981;">Условие (Триггер)</span>
-                    <span class="node-del-icon" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))">✖</span>
+                    <span style="color:#10b981;">⚡ Триггер (Условие)</span>
+                    <span style="color:#ff4444; cursor:pointer;" onclick="editor.removeNodeId('node-'+this.closest('.drawflow-node').id.slice(5))">✖</span>
                 </div>
                 <div class="node-robo-body">
-                    <div style="font-size:11px; color:#888; margin-bottom:-5px;">ЕСЛИ НАПИСАЛИ:</div>
-                    <input type="text" df-trigger class="node-robo-input" placeholder="напр: привет" value="${nodeData.trigger}">
+                    <div style="font-size:11px; color:#aaa; margin-bottom:-5px;">Если клиент написал:</div>
+                    <input type="text" df-trigger class="node-robo-input" placeholder="например: привет" value="${nodeData.trigger}">
                 </div>
             `;
-
-            // 0 входов (это начало цепочки), 1 выход (ведет к сообщению)
             editor.addNode('trigger', 0, 1, posX, posY, 'trigger-node', nodeData, html);
         }
 
-        // === 5. ОТКРЫТИЕ РЕДАКТОРА ===
-        async function openEditor(token, name) {
+        // 5. ОТКРЫТИЕ РЕДАКТОРА
+        async function openEditor(token, name, username) {
             currentBotToken = token;
             document.getElementById('editorBotName').innerText = name;
-            switchView('viewEditor');
-
-            editor.clear();
-            ruleBlockCounter = 1;
-
-            try {
-                const doc = await db.collection('bot_flows').doc(token).get();
-                if (doc.exists && doc.data().flowData) {
-                    editor.import(doc.data().flowData);
-                } else {
-                    // Если пусто - кидаем стартовые блоки для примера
-                    addTriggerNode({ trigger: "старт" }, 100, 200);
-                    addMessageNode({ text: "Добро пожаловать в бота!" }, 450, 200);
-                }
-            } catch (e) {
-                console.error("Ошибка загрузки", e);
-            }
-        }
-
-        // === 5. ОТКРЫТИЕ РЕДАКТОРА ДЛЯ ВЫБРАННОГО БОТА ===
-        async function openEditor(token, name) {
-            currentBotToken = token;
-            document.getElementById('editorBotName').innerText = name;
+            document.getElementById('editorBotNick').innerText = '@' + username;
             switchView('viewEditor');
             
-            editor.clear(); // Очищаем холст
+            editor.clear();
 
             try {
-                // Пытаемся загрузить сохраненный граф из Firebase
                 const doc = await db.collection('bot_flows').doc(token).get();
                 if (doc.exists && doc.data().flowData) {
-                    // Загружаем всю магию связей и блоков обратно!
                     editor.import(doc.data().flowData);
                 } else {
-                    // Если бот пустой, создаем стартовый блок по центру
-                    addMessageNode({trigger: "привет", text: "Привет! Я бот."}, 300, 200);
+                    addTriggerNode({trigger: "привет"}, 100, 300);
+                    addMessageNode({text: "Добро пожаловать!"}, 500, 300);
                 }
             } catch(e) {
-                console.error("Ошибка загрузки сценария", e);
+                console.error(e);
             }
         }
 
-        // === 6. СОХРАНЕНИЕ ГРАФА В БАЗУ ===
+        // 6. СОХРАНЕНИЕ
         async function saveGraphToFirebase() {
             const btn = document.getElementById('saveBtn');
-            btn.style.opacity = '0.5';
-
-            // Эта магия собирает все блоки, их координаты, тексты и линии связей в один JSON объект
+            btn.innerText = "Сохранение...";
+            
             const exportedData = editor.export(); 
             
             try {
-                // Сохраняем это в отдельную коллекцию (чтобы не ломать старый формат, если он где-то используется)
                 await db.collection('bot_flows').doc(currentBotToken).set({
                     flowData: exportedData,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                
-                alert("Сценарий успешно сохранен на сервере!");
+                btn.style.background = "#10b981";
+                btn.innerText = "Сохранено ✓";
+                setTimeout(() => {
+                    btn.style.background = "var(--primary)";
+                    btn.innerText = "Опубликовать";
+                }, 2000);
             } catch (e) {
-                alert("Ошибка сохранения: " + e.message);
-            } finally {
-                btn.style.opacity = '1';
+                alert("Ошибка: " + e.message);
+                btn.innerText = "Опубликовать";
             }
         }
-
     </script>
 </body>
 </html>
