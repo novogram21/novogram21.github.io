@@ -8919,10 +8919,15 @@
                     // 1. Сбрасываем старый, если был
                     if (chatStatusUnsub) chatStatusUnsub();
 
-                    // 2. Ставим "загрузка" или последнее известное время сразу
+                    // 2. Ставим статус: если это бот, то пишем "бот", иначе время захода
                     const statusEl = document.getElementById('chatStatus');
                     if (statusEl) {
-                        statusEl.innerText = userData.lastSeen ? formatLastSeen(userData.lastSeen) : 'загрузка...';
+                        if (userData.isBot === true) {
+                            statusEl.innerText = 'бот';
+                            statusEl.style.color = '#8e8e93'; // Спокойный серый цвет
+                        } else {
+                            statusEl.innerText = userData.lastSeen ? formatLastSeen(userData.lastSeen) : 'загрузка...';
+                        }
                     }
 
 
@@ -10527,6 +10532,7 @@
                 list = document.createElement('div');
                 list.id = 'msgList_' + chatId;
                 list.className = 'messages';
+                list.style.position = 'relative';
                 list.addEventListener('scroll', handleChatScroll); // Вешаем скролл
 
                 // СЛУШАТЕЛИ ДЛЯ СВАЙПА
@@ -11283,6 +11289,16 @@
             const listener = statusRef.on('value', (snap) => {
                 const data = snap.val();
                 if (!data) return;
+
+                const uData = usersCache[friendId] || {};
+                if (uData.isBot === true) {
+                    const el = document.getElementById('chatStatus');
+                    if (el) {
+                        el.innerText = 'бот';
+                        el.style.color = '#8e8e93';
+                    }
+                    return; // Выходим из функции, дальше не идем
+                }
 
                 const statusEl = document.getElementById('chatStatus');
                 const profileStatusEl = document.getElementById('friendProfileStatus');
