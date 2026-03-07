@@ -4175,6 +4175,28 @@
         .messages {
             scroll-behavior: smooth;
         }
+        /* --- ПРЕМИУМ ПОЯВЛЕНИЕ ТЕКСТА --- */
+        .premium-letter {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(2px) scale(0.95);
+            filter: blur(1px); /* Легкое размытие для мягкости */
+            animation: letterReveal 0.25s ease-out forwards;
+        }
+
+        @keyframes letterReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        /* Чтобы пробелы не схлопывались */
+        .premium-letter-space {
+            display: inline-block;
+            width: 0.25em;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -6811,13 +6833,21 @@
                                                                         `;
             }
             else {
-                // Добавили класс "chat-link" и убрали target="_blank"
+                // Сначала обрабатываем ссылки, как и раньше
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
 
-                // ВАЖНО: Добавили 'class' в ALLOWED_ATTR, иначе DOMPurify его удалит
+                // --- ПРЕМИУМ: Если это новое сообщение (не загрузка истории), анимируем буквы ---
+                // Проверяем глобальную переменную isChatInitialLoad (которую мы используем в loadMessages)
+                let finalContent = formattedText;
+
+                // Если сообщение новое и это НЕ ссылка (ссылки анимировать сложно из-за HTML-тегов)
+                if (typeof isChatInitialLoad !== 'undefined' && !isChatInitialLoad && !m.sys && msgType === 'text' && !m.txt.includes('http')) {
+                    finalContent = applyPremiumTextEffect(m.txt);
+                }
+
                 const safeHtml = (typeof DOMPurify !== 'undefined')
-                    ? DOMPurify.sanitize(formattedText, { ALLOWED_TAGS: ['a'], ALLOWED_ATTR: ['href', 'style', 'class'] })
-                    : formattedText;
+                    ? DOMPurify.sanitize(finalContent, { ALLOWED_TAGS: ['a', 'span'], ALLOWED_ATTR: ['href', 'style', 'class'] })
+                    : finalContent;
 
                 contentHtml += `<span class="msg-text">${safeHtml}</span>`;
             }
@@ -7798,6 +7828,21 @@
                 endCall(true);
             }
         }
+
+        function applyPremiumTextEffect(text) {
+            if (!text) return "";
+
+            // Разбиваем текст на символы
+            return text.split('').map((char, index) => {
+                // Если это пробел, даем ему специальный класс
+                if (char === ' ') return `<span class="premium-letter-space"> </span>`;
+
+                // Для каждой буквы ставим задержку (индекс * 5мс - это дает скорость 200 букв в сек)
+                const delay = index * 0.005;
+                return `<span class="premium-letter" style="animation-delay: ${delay}s">${char}</span>`;
+            }).join('');
+        }
+
         async function answerCall() {
             document.getElementById('ringtone').pause();
             document.getElementById('incomingPopup').style.display = 'none';
