@@ -5909,8 +5909,13 @@
                             }
                         }
                         // ---> КОНЕЦ БЛОКА УВЕДОМЛЕНИЙ <---
-
-                        if (lastData.ts) timeToDisplay = lastData.ts.toMillis();
+                        if (lastData.ts) {
+                            timeToDisplay = lastData.ts.toMillis();
+                        } else {
+                            // ФИКС: Если Firebase еще не выдал серверное время,
+                            // берем время устройства, чтобы чат не проваливался вниз
+                            timeToDisplay = Date.now();
+                        }
 
                         if (statusEl) {
                             if (lastData.from === currentUser.uid) {
