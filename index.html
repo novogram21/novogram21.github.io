@@ -12097,10 +12097,10 @@
             if (!viewerImg) return;
 
             if (withTransition) {
-                // Идеальная кривая Безье для эффекта упругого отскока
+                // Идеальная кривая Безье для эффекта упругого отскока (КАК РАЗ ДЛЯ СКОЛЬЖЕНИЯ)
                 viewerImg.style.transition = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
             } else {
-                // Мгновенное следование за пальцем
+                // Мгновенное следование за пальцем (при движении)
                 viewerImg.style.transition = 'none';
             }
             viewerImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
@@ -12366,29 +12366,37 @@
                     let needsSnap = false;
 
                     if (currentScale < 1) {
-                        window.resetImageZoom();
+                        currentScale = 1;
+                        currentTranslateX = 0;
+                        currentTranslateY = 0;
                         needsSnap = true;
                     } else if (currentScale > 5) {
                         currentScale = 5;
                         needsSnap = true;
                     }
 
+                    // Если фотка зазумлена, проверяем, не вылетела ли она за края
                     if (currentScale >= 1) {
                         const bounds = getPanBounds();
+
+                        // Плавная доводка к краям, если утянули слишком далеко
                         if (currentTranslateX > bounds.maxTx) { currentTranslateX = bounds.maxTx; needsSnap = true; }
                         if (currentTranslateX < -bounds.maxTx) { currentTranslateX = -bounds.maxTx; needsSnap = true; }
                         if (currentTranslateY > bounds.maxTy) { currentTranslateY = bounds.maxTy; needsSnap = true; }
                         if (currentTranslateY < -bounds.maxTy) { currentTranslateY = -bounds.maxTy; needsSnap = true; }
                     }
 
+                    // ВОТ ЭТА СТРОКА ДЕЛАЕТ СКОЛЬЖЕНИЕ (true включает transition в CSS)
                     if (needsSnap) {
                         updateImageTransform(true);
                     }
                 }
 
-                // 🔥 УМНЫЙ ОДИНОЧНЫЙ И ДВОЙНОЙ ТАП
+                
                 // 🔥 НАДЕЖНЫЙ ОДИНОЧНЫЙ И ДВОЙНОЙ ТАП (ПО ВРЕМЕНИ)
                 if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
+                    e.preventDefault(); // ОТКЛЮЧАЕМ ФАНТОМНЫЙ CLICK!
+
                     const currentTime = Date.now();
                     const tapLength = currentTime - lastTapTime;
 
