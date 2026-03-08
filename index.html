@@ -9692,33 +9692,30 @@
 
                 const base64Data = await toBase64(file);
 
-                // --- 2. УМНЫЙ АДАПТИВНЫЙ ПРОГРЕСС (Зависит от скорости сети) ---
-                let percentComplete = 0;
-                let isUploading = true;
-
+               
                 // --- 2. УМНЫЙ АДАПТИВНЫЙ ПРОГРЕСС (ОТКАЛИБРОВАННЫЙ) ---
                 let percentComplete = 0;
                 let isUploading = true;
 
                 let networkSpeedMbps = (navigator.connection && navigator.connection.downlink) ? navigator.connection.downlink : 3;
-
+                
                 // ЖЕСТКАЯ КАЛИБРОВКА: Делим на 4, так как отдавать файл всегда медленнее, чем качать
-                let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 4;
-
+                let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 4; 
+                
                 // Вычисляем время + добавляем 2.5 секунды (ровно столько Гугл думает над файлом)
                 let estimatedSeconds = Math.max(3.0, Math.min((totalMb / estimatedUploadSpeedMb) + 2.5, 45));
-                let progressStep = (1 / (estimatedSeconds * 10));
+                let progressStep = (1 / (estimatedSeconds * 10)); 
 
                 const progressInterval = setInterval(() => {
                     if (!isUploading) return clearInterval(progressInterval);
-
+                    
                     if (percentComplete < 0.95) {
                         let currentStep = progressStep;
-
+                        
                         // Плавное торможение начинается раньше, чтобы не было "зависания"
                         if (percentComplete > 0.70) currentStep = progressStep * 0.5;
                         if (percentComplete > 0.85) currentStep = progressStep * 0.15;
-
+                        
                         percentComplete += currentStep;
                         if (percentComplete > 0.95) percentComplete = 0.95;
                     }
