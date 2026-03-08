@@ -1083,10 +1083,10 @@
             border: 1px solid rgba(255,255,255,0.05) !important;
             display: inline-flex !important;
             flex-direction: column !important;
-            /* ДОБАВЛЯЕМ ПЛАВНОСТЬ ДЛЯ ВСЕГО БЛОКА */
             transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            /* --- НОВОЕ: ГАРАНТИЯ, ЧТО ФОТО НЕ ОБРЕЖЕТСЯ СНИЗУ --- */
+            flex-shrink: 0 !important;
         }
-
             /* ТЕПЕРЬ ПРИ НАЖАТИИ СЖИМАЕТСЯ И ФОТО, И ВРЕМЯ ОДНОВРЕМЕННО */
             .msg-image-only:active {
                 transform: scale(0.97) !important;
@@ -1148,6 +1148,8 @@
             position: relative;
             cursor: pointer;
             word-wrap: break-word; /* Чтобы длинные слова переносились */
+            /* --- НОВОЕ: ЗАПРЕЩАЕМ БРАУЗЕРУ СЖИМАТЬ БЛОКИ --- */
+            flex-shrink: 0 !important;
         }
 
 
