@@ -9635,17 +9635,16 @@
 
         // --- 2. Основная функция загрузки ---
         // Глобальный объект для хранения активных загрузок (чтобы их можно было убить крестиком)
+        // Глобальный объект для хранения активных загрузок (чтобы работал крестик)
         window.activeUploads = {};
 
         // ФУНКЦИЯ ОТМЕНЫ ЗАГРУЗКИ ПОЛЬЗОВАТЕЛЕМ
         window.cancelUpload = function (tempId) {
-            // Убиваем процесс отправки в браузере
             if (window.activeUploads[tempId]) {
-                window.activeUploads[tempId].abort();
+                window.activeUploads[tempId].abort(); // Обрываем fetch-запрос на аппаратном уровне
                 delete window.activeUploads[tempId];
             }
 
-            // Красиво и плавно удаляем пузырь из чата
             const el = document.getElementById(tempId);
             if (el) {
                 el.style.opacity = '0';
@@ -9653,7 +9652,6 @@
                 setTimeout(() => el.remove(), 300);
             }
 
-            // Разблокируем поле ввода
             const msgInput = document.getElementById('msgInput');
             if (msgInput && msgInput.disabled) {
                 msgInput.placeholder = "Сообщение";
@@ -9663,12 +9661,11 @@
             showToast("Отправка отменена");
         };
 
-        // --- 2. ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ (С ПОДДЕРЖКОЙ ПРОГРЕССА) ---
+        // ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ (С УМНЫМ ПРОГРЕССОМ И ОБХОДОМ CORS)
         async function uploadFile(input) {
             const file = input.files[0];
             if (!file) return;
 
-            // Ограничение 10 МБ
             if (file.size > 10 * 1024 * 1024) {
                 alert("Файл слишком большой! Максимум 10 МБ.");
                 input.value = '';
@@ -9677,6 +9674,7 @@
 
             const tempMsgId = showTempMessage(file);
             const totalMb = (file.size / (1024 * 1024)).toFixed(1);
+            const circumference = 135; // Длина круга
 
             const msgInput = document.getElementById('msgInput');
             const originalPlaceholder = msgInput.placeholder;
@@ -9684,7 +9682,7 @@
             msgInput.disabled = true;
 
             try {
-                // Конвертируем в Base64 (в памяти телефона это быстро)
+                // 1. Конвертируем в Base64
                 const toBase64 = f => new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(f);
@@ -9694,68 +9692,50 @@
 
                 const base64Data = await toBase64(file);
 
-                // Длина нашей SVG-линии (из CSS)
-                const circumference = 135;
-
-                // =================================================================
-                // --- ЭЛИТАРНАЯ МАГИЯ: АДАПТИВНЫЙ ПРОГРЕСС С УЧЕТОМ СЕТИ ---
-                // =================================================================
+                // --- 2. УМНЫЙ АДАПТИВНЫЙ ПРОГРЕСС (Зависит от скорости сети) ---
                 let percentComplete = 0;
                 let isUploading = true;
 
-                // 1. Узнаем реальную скорость скачивания у пользователя в мегабитах/сек
-                // (Если браузер iOS/Safari не отдает эти данные, берем среднюю 3G скорость = 3 Mbps)
-                let networkSpeedMbps = (navigator.connection && navigator.connection.downlink)
-                    ? navigator.connection.downlink : 3;
+                // Получаем текущую скорость интернета юзера (по умолчанию берем 3 Мбит/с, если браузер скрывает)
+                let networkSpeedMbps = (navigator.connection && navigator.connection.downlink) ? navigator.connection.downlink : 3;
+                let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 2; // Перевод в Мегабайты
 
-                // 2. Скорость отдачи (upload) обычно в 2 раза ниже загрузки (download)
-                // Переводим Mbps в Мегабайты в секунду (MB/s)
-                let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 2;
-
-                // 3. Вычисляем ИДЕАЛЬНОЕ время загрузки ИМЕННО ЭТОГО файла в секундах
-                let estimatedSeconds = totalMb / estimatedUploadSpeedMb;
-
-                // Страховочные лимиты: анимация не должна быть быстрее 1.5 сек и дольше 45 сек
-                estimatedSeconds = Math.max(1.5, Math.min(estimatedSeconds, 45));
-
-                // 4. Шаг заливки каждые 100 миллисекунд (10 раз в секунду)
-                let progressStep = (1 / (estimatedSeconds * 10));
+                // Вычисляем идеальное время отправки именно этой фотки (ограничиваем от 1.5 до 30 секунд)
+                let estimatedSeconds = Math.max(1.5, Math.min(totalMb / estimatedUploadSpeedMb, 30));
+                let progressStep = (1 / (estimatedSeconds * 10)); // Шаг для интервала в 100мс
 
                 const progressInterval = setInterval(() => {
                     if (!isUploading) return clearInterval(progressInterval);
 
                     if (percentComplete < 0.95) {
-                        // Умное физическое замедление: в самом конце скорость падает, 
-                        // имитируя процесс обработки файла на сервере Google
-                        let currentStep = progressStep;
-                        if (percentComplete > 0.8) currentStep = progressStep * 0.4;
-                        if (percentComplete > 0.9) currentStep = progressStep * 0.1;
-
+                        // Эффект реалистичности: в конце (на 95%) замедляемся, имитируя сохранение на сервере
+                        let currentStep = percentComplete > 0.8 ? progressStep * 0.3 : progressStep;
                         percentComplete += currentStep;
                         if (percentComplete > 0.95) percentComplete = 0.95;
                     }
 
                     const loadedMb = (file.size * percentComplete / (1024 * 1024)).toFixed(1);
 
+                    // Обновляем текст МБ
                     const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
                     if (txtEl) txtEl.innerText = `${loadedMb} / ${totalMb} МБ`;
 
+                    // Двигаем белый кружок
                     const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
                     if (circleEl) {
                         const offset = circumference - (percentComplete * circumference);
                         circleEl.style.strokeDashoffset = offset;
                     }
                 }, 100);
-                // =================================================================
 
-                // Используем AbortController для аппаратной работы крестика отмены
+                // 3. ОТПРАВКА ЧЕРЕЗ FETCH (Идеальный обход CORS)
                 const controller = new AbortController();
                 window.activeUploads[tempMsgId] = controller;
 
-                // Используем FETCH (он не отправляет OPTIONS запрос и легко обходит CORS)
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     redirect: "follow",
+                    // ВАЖНО: Используем строго text/plain БЕЗ charset, чтобы браузер не слал OPTIONS-запрос!
                     headers: { "Content-Type": "text/plain" },
                     body: JSON.stringify({
                         action: "upload",
@@ -9764,27 +9744,27 @@
                         mimeType: file.type,
                         base64: base64Data
                     }),
-                    signal: controller.signal
+                    signal: controller.signal // Привязываем крестик отмены
                 })
                     .then(res => res.json())
                     .then(data => {
                         isUploading = false;
                         delete window.activeUploads[tempMsgId];
 
-                        // Сервер ответил -> Заливаем круг на 100% моментально
+                        // Сервер ответил! Заливаем круг на 100%
                         const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
                         if (txtEl) txtEl.innerText = `${totalMb} / ${totalMb} МБ`;
                         const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
                         if (circleEl) circleEl.style.strokeDashoffset = 0;
 
-                        // Ждем 350мс, чтобы юзер кайфанул от 100% круга, потом отправляем
+                        // Микро-пауза, чтобы глаз успел заметить 100% загрузку (очень приятный UX)
                         setTimeout(() => {
                             const tempEl = document.getElementById(tempMsgId);
-                            if (tempEl) tempEl.remove(); // Удаляем превью
+                            if (tempEl) tempEl.remove();
 
                             if (data.result === "success") {
                                 const type = file.type.startsWith('image/') ? 'image' : 'file';
-                                sendMsg(data.url, false, type); // Отправляем финальное сообщение
+                                sendMsg(data.url, false, type);
                             } else {
                                 showToast("Ошибка диска: " + (data.message || ""));
                             }
@@ -9795,11 +9775,10 @@
                         isUploading = false;
                         delete window.activeUploads[tempMsgId];
 
-                        // Если ошибку вызвал наш крестик отмены
                         if (err.name === 'AbortError') {
-                            console.log('Загрузка прервана пользователем');
+                            console.log('Отменено пользователем'); // Юзер нажал крестик
                         } else {
-                            showToast("Ошибка сети");
+                            showToast("Интернет отключился или сбой сети");
                             const tempEl = document.getElementById(tempMsgId);
                             if (tempEl) tempEl.remove();
                         }
@@ -9816,13 +9795,11 @@
                 }
 
             } catch (error) {
-                console.error("Ошибка подготовки файла:", error);
+                console.error("Ошибка:", error);
                 const tempEl = document.getElementById(tempMsgId);
                 if (tempEl) tempEl.remove();
-                showToast("Ошибка чтения файла");
-                msgInput.placeholder = originalPlaceholder;
-                msgInput.disabled = false;
-                input.value = '';
+                showToast("Системная ошибка");
+                resetInput();
             }
         }
         // Функции для просмотра фото
