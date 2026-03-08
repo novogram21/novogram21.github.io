@@ -4251,11 +4251,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            /* Учитываем "челку" (notch) на iPhone */
             padding: calc(env(safe-area-inset-top) + 10px) 15px 15px 15px;
             background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
             z-index: 10001;
+            /* Плавная анимация скрытия */
+            transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
+
+            .viewer-toolbar.hidden-ui {
+                opacity: 0;
+                transform: translateY(-20px);
+                pointer-events: none;
+            }
 
         .viewer-actions {
             display: flex;
@@ -12200,8 +12207,19 @@
             let swipeCloseStartY = 0;
             let swipeCloseCurrentY = 0;
 
+            // Переменные для умных тапов
+            let tapStartX = 0;
+            let tapStartY = 0;
+            let tapCount = 0;
+            let tapTimeout = null;
+
             viewerImg.addEventListener('touchstart', (e) => {
                 touchHasMoved = false;
+
+                if (e.touches.length === 1) {
+                    tapStartX = e.touches[0].clientX;
+                    tapStartY = e.touches[0].clientY;
+                }
 
                 if (e.touches.length === 2) {
                     isZoomDragging = false;
@@ -12227,7 +12245,14 @@
 
             viewerImg.addEventListener('touchmove', (e) => {
                 e.preventDefault();
-                touchHasMoved = true;
+
+                // Игнорируем микро-сдвиги пальца (меньше 10 пикселей), чтобы не ломался двойной тап
+                if (e.touches.length === 1) {
+                    const moveDist = Math.hypot(e.touches[0].clientX - tapStartX, e.touches[0].clientY - tapStartY);
+                    if (moveDist > 10) touchHasMoved = true;
+                } else {
+                    touchHasMoved = true;
+                }
 
                 if (e.touches.length === 2 && initialPinchDistance) {
                     const currentDistance = Math.hypot(
@@ -12350,20 +12375,27 @@
                     }
                 }
 
+                // 🔥 УМНЫЙ ОДИНОЧНЫЙ И ДВОЙНОЙ ТАП
                 if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
-                    const currentTime = new Date().getTime();
-                    const tapLength = currentTime - lastTapTime;
+                    tapCount++;
 
-                    if (tapLength < 300 && tapLength > 0) {
+                    if (tapCount === 1) {
+                        // Ждем 250мс: если второго тапа не будет, прячем/показываем интерфейс
+                        tapTimeout = setTimeout(() => {
+                            const tb = document.querySelector('.viewer-toolbar');
+                            if (tb) tb.classList.toggle('hidden-ui');
+                            tapCount = 0;
+                        }, 250);
+                    } else if (tapCount === 2) {
+                        // Если произошел второй тап - отменяем скрытие интерфейса и зумим
+                        clearTimeout(tapTimeout);
                         if (currentScale > 1) {
                             window.resetImageZoom();
                         } else {
                             currentScale = 2.5;
                             updateImageTransform(true);
                         }
-                        lastTapTime = 0;
-                    } else {
-                        lastTapTime = currentTime;
+                        tapCount = 0;
                     }
                 }
             });
@@ -12380,7 +12412,9 @@
             const viewer = document.getElementById('imageViewer');
             const img = document.getElementById('imageViewerImg');
             const deleteBtn = document.getElementById('viewerDeleteBtn');
+            const tb = document.querySelector('.viewer-toolbar'); // Находим панель кнопок
 
+            if (tb) tb.classList.remove('hidden-ui');
             currentViewerMsgId = msgId;
 
             // Показываем кнопку "Удалить" только если это сообщение из чата и оно ваше
