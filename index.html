@@ -1081,10 +1081,16 @@
             overflow: hidden !important;
             position: relative !important;
             border: 1px solid rgba(255,255,255,0.05) !important;
-            /* Делаем контейнер гибким, чтобы он не оставлял пустых пикселей под фото */
             display: inline-flex !important;
             flex-direction: column !important;
+            /* ДОБАВЛЯЕМ ПЛАВНОСТЬ ДЛЯ ВСЕГО БЛОКА */
+            transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         }
+
+            /* ТЕПЕРЬ ПРИ НАЖАТИИ СЖИМАЕТСЯ И ФОТО, И ВРЕМЯ ОДНОВРЕМЕННО */
+            .msg-image-only:active {
+                transform: scale(0.97) !important;
+            }
 
             .msg-image-only .chat-media-img {
                 max-width: 280px !important;
@@ -2220,9 +2226,7 @@
             transition: transform 0.2s;
         }
 
-            .chat-media-img:active {
-                transform: scale(0.98); /* Эффект нажатия */
-            }
+            
 
         .media-container {
             overflow: hidden;
@@ -12677,25 +12681,42 @@
             const viewer = document.getElementById('imageViewer');
             const img = document.getElementById('imageViewerImg');
             const deleteBtn = document.getElementById('viewerDeleteBtn');
-            const tb = document.querySelector('.viewer-toolbar'); // Находим панель кнопок
+            const tb = document.querySelector('.viewer-toolbar');
 
             if (tb) tb.classList.remove('hidden-ui');
             currentViewerMsgId = msgId;
 
-            // Показываем кнопку "Удалить" только если это сообщение из чата и оно ваше
+            // Показываем кнопку "Удалить"
             if (deleteBtn) {
                 deleteBtn.style.display = (isMine && msgId) ? 'flex' : 'none';
             }
 
             if (window.resetImageZoom) window.resetImageZoom();
 
+            // === МАГИЯ TELEGRAM (БЕСШОВНАЯ ЗАГРУЗКА) ===
+            // 1. Мгновенно показываем ту фотку, которая уже загружена в чате (она в кэше)
+            img.src = src;
+            viewer.classList.add('active');
+            history.pushState({ isImageViewer: true }, "", window.location.href);
+
+            // 2. Вычисляем ссылку на 4K оригинал
             let highResSrc = src;
             if (src.includes('lh3.googleusercontent.com')) {
                 highResSrc = src.split('=')[0] + '=w2000';
             }
-            img.src = highResSrc;
-            viewer.classList.add('active');
-            history.pushState({ isImageViewer: true }, "", window.location.href);
+
+            // 3. Загружаем оригинал В ФОНЕ (невидимкой)
+            if (highResSrc !== src) {
+                const tempImg = new Image();
+                tempImg.onload = function () {
+                    // 4. Как только оригинал скачался — бесшовно подменяем src.
+                    // Никакой прорисовки сверху вниз! Фото просто моментально станет резким.
+                    if (viewer.classList.contains('active')) {
+                        img.src = highResSrc;
+                    }
+                };
+                tempImg.src = highResSrc;
+            }
         };
 
         // --- ФУНКЦИИ КНОПОК ПАНЕЛИ ---
