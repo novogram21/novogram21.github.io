@@ -12150,10 +12150,20 @@
             viewerImg.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 const zoomSpeed = 0.15;
-                if (e.deltaY < 0) {
-                    currentScale = Math.min(currentScale + zoomSpeed, 5); // Вперед = увеличить
-                } else {
-                    currentScale = Math.max(currentScale - zoomSpeed, 1); // Назад = уменьшить
+
+                let targetScale = e.deltaY < 0
+                    ? Math.min(currentScale + zoomSpeed, 5)
+                    : Math.max(currentScale - zoomSpeed, 1);
+
+                if (targetScale !== currentScale) {
+                    const scaleRatio = targetScale / currentScale;
+                    const cx = e.clientX;
+                    const cy = e.clientY;
+
+                    // МАГИЯ: Математический сдвиг под курсор мыши
+                    currentTranslateX -= ((cx - window.innerWidth / 2) - currentTranslateX) * (scaleRatio - 1);
+                    currentTranslateY -= ((cy - window.innerHeight / 2) - currentTranslateY) * (scaleRatio - 1);
+                    currentScale = targetScale;
                 }
 
                 if (currentScale === 1) {
@@ -12204,11 +12214,26 @@
                 }
             });
 
-            viewerImg.addEventListener('dblclick', () => {
-                clearTimeout(pcClickTimeout); // Отменяем скрытие при двойном клике
-                if (currentScale > 1) window.resetImageZoom();
-                else {
-                    currentScale = 2.5;
+            viewerImg.addEventListener('dblclick', (e) => { // Добавили (e)
+                clearTimeout(pcClickTimeout);
+                if (currentScale > 1) {
+                    window.resetImageZoom();
+                } else {
+                    const cx = e.clientX;
+                    const cy = e.clientY;
+                    const targetScale = 2.5;
+
+                    // Вычисляем точку клика и зумируем прямо в нее
+                    currentTranslateX -= (cx - window.innerWidth / 2) * (targetScale - 1);
+                    currentTranslateY -= (cy - window.innerHeight / 2) * (targetScale - 1);
+                    currentScale = targetScale;
+
+                    const bounds = getPanBounds();
+                    if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
+                    if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
+                    if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
+                    if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+
                     updateImageTransform(true);
                 }
             });
@@ -12310,29 +12335,40 @@
                 }
 
                 if (e.touches.length === 2 && initialPinchDistance) {
+                    // Ищем точный центр между двумя пальцами
+                    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
                     const currentDistance = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
                     );
-                    const zoomDelta = currentDistance / initialPinchDistance;
-                    let rawScale = initialScale * zoomDelta;
+
+                    let targetScale = initialScale * (currentDistance / initialPinchDistance);
 
                     const MAX_SCALE = 5;
                     const MIN_SCALE = 1;
 
-                    if (rawScale > MAX_SCALE) {
-                        currentScale = MAX_SCALE + (rawScale - MAX_SCALE) * 0.25;
-                    } else if (rawScale < MIN_SCALE) {
-                        currentScale = MIN_SCALE - (MIN_SCALE - rawScale) * 0.35;
-                    } else {
-                        currentScale = rawScale;
+                    if (targetScale > MAX_SCALE) {
+                        targetScale = MAX_SCALE + (targetScale - MAX_SCALE) * 0.25;
+                    } else if (targetScale < MIN_SCALE) {
+                        targetScale = MIN_SCALE - (MIN_SCALE - targetScale) * 0.35;
                     }
 
+                    const scaleRatio = targetScale / currentScale;
+
+                    // Плавно сдвигаем фокус прямо между пальцами
+                    currentTranslateX -= ((cx - window.innerWidth / 2) - currentTranslateX) * (scaleRatio - 1);
+                    currentTranslateY -= ((cy - window.innerHeight / 2) - currentTranslateY) * (scaleRatio - 1);
+                    currentScale = targetScale;
+
                     const bounds = getPanBounds();
-                    if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
-                    if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
-                    if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
-                    if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+                    if (currentScale >= 1) {
+                        if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
+                        if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
+                        if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
+                        if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+                    }
 
                     updateImageTransform(false);
                 } else if (e.touches.length === 1) {
@@ -12459,6 +12495,7 @@
                 }
 
                 // 🔥 НАДЕЖНЫЙ ОДИНОЧНЫЙ И ДВОЙНОЙ ТАП (ПО ВРЕМЕНИ)
+                // 🔥 НАДЕЖНЫЙ ОДИНОЧНЫЙ И ДВОЙНОЙ ТАП (ПО ВРЕМЕНИ)
                 if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
                     e.preventDefault(); // Защита от фантомных кликов
 
@@ -12471,7 +12508,21 @@
                         if (currentScale > 1) {
                             window.resetImageZoom();
                         } else {
-                            currentScale = 2.5;
+                            // ЗУМ В ТОЧКУ ТАПА
+                            const cx = tapStartX;
+                            const cy = tapStartY;
+                            const targetScale = 2.5;
+
+                            currentTranslateX -= (cx - window.innerWidth / 2) * (targetScale - 1);
+                            currentTranslateY -= (cy - window.innerHeight / 2) * (targetScale - 1);
+                            currentScale = targetScale;
+
+                            const bounds = getPanBounds();
+                            if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
+                            if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
+                            if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
+                            if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+
                             updateImageTransform(true);
                         }
                     } else {
