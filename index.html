@@ -11487,13 +11487,24 @@
 
         // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
         // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
+        // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
         window.addEventListener('popstate', (e) => {
+
+            // 1. САМЫЙ ВЫСОКИЙ ПРИОРИТЕТ: Открыта ли фотография на весь экран?
+            const viewer = document.getElementById('imageViewer');
+            // Проверяем, активна ли фотка и НЕ находится ли она в процессе полета
+            if (viewer && viewer.classList.contains('active') && !window.isViewerClosing) {
+                // Передаем true, чтобы функция поняла: кнопку Назад УЖЕ нажали
+                closeImageViewer(null, true);
+                return; // Прерываем выполнение, чтобы шторки не закрылись
+            }
+
+            // 2. Если фото не было, проверяем открытые меню/шторки
             if (typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 sheetHistoryStack--;
 
-                // Проверяем, какая шторка открыта сейчас сверху, и закрываем именно её
                 if (document.getElementById('friendProfileSheet')?.classList.contains('open')) {
-                    closeFriendProfile(true); // <-- Теперь правильно закрывает и убирает затемнение
+                    closeFriendProfile(true);
                 } else if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
                     closeEditProfile(true);
                 } else if (document.getElementById('generalSettingsSheet')?.classList.contains('open')) {
@@ -11505,7 +11516,6 @@
                 } else if (document.getElementById('botsListSheet')?.classList.contains('open')) {
                     closeBotsList(true);
                 }
-
             }
         });
 
