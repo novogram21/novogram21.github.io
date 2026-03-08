@@ -12102,8 +12102,6 @@
             const viewerImg = document.getElementById('imageViewerImg');
             if (!viewerImg) return;
 
-            
-
             // --- СОБЫТИЯ МЫШИ (ПК) ---
             viewerImg.addEventListener('wheel', (e) => {
                 e.preventDefault();
@@ -12149,15 +12147,95 @@
                     currentScale = 2.5;
                     updateImageTransform(true);
                 }
-
             });
 
+            // --- СЕНСОРНЫЕ СОБЫТИЯ (ТЕЛЕФОН) ---
+            let touchHasMoved = false;
 
+            viewerImg.addEventListener('touchstart', (e) => {
+                touchHasMoved = false;
 
+                if (e.touches.length === 2) {
+                    // Начало зума двумя пальцами
+                    isZoomDragging = false;
+                    initialPinchDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    initialScale = currentScale;
+                } else if (e.touches.length === 1) {
+                    // Начало таскания (если уже приближено)
+                    if (currentScale > 1) {
+                        isZoomDragging = true;
+                        startDragX = e.touches[0].clientX - currentTranslateX;
+                        startDragY = e.touches[0].clientY - currentTranslateY;
+                    }
+                }
+            }, { passive: false });
 
-        });
+            viewerImg.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // Запрещаем системный скролл
+                touchHasMoved = true;
 
-        // Сброс зума
+                if (e.touches.length === 2 && initialPinchDistance) {
+                    // Зуммируем
+                    const currentDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const zoomDelta = currentDistance / initialPinchDistance;
+                    currentScale = Math.min(Math.max(1, initialScale * zoomDelta), 5); // Лимит от 1x до 5x
+                    updateImageTransform(false);
+                } else if (e.touches.length === 1 && isZoomDragging && currentScale > 1) {
+                    // Перетаскиваем
+                    currentTranslateX = e.touches[0].clientX - startDragX;
+                    currentTranslateY = e.touches[0].clientY - startDragY;
+                    updateImageTransform(false);
+                }
+            }, { passive: false });
+
+            viewerImg.addEventListener('touchend', (e) => {
+                // Если отпустили один из пальцев при зуме — плавно переходим в режим таскания
+                if (e.touches.length < 2) {
+                    initialPinchDistance = null;
+                }
+
+                if (e.touches.length === 1 && currentScale > 1) {
+                    // Страховка: пересчитываем координаты для оставшегося пальца
+                    isZoomDragging = true;
+                    startDragX = e.touches[0].clientX - currentTranslateX;
+                    startDragY = e.touches[0].clientY - currentTranslateY;
+                } else if (e.touches.length === 0) {
+                    isZoomDragging = false;
+                }
+
+                // Плавный сброс, если отдалили меньше 100%
+                if (currentScale <= 1 && e.touches.length === 0) {
+                    window.resetImageZoom();
+                }
+
+                // Двойной тап (работает только если пальцы не скользили)
+                if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTapTime;
+
+                    if (tapLength < 300 && tapLength > 0) {
+                        if (currentScale > 1) {
+                            window.resetImageZoom(); // Сброс
+                        } else {
+                            currentScale = 2.5; // Резкое приближение
+                            updateImageTransform(true);
+                        }
+                        lastTapTime = 0;
+                    } else {
+                        lastTapTime = currentTime;
+                    }
+                }
+            });
+
+        }); // <--- ТЕПЕРЬ БЛОК ЗАГРУЗКИ ЗАКРЫВАЕТСЯ ЗДЕСЬ (ПРАВИЛЬНО!)
+
+        // Сброс зума (выносим глобально, чтобы его могли вызывать другие функции)
         function resetImageZoom() {
             currentScale = 1;
             currentTranslateX = 0;
