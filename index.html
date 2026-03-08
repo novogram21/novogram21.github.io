@@ -12096,13 +12096,28 @@
             viewerImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
         }
 
-        // Сброс зума (выносим глобально, чтобы его могли вызывать другие функции)
+        // Сброс зума
         window.resetImageZoom = function () {
             currentScale = 1;
             currentTranslateX = 0;
             currentTranslateY = 0;
             updateImageTransform(true);
         };
+
+        // --- НОВАЯ ФУНКЦИЯ: ВЫЧИСЛЕНИЕ ГРАНИЦ КАРТИНКИ ---
+        function getPanBounds() {
+            const viewerImg = document.getElementById('imageViewerImg');
+            if (!viewerImg) return { maxTx: 0, maxTy: 0 };
+
+            const w = viewerImg.offsetWidth;
+            const h = viewerImg.offsetHeight;
+
+            // Разрешаем двигать только ту часть, которая не влезла в экран (с учетом масштаба)
+            const maxTx = Math.max(0, (w * currentScale - window.innerWidth) / 2);
+            const maxTy = Math.max(0, (h * currentScale - window.innerHeight) / 2);
+
+            return { maxTx, maxTy };
+        }
 
         // ЖДЕМ ЗАГРУЗКИ HTML ПЕРЕД ТЕМ КАК ВЕШАТЬ ЖЕСТЫ
         document.addEventListener('DOMContentLoaded', () => {
@@ -12122,6 +12137,13 @@
                 if (currentScale === 1) {
                     currentTranslateX = 0;
                     currentTranslateY = 0;
+                } else {
+                    // При зуме колесиком мыши тоже не даем картинке уехать
+                    const bounds = getPanBounds();
+                    if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
+                    if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
+                    if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
+                    if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
                 }
                 updateImageTransform(false);
             }, { passive: false });
@@ -12137,8 +12159,14 @@
 
             window.addEventListener('mousemove', (e) => {
                 if (isZoomDragging && currentScale > 1) {
-                    currentTranslateX = e.clientX - startDragX;
-                    currentTranslateY = e.clientY - startDragY;
+                    let rawTx = e.clientX - startDragX;
+                    let rawTy = e.clientY - startDragY;
+                    const bounds = getPanBounds();
+
+                    // На ПК просто делаем жесткий упор в границу
+                    currentTranslateX = Math.max(-bounds.maxTx, Math.min(bounds.maxTx, rawTx));
+                    currentTranslateY = Math.max(-bounds.maxTy, Math.min(bounds.maxTy, rawTy));
+
                     updateImageTransform(false);
                 }
             });
@@ -12163,7 +12191,6 @@
                 touchHasMoved = false;
 
                 if (e.touches.length === 2) {
-                    // Начало зума двумя пальцами
                     isZoomDragging = false;
                     initialPinchDistance = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
@@ -12171,7 +12198,6 @@
                     );
                     initialScale = currentScale;
                 } else if (e.touches.length === 1) {
-                    // Начало таскания (если уже приближено)
                     if (currentScale > 1) {
                         isZoomDragging = true;
                         startDragX = e.touches[0].clientX - currentTranslateX;
@@ -12181,11 +12207,11 @@
             }, { passive: false });
 
             viewerImg.addEventListener('touchmove', (e) => {
-                e.preventDefault(); // Запрещаем системный скролл
+                e.preventDefault();
                 touchHasMoved = true;
 
                 if (e.touches.length === 2 && initialPinchDistance) {
-                    // Зуммируем
+                    // ЗУМ ДВУМЯ ПАЛЬЦАМИ
                     const currentDistance = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
@@ -12193,31 +12219,56 @@
                     const zoomDelta = currentDistance / initialPinchDistance;
                     let rawScale = initialScale * zoomDelta;
 
-                    // 🔥 ПРЕМИУМ-ФИШКА: Эффект "резинки"
                     const MAX_SCALE = 5;
                     const MIN_SCALE = 1;
 
+                    // Эффект резинки при зуме
                     if (rawScale > MAX_SCALE) {
-                        // Тянется тяжело при превышении максимума (замедляем в 4 раза)
                         currentScale = MAX_SCALE + (rawScale - MAX_SCALE) * 0.25;
                     } else if (rawScale < MIN_SCALE) {
-                        // Сжимается тяжело при отдалении меньше оригинала (замедляем в 3 раза)
                         currentScale = MIN_SCALE - (MIN_SCALE - rawScale) * 0.35;
                     } else {
                         currentScale = rawScale;
                     }
 
+                    // Подтягиваем координаты, если при уменьшении картинка оказалась за краем
+                    const bounds = getPanBounds();
+                    if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
+                    if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
+                    if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
+                    if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+
                     updateImageTransform(false);
                 } else if (e.touches.length === 1 && isZoomDragging && currentScale > 1) {
-                    // Перетаскиваем
-                    currentTranslateX = e.touches[0].clientX - startDragX;
-                    currentTranslateY = e.touches[0].clientY - startDragY;
+                    // ПЕРЕТАСКИВАНИЕ ОДНИМ ПАЛЬЦЕМ
+                    let rawTx = e.touches[0].clientX - startDragX;
+                    let rawTy = e.touches[0].clientY - startDragY;
+
+                    const bounds = getPanBounds();
+
+                    // 🔥 ПРЕМИУМ: Эффект резинки при выходе за границы экрана по оси X
+                    if (rawTx > bounds.maxTx) {
+                        currentTranslateX = bounds.maxTx + (rawTx - bounds.maxTx) * 0.25;
+                    } else if (rawTx < -bounds.maxTx) {
+                        currentTranslateX = -bounds.maxTx + (rawTx + bounds.maxTx) * 0.25;
+                    } else {
+                        currentTranslateX = rawTx;
+                    }
+
+                    // Эффект резинки по оси Y
+                    if (rawTy > bounds.maxTy) {
+                        currentTranslateY = bounds.maxTy + (rawTy - bounds.maxTy) * 0.25;
+                    } else if (rawTy < -bounds.maxTy) {
+                        currentTranslateY = -bounds.maxTy + (rawTy + bounds.maxTy) * 0.25;
+                    } else {
+                        currentTranslateY = rawTy;
+                    }
+
                     updateImageTransform(false);
                 }
             }, { passive: false });
 
             viewerImg.addEventListener('touchend', (e) => {
-                // Если отпустили один из пальцев при зуме — плавно переходим в режим таскания
                 if (e.touches.length < 2) {
                     initialPinchDistance = null;
                 }
@@ -12230,14 +12281,28 @@
                     isZoomDragging = false;
                 }
 
-                // 🔥 ПРЕМИУМ-ФИШКА: Плавный отскок при отпускании пальцев
+                // Плавный отскок при отпускании (возврат в границы и лимиты масштаба)
                 if (e.touches.length === 0) {
+                    let needsSnap = false;
+
                     if (currentScale < 1) {
-                        // Отдалили слишком сильно — отскок к 1x и по центру
                         window.resetImageZoom();
+                        needsSnap = true;
                     } else if (currentScale > 5) {
-                        // Приблизили слишком сильно — отскок обратно к 5x
                         currentScale = 5;
+                        needsSnap = true;
+                    }
+
+                    // Определение отскока за границы
+                    if (currentScale >= 1) {
+                        const bounds = getPanBounds();
+                        if (currentTranslateX > bounds.maxTx) { currentTranslateX = bounds.maxTx; needsSnap = true; }
+                        if (currentTranslateX < -bounds.maxTx) { currentTranslateX = -bounds.maxTx; needsSnap = true; }
+                        if (currentTranslateY > bounds.maxTy) { currentTranslateY = bounds.maxTy; needsSnap = true; }
+                        if (currentTranslateY < -bounds.maxTy) { currentTranslateY = -bounds.maxTy; needsSnap = true; }
+                    }
+
+                    if (needsSnap) {
                         updateImageTransform(true);
                     }
                 }
@@ -12249,9 +12314,9 @@
 
                     if (tapLength < 300 && tapLength > 0) {
                         if (currentScale > 1) {
-                            window.resetImageZoom(); // Сброс
+                            window.resetImageZoom();
                         } else {
-                            currentScale = 2.5; // Резкое приближение
+                            currentScale = 2.5;
                             updateImageTransform(true);
                         }
                         lastTapTime = 0;
