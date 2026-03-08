@@ -9697,40 +9697,60 @@
                 // Длина нашей SVG-линии (из CSS)
                 const circumference = 135;
 
-                // ИСПОЛЬЗУЕМ XMLHttpRequest ДЛЯ ОТСЛЕЖИВАНИЯ ПРОГРЕССА
-                const xhr = new XMLHttpRequest();
-                window.activeUploads[tempMsgId] = xhr; // Запоминаем процесс для возможности отмены
+                // --- МАГИЯ: УМНАЯ ИМИТАЦИЯ ПРОГРЕССА ---
+                let percentComplete = 0;
+                let isUploading = true;
 
-                // Событие обновления процентов
-                xhr.upload.onprogress = function (event) {
-                    if (event.lengthComputable) {
-                        let percentComplete = event.loaded / event.total;
+                // Плавная анимация загрузки (замедляется у 95%, ждет ответа сервера)
+                const progressInterval = setInterval(() => {
+                    if (!isUploading) return clearInterval(progressInterval);
 
-                        // Защита от слишком быстрого скачка до 100% (ждем ответа Гугла)
-                        if (percentComplete > 0.95) percentComplete = 0.95;
+                    // Хитрый алгоритм: быстро до 70%, потом медленно ползет к 95%
+                    percentComplete += (0.95 - percentComplete) * 0.08;
 
-                        const loadedMb = (file.size * percentComplete / (1024 * 1024)).toFixed(1);
+                    const loadedMb = (file.size * percentComplete / (1024 * 1024)).toFixed(1);
 
-                        // 1. Обновляем текст мегабайтов
-                        const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
-                        if (txtEl) txtEl.innerText = `${loadedMb} / ${totalMb} МБ`;
+                    const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
+                    if (txtEl) txtEl.innerText = `${loadedMb} / ${totalMb} МБ`;
 
-                        // 2. Двигаем белую обводку круга
-                        const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
-                        if (circleEl) {
-                            const offset = circumference - (percentComplete * circumference);
-                            circleEl.style.strokeDashoffset = offset;
-                        }
+                    const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
+                    if (circleEl) {
+                        const offset = circumference - (percentComplete * circumference);
+                        circleEl.style.strokeDashoffset = offset;
                     }
-                };
+                }, 150);
 
-                // Ответ от сервера получен
-                xhr.onload = function () {
-                    delete window.activeUploads[tempMsgId];
-                    if (xhr.status === 200 || xhr.status === 302) {
-                        try {
-                            const data = JSON.parse(xhr.responseText);
+                // Используем AbortController для аппаратной работы крестика отмены
+                const controller = new AbortController();
+                window.activeUploads[tempMsgId] = controller;
 
+                // Используем FETCH (он не отправляет OPTIONS запрос и легко обходит CORS)
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    redirect: "follow",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "upload",
+                        secret: APP_SECRET_KEY,
+                        filename: file.name,
+                        mimeType: file.type,
+                        base64: base64Data
+                    }),
+                    signal: controller.signal
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        isUploading = false;
+                        delete window.activeUploads[tempMsgId];
+
+                        // Сервер ответил -> Заливаем круг на 100% моментально
+                        const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
+                        if (txtEl) txtEl.innerText = `${totalMb} / ${totalMb} МБ`;
+                        const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
+                        if (circleEl) circleEl.style.strokeDashoffset = 0;
+
+                        // Ждем 350мс, чтобы юзер кайфанул от 100% круга, потом отправляем
+                        setTimeout(() => {
                             const tempEl = document.getElementById(tempMsgId);
                             if (tempEl) tempEl.remove(); // Удаляем превью
 
@@ -9740,27 +9760,23 @@
                             } else {
                                 showToast("Ошибка диска: " + (data.message || ""));
                             }
-                        } catch (e) {
-                            showToast("Ошибка ответа сервера");
+                            resetInput();
+                        }, 350);
+                    })
+                    .catch(err => {
+                        isUploading = false;
+                        delete window.activeUploads[tempMsgId];
+
+                        // Если ошибку вызвал наш крестик отмены
+                        if (err.name === 'AbortError') {
+                            console.log('Загрузка прервана пользователем');
+                        } else {
+                            showToast("Ошибка сети");
                             const tempEl = document.getElementById(tempMsgId);
                             if (tempEl) tempEl.remove();
                         }
-                    } else {
-                        showToast("Сетевая ошибка");
-                        const tempEl = document.getElementById(tempMsgId);
-                        if (tempEl) tempEl.remove();
-                    }
-                    resetInput();
-                };
-
-                // Ошибка сети (например, пропал интернет)
-                xhr.onerror = function () {
-                    delete window.activeUploads[tempMsgId];
-                    showToast("Интернет отключился");
-                    const tempEl = document.getElementById(tempMsgId);
-                    if (tempEl) tempEl.remove();
-                    resetInput();
-                };
+                        resetInput();
+                    });
 
                 function resetInput() {
                     if (msgInput) {
@@ -9770,19 +9786,6 @@
                     }
                     input.value = '';
                 }
-
-                // Начинаем отправку
-                xhr.open("POST", GOOGLE_SCRIPT_URL, true);
-                // УБРАЛИ ;charset=utf-8 ЧТОБЫ ОБОЙТИ БЛОКИРОВКУ CORS ОТ GOOGLE
-                xhr.setRequestHeader("Content-Type", "text/plain");
-
-                xhr.send(JSON.stringify({
-                    action: "upload",
-                    secret: APP_SECRET_KEY,
-                    filename: file.name,
-                    mimeType: file.type,
-                    base64: base64Data
-                }));
 
             } catch (error) {
                 console.error("Ошибка подготовки файла:", error);
