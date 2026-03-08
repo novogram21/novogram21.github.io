@@ -2202,17 +2202,17 @@
             }
 
             .image-viewer img {
-                max-width: 95%;
-                max-height: 95%;
-                border-radius: 8px;
-                box-shadow: 0 0 20px rgba(0,0,0,0.5);
-                /* Задаем базовое состояние */
+                width: 100%; /* Заставляем фото занять 100% ширины... */
+                height: 100%; /* ...и высоты экрана */
+                object-fit: contain; /* Но сохраняем пропорции, чтобы не сплющило! */
+                border-radius: 0; /* Убираем рамки, делаем как в iOS */
+                box-shadow: none; /* Тень тоже не нужна для фуллскрина */
+
                 transform: scale(0.9) translate(0px, 0px);
                 opacity: 0;
                 transition: transform 0.3s ease-out, opacity 0.3s ease-out;
                 will-change: transform;
                 cursor: grab;
-                /* Блокируем системные действия (чтобы браузер сам не пытался скроллить) */
                 touch-action: none;
                 user-select: none;
                 -webkit-user-drag: none;
@@ -12109,12 +12109,22 @@
             const viewerImg = document.getElementById('imageViewerImg');
             if (!viewerImg) return { maxTx: 0, maxTy: 0 };
 
-            const w = viewerImg.offsetWidth;
-            const h = viewerImg.offsetHeight;
+            // Оригинальное физическое разрешение файла
+            const natW = viewerImg.naturalWidth || 1;
+            const natH = viewerImg.naturalHeight || 1;
 
-            // Разрешаем двигать только ту часть, которая не влезла в экран (с учетом масштаба)
-            const maxTx = Math.max(0, (w * currentScale - window.innerWidth) / 2);
-            const maxTy = Math.max(0, (h * currentScale - window.innerHeight) / 2);
+            // Текущий размер экрана телефона/ПК
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
+
+            // Вычисляем, как именно браузер растянул картинку (object-fit: contain)
+            const fitScale = Math.min(screenW / natW, screenH / natH);
+            const renderedW = natW * fitScale;
+            const renderedH = natH * fitScale;
+
+            // Считаем разрешенный сдвиг (разница между увеличенным фото и экраном)
+            const maxTx = Math.max(0, (renderedW * currentScale - screenW) / 2);
+            const maxTy = Math.max(0, (renderedH * currentScale - screenH) / 2);
 
             return { maxTx, maxTy };
         }
