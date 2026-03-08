@@ -12132,6 +12132,8 @@
             return { maxTx, maxTy };
         }
 
+
+
         // ЖДЕМ ЗАГРУЗКИ HTML ПЕРЕД ТЕМ КАК ВЕШАТЬ ЖЕСТЫ
         document.addEventListener('DOMContentLoaded', () => {
             const viewerImg = document.getElementById('imageViewerImg');
@@ -12151,7 +12153,6 @@
                     currentTranslateX = 0;
                     currentTranslateY = 0;
                 } else {
-                    // При зуме колесиком мыши тоже не даем картинке уехать
                     const bounds = getPanBounds();
                     if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
                     if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
@@ -12175,11 +12176,8 @@
                     let rawTx = e.clientX - startDragX;
                     let rawTy = e.clientY - startDragY;
                     const bounds = getPanBounds();
-
-                    // На ПК просто делаем жесткий упор в границу
                     currentTranslateX = Math.max(-bounds.maxTx, Math.min(bounds.maxTx, rawTx));
                     currentTranslateY = Math.max(-bounds.maxTy, Math.min(bounds.maxTy, rawTy));
-
                     updateImageTransform(false);
                 }
             });
@@ -12188,7 +12186,6 @@
                 isZoomDragging = false;
             });
 
-            // Двойной клик на ПК
             viewerImg.addEventListener('dblclick', () => {
                 if (currentScale > 1) window.resetImageZoom();
                 else {
@@ -12199,12 +12196,16 @@
 
             // --- СЕНСОРНЫЕ СОБЫТИЯ (ТЕЛЕФОН) ---
             let touchHasMoved = false;
+            let isSwipeToClose = false;
+            let swipeCloseStartY = 0;
+            let swipeCloseCurrentY = 0;
 
             viewerImg.addEventListener('touchstart', (e) => {
                 touchHasMoved = false;
 
                 if (e.touches.length === 2) {
                     isZoomDragging = false;
+                    isSwipeToClose = false;
                     initialPinchDistance = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
@@ -12213,8 +12214,13 @@
                 } else if (e.touches.length === 1) {
                     if (currentScale > 1) {
                         isZoomDragging = true;
+                        isSwipeToClose = false;
                         startDragX = e.touches[0].clientX - currentTranslateX;
                         startDragY = e.touches[0].clientY - currentTranslateY;
+                    } else if (currentScale === 1) {
+                        isSwipeToClose = true;
+                        swipeCloseStartY = e.touches[0].clientY;
+                        swipeCloseCurrentY = 0;
                     }
                 }
             }, { passive: false });
@@ -12224,7 +12230,6 @@
                 touchHasMoved = true;
 
                 if (e.touches.length === 2 && initialPinchDistance) {
-                    // ЗУМ ДВУМЯ ПАЛЬЦАМИ
                     const currentDistance = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
@@ -12235,7 +12240,6 @@
                     const MAX_SCALE = 5;
                     const MIN_SCALE = 1;
 
-                    // Эффект резинки при зуме
                     if (rawScale > MAX_SCALE) {
                         currentScale = MAX_SCALE + (rawScale - MAX_SCALE) * 0.25;
                     } else if (rawScale < MIN_SCALE) {
@@ -12244,7 +12248,6 @@
                         currentScale = rawScale;
                     }
 
-                    // Подтягиваем координаты, если при уменьшении картинка оказалась за краем
                     const bounds = getPanBounds();
                     if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
                     if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
@@ -12252,32 +12255,42 @@
                     if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
 
                     updateImageTransform(false);
-                } else if (e.touches.length === 1 && isZoomDragging && currentScale > 1) {
-                    // ПЕРЕТАСКИВАНИЕ ОДНИМ ПАЛЬЦЕМ
-                    let rawTx = e.touches[0].clientX - startDragX;
-                    let rawTy = e.touches[0].clientY - startDragY;
+                } else if (e.touches.length === 1) {
+                    if (isZoomDragging && currentScale > 1) {
+                        let rawTx = e.touches[0].clientX - startDragX;
+                        let rawTy = e.touches[0].clientY - startDragY;
 
-                    const bounds = getPanBounds();
+                        const bounds = getPanBounds();
 
-                    // 🔥 ПРЕМИУМ: Эффект резинки при выходе за границы экрана по оси X
-                    if (rawTx > bounds.maxTx) {
-                        currentTranslateX = bounds.maxTx + (rawTx - bounds.maxTx) * 0.25;
-                    } else if (rawTx < -bounds.maxTx) {
-                        currentTranslateX = -bounds.maxTx + (rawTx + bounds.maxTx) * 0.25;
-                    } else {
-                        currentTranslateX = rawTx;
+                        if (rawTx > bounds.maxTx) {
+                            currentTranslateX = bounds.maxTx + (rawTx - bounds.maxTx) * 0.25;
+                        } else if (rawTx < -bounds.maxTx) {
+                            currentTranslateX = -bounds.maxTx + (rawTx + bounds.maxTx) * 0.25;
+                        } else {
+                            currentTranslateX = rawTx;
+                        }
+
+                        if (rawTy > bounds.maxTy) {
+                            currentTranslateY = bounds.maxTy + (rawTy - bounds.maxTy) * 0.25;
+                        } else if (rawTy < -bounds.maxTy) {
+                            currentTranslateY = -bounds.maxTy + (rawTy + bounds.maxTy) * 0.25;
+                        } else {
+                            currentTranslateY = rawTy;
+                        }
+
+                        updateImageTransform(false);
+                    } else if (isSwipeToClose && currentScale === 1) {
+                        const deltaY = e.touches[0].clientY - swipeCloseStartY;
+                        swipeCloseCurrentY = deltaY;
+
+                        const opacity = Math.max(0, 0.9 - Math.abs(deltaY) / (window.innerHeight / 1.5));
+                        document.getElementById('imageViewer').style.backgroundColor = `rgba(0, 0, 0, ${opacity})`;
+
+                        const pullScale = Math.max(0.7, 1 - Math.abs(deltaY) / window.innerHeight);
+
+                        viewerImg.style.transition = 'none';
+                        viewerImg.style.transform = `translate(0px, ${deltaY}px) scale(${pullScale})`;
                     }
-
-                    // Эффект резинки по оси Y
-                    if (rawTy > bounds.maxTy) {
-                        currentTranslateY = bounds.maxTy + (rawTy - bounds.maxTy) * 0.25;
-                    } else if (rawTy < -bounds.maxTy) {
-                        currentTranslateY = -bounds.maxTy + (rawTy + bounds.maxTy) * 0.25;
-                    } else {
-                        currentTranslateY = rawTy;
-                    }
-
-                    updateImageTransform(false);
                 }
             }, { passive: false });
 
@@ -12294,7 +12307,25 @@
                     isZoomDragging = false;
                 }
 
-                // Плавный отскок при отпускании (возврат в границы и лимиты масштаба)
+                if (isSwipeToClose && currentScale === 1 && e.touches.length === 0) {
+                    isSwipeToClose = false;
+
+                    if (Math.abs(swipeCloseCurrentY) > 100) {
+                        document.getElementById('imageViewer').style.backgroundColor = '';
+                        closeImageViewer();
+                    } else {
+                        document.getElementById('imageViewer').style.transition = 'background-color 0.3s ease';
+                        document.getElementById('imageViewer').style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+                        window.resetImageZoom();
+
+                        setTimeout(() => {
+                            document.getElementById('imageViewer').style.transition = '';
+                        }, 300);
+                    }
+                    swipeCloseCurrentY = 0;
+                    return;
+                }
+
                 if (e.touches.length === 0) {
                     let needsSnap = false;
 
@@ -12306,7 +12337,6 @@
                         needsSnap = true;
                     }
 
-                    // Определение отскока за границы
                     if (currentScale >= 1) {
                         const bounds = getPanBounds();
                         if (currentTranslateX > bounds.maxTx) { currentTranslateX = bounds.maxTx; needsSnap = true; }
@@ -12320,7 +12350,6 @@
                     }
                 }
 
-                // Двойной тап (работает только если пальцы не скользили)
                 if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
                     const currentTime = new Date().getTime();
                     const tapLength = currentTime - lastTapTime;
@@ -12338,254 +12367,13 @@
                     }
                 }
             });
-
         });
 
-        // Сброс зума (выносим глобально, чтобы его могли вызывать другие функции)
-        function resetImageZoom() {
-            currentScale = 1;
-            currentTranslateX = 0;
-            currentTranslateY = 0;
-            updateImageTransform(true);
-        }
 
-        // --- СЕНСОРНЫЕ СОБЫТИЯ (ТЕЛЕФОН) ---
-        let touchHasMoved = false;
-        let isSwipeToClose = false;
-        let swipeCloseStartY = 0;
-        let swipeCloseCurrentY = 0;
 
-        viewerImg.addEventListener('touchstart', (e) => {
-            touchHasMoved = false;
 
-            if (e.touches.length === 2) {
-                // Начало зума двумя пальцами
-                isZoomDragging = false;
-                isSwipeToClose = false; // Отменяем свайп закрытия
-                initialPinchDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                initialScale = currentScale;
-            } else if (e.touches.length === 1) {
-                if (currentScale > 1) {
-                    // Картинка увеличена - таскаем её
-                    isZoomDragging = true;
-                    isSwipeToClose = false;
-                    startDragX = e.touches[0].clientX - currentTranslateX;
-                    startDragY = e.touches[0].clientY - currentTranslateY;
-                } else if (currentScale === 1) {
-                    // Картинка 100% - готовимся к свайпу для закрытия
-                    isSwipeToClose = true;
-                    swipeCloseStartY = e.touches[0].clientY;
-                    swipeCloseCurrentY = 0;
-                }
-            }
-        }, { passive: false });
 
-        viewerImg.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            touchHasMoved = true;
-
-            if (e.touches.length === 2 && initialPinchDistance) {
-                // ЗУМ ДВУМЯ ПАЛЬЦАМИ
-                const currentDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                const zoomDelta = currentDistance / initialPinchDistance;
-                let rawScale = initialScale * zoomDelta;
-
-                const MAX_SCALE = 5;
-                const MIN_SCALE = 1;
-
-                if (rawScale > MAX_SCALE) {
-                    currentScale = MAX_SCALE + (rawScale - MAX_SCALE) * 0.25;
-                } else if (rawScale < MIN_SCALE) {
-                    currentScale = MIN_SCALE - (MIN_SCALE - rawScale) * 0.35;
-                } else {
-                    currentScale = rawScale;
-                }
-
-                const bounds = getPanBounds();
-                if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
-                if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
-                if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
-                if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
-
-                updateImageTransform(false);
-            } else if (e.touches.length === 1) {
-                if (isZoomDragging && currentScale > 1) {
-                    // ПЕРЕТАСКИВАНИЕ ПРИБЛИЖЕННОЙ КАРТИНКИ
-                    let rawTx = e.touches[0].clientX - startDragX;
-                    let rawTy = e.touches[0].clientY - startDragY;
-
-                    const bounds = getPanBounds();
-
-                    if (rawTx > bounds.maxTx) {
-                        currentTranslateX = bounds.maxTx + (rawTx - bounds.maxTx) * 0.25;
-                    } else if (rawTx < -bounds.maxTx) {
-                        currentTranslateX = -bounds.maxTx + (rawTx + bounds.maxTx) * 0.25;
-                    } else {
-                        currentTranslateX = rawTx;
-                    }
-
-                    if (rawTy > bounds.maxTy) {
-                        currentTranslateY = bounds.maxTy + (rawTy - bounds.maxTy) * 0.25;
-                    } else if (rawTy < -bounds.maxTy) {
-                        currentTranslateY = -bounds.maxTy + (rawTy + bounds.maxTy) * 0.25;
-                    } else {
-                        currentTranslateY = rawTy;
-                    }
-
-                    updateImageTransform(false);
-                } else if (isSwipeToClose && currentScale === 1) {
-                    // 🔥 СВАЙП ДЛЯ ЗАКРЫТИЯ (когда масштаб 100%)
-                    const deltaY = e.touches[0].clientY - swipeCloseStartY;
-                    swipeCloseCurrentY = deltaY;
-
-                    // Плавно делаем фон прозрачным
-                    const opacity = Math.max(0, 0.9 - Math.abs(deltaY) / (window.innerHeight / 1.5));
-                    document.getElementById('imageViewer').style.backgroundColor = `rgba(0, 0, 0, ${opacity})`;
-
-                    // Эффект отдаления картинки при свайпе (как в Telegram/iOS)
-                    const pullScale = Math.max(0.7, 1 - Math.abs(deltaY) / window.innerHeight);
-
-                    viewerImg.style.transition = 'none';
-                    viewerImg.style.transform = `translate(0px, ${deltaY}px) scale(${pullScale})`;
-                }
-            }
-        }, { passive: false });
-
-        viewerImg.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) {
-                initialPinchDistance = null;
-            }
-
-            if (e.touches.length === 1 && currentScale > 1) {
-                isZoomDragging = true;
-                startDragX = e.touches[0].clientX - currentTranslateX;
-                startDragY = e.touches[0].clientY - currentTranslateY;
-            } else if (e.touches.length === 0) {
-                isZoomDragging = false;
-            }
-
-            // 🔥 ЛОГИКА ОКОНЧАНИЯ СВАЙПА ДЛЯ ЗАКРЫТИЯ
-            if (isSwipeToClose && currentScale === 1 && e.touches.length === 0) {
-                isSwipeToClose = false;
-
-                if (Math.abs(swipeCloseCurrentY) > 100) {
-                    // Свайпнули достаточно далеко — закрываем!
-                    document.getElementById('imageViewer').style.backgroundColor = '';
-                    closeImageViewer();
-                } else {
-                    // Недотянули — упруго возвращаем обратно
-                    document.getElementById('imageViewer').style.transition = 'background-color 0.3s ease';
-                    document.getElementById('imageViewer').style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-                    window.resetImageZoom();
-
-                    setTimeout(() => {
-                        document.getElementById('imageViewer').style.transition = '';
-                    }, 300);
-                }
-                swipeCloseCurrentY = 0;
-                return; // Выходим, чтобы не сработал двойной тап
-            }
-
-            // Плавный отскок при отпускании (возврат в границы)
-            if (e.touches.length === 0) {
-                let needsSnap = false;
-
-                if (currentScale < 1) {
-                    window.resetImageZoom();
-                    needsSnap = true;
-                } else if (currentScale > 5) {
-                    currentScale = 5;
-                    needsSnap = true;
-                }
-
-                if (currentScale >= 1) {
-                    const bounds = getPanBounds();
-                    if (currentTranslateX > bounds.maxTx) { currentTranslateX = bounds.maxTx; needsSnap = true; }
-                    if (currentTranslateX < -bounds.maxTx) { currentTranslateX = -bounds.maxTx; needsSnap = true; }
-                    if (currentTranslateY > bounds.maxTy) { currentTranslateY = bounds.maxTy; needsSnap = true; }
-                    if (currentTranslateY < -bounds.maxTy) { currentTranslateY = -bounds.maxTy; needsSnap = true; }
-                }
-
-                if (needsSnap) {
-                    updateImageTransform(true);
-                }
-            }
-
-            // Двойной тап (работает только если пальцы не скользили)
-            if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTapTime;
-
-                if (tapLength < 300 && tapLength > 0) {
-                    if (currentScale > 1) {
-                        window.resetImageZoom();
-                    } else {
-                        currentScale = 2.5;
-                        updateImageTransform(true);
-                    }
-                    lastTapTime = 0;
-                } else {
-                    lastTapTime = currentTime;
-                }
-            }
-        });
-
-      
-
-        // --- СОБЫТИЯ МЫШИ (ПК) ---
-        viewerImg.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const zoomSpeed = 0.15;
-            if (e.deltaY < 0) {
-                currentScale = Math.min(currentScale + zoomSpeed, 5); // Вперед = увеличить
-            } else {
-                currentScale = Math.max(currentScale - zoomSpeed, 1); // Назад = уменьшить
-            }
-
-            if (currentScale === 1) {
-                currentTranslateX = 0;
-                currentTranslateY = 0;
-            }
-            updateImageTransform(false);
-        }, { passive: false });
-
-        viewerImg.addEventListener('mousedown', (e) => {
-            if (currentScale > 1) {
-                e.preventDefault();
-                isZoomDragging = true;
-                startDragX = e.clientX - currentTranslateX;
-                startDragY = e.clientY - currentTranslateY;
-            }
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (isZoomDragging && currentScale > 1) {
-                currentTranslateX = e.clientX - startDragX;
-                currentTranslateY = e.clientY - startDragY;
-                updateImageTransform(false);
-            }
-        });
-
-        window.addEventListener('mouseup', () => {
-            isZoomDragging = false;
-        });
-
-        // Двойной клик на ПК
-        viewerImg.addEventListener('dblclick', () => {
-            if (currentScale > 1) resetImageZoom();
-            else {
-                currentScale = 2.5;
-                updateImageTransform(true);
-            }
-        });
-
-        let currentViewerMsgId = null;
+        
 
         // Обновленная функция открытия (с проверкой прав на удаление)
         window.openImageViewer = function (src, msgId = null, isMine = false) {
