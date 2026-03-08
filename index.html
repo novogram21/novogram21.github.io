@@ -12226,10 +12226,12 @@
             let tapTimeout = null;
 
             // ПЕРЕМЕННЫЕ ДЛЯ ИНЕРЦИИ
+           
             let lastTouchX = 0;
             let lastTouchY = 0;
             let velocityX = 0;
             let velocityY = 0;
+            let lastTouchTime = 0; // Время для вычисления идеальной физики
             viewerImg.addEventListener('touchstart', (e) => {
                 touchHasMoved = false;
 
@@ -12241,6 +12243,7 @@
                     lastTouchY = e.touches[0].clientY;
                     velocityX = 0;
                     velocityY = 0;
+                    lastTouchTime = Date.now();
                 }
 
                 if (e.touches.length === 2) {
@@ -12274,12 +12277,21 @@
                     if (moveDist > 10) touchHasMoved = true;
 
                     // СЧИТАЕМ СКОРОСТЬ ПАЛЬЦА
+                    // СЧИТАЕМ СКОРОСТЬ ПАЛЬЦА С УЧЕТОМ ВРЕМЕНИ (ПРЕМИУМ ФИЗИКА)
                     let currentX = e.touches[0].clientX;
                     let currentY = e.touches[0].clientY;
-                    velocityX = currentX - lastTouchX;
-                    velocityY = currentY - lastTouchY;
+                    let now = Date.now();
+                    let dt = now - lastTouchTime;
+
+                    if (dt > 0) {
+                        // Делим расстояние на время (получаем пиксели в миллисекунду)
+                        velocityX = (currentX - lastTouchX) / dt;
+                        velocityY = (currentY - lastTouchY) / dt;
+                    }
+
                     lastTouchX = currentX;
                     lastTouchY = currentY;
+                    lastTouchTime = now;
                 } else {
                     touchHasMoved = true;
                 }
@@ -12408,19 +12420,31 @@
                     // ВОТ ЭТА СТРОКА ДЕЛАЕТ СКОЛЬЖЕНИЕ (true включает transition в CSS)
                     if (needsSnap) {
                         updateImageTransform(true);
-                    } else if (Math.abs(velocityX) > 2 || Math.abs(velocityY) > 2) {
-                        // ЕСЛИ ФОТО НЕ ВЫЛЕТЕЛО ЗА КРАЯ, НО БЫЛ РЕЗКИЙ СВАЙП - ДЕЛАЕМ ИНЕРЦИЮ
-                        currentTranslateX += velocityX * 7; // Множитель силы скольжения
-                        currentTranslateY += velocityY * 7;
+                    } else {
+                        // ПРЕМИУМ ИНЕРЦИЯ (СКОЛЬЖЕНИЕ)
+                        let timeSinceLastMove = Date.now() - lastTouchTime;
 
-                        // Гасим инерцию о края экрана (чтобы фото не улетело в космос)
-                        const bounds = getPanBounds();
-                        if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
-                        if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
-                        if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
-                        if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+                        // Если палец остановился (более 50мс) перед тем как отпустить - инерции нет (как в iOS)
+                        if (timeSinceLastMove < 50 && (Math.abs(velocityX) > 0.2 || Math.abs(velocityY) > 0.2)) {
+                            // Сила броска (можешь менять 300 на 200 или 400 для настройки "скользкости")
+                            let amplitudeX = velocityX * 300;
+                            let amplitudeY = velocityY * 300;
 
-                        updateImageTransform(true); // Включаем плавное скольжение
+                            currentTranslateX += amplitudeX;
+                            currentTranslateY += amplitudeY;
+
+                            // Мягко упираемся в края экрана, чтобы фото не улетело за границу
+                            const bounds = getPanBounds();
+                            if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
+                            if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
+                            if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
+                            if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+
+                            // ЗАПУСКАЕМ СПЕЦИАЛЬНУЮ АНИМАЦИЮ (эффект "масла" - длинная и затухающая)
+                            const viewerImg = document.getElementById('imageViewerImg');
+                            viewerImg.style.transition = 'transform 0.65s cubic-bezier(0.1, 0.9, 0.2, 1)';
+                            viewerImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+                        }
                     }
                 }
 
