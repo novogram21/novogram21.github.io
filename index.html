@@ -9773,7 +9773,8 @@
 
                 // Начинаем отправку
                 xhr.open("POST", GOOGLE_SCRIPT_URL, true);
-                xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
+                // УБРАЛИ ;charset=utf-8 ЧТОБЫ ОБОЙТИ БЛОКИРОВКУ CORS ОТ GOOGLE
+                xhr.setRequestHeader("Content-Type", "text/plain");
 
                 xhr.send(JSON.stringify({
                     action: "upload",
