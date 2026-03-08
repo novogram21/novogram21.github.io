@@ -12166,73 +12166,83 @@
         }
 
         // --- СЕНСОРНЫЕ СОБЫТИЯ (ТЕЛЕФОН) ---
-        let hasMoved = false; // Флаг, чтобы отличать свайп/зум от простого клика
+        let touchHasMoved = false;
 
         viewerImg.addEventListener('touchstart', (e) => {
-            hasMoved = false; // Сбрасываем флаг при новом касании
+            touchHasMoved = false;
 
             if (e.touches.length === 2) {
                 // Начало зума двумя пальцами
                 isZoomDragging = false;
                 initialPinchDistance = Math.hypot(
-                    e.touches[0].pageX - e.touches[1].pageX,
-                    e.touches[0].pageY - e.touches[1].pageY
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
                 );
                 initialScale = currentScale;
             } else if (e.touches.length === 1) {
-                // Начало перемещения одним пальцем (если картинка увеличена)
+                // Начало таскания (если уже приближено)
                 if (currentScale > 1) {
                     isZoomDragging = true;
-                    startDragX = e.touches[0].pageX - currentTranslateX;
-                    startDragY = e.touches[0].pageY - currentTranslateY;
+                    startDragX = e.touches[0].clientX - currentTranslateX;
+                    startDragY = e.touches[0].clientY - currentTranslateY;
                 }
             }
         }, { passive: false });
 
         viewerImg.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // Блокируем дерганье страницы
-            hasMoved = true; // Раз пальцы двигаются, значит это уже не просто "двойной тап"
+            e.preventDefault(); // Запрещаем системный скролл
+            touchHasMoved = true;
 
             if (e.touches.length === 2 && initialPinchDistance) {
                 // Зуммируем
                 const currentDistance = Math.hypot(
-                    e.touches[0].pageX - e.touches[1].pageX,
-                    e.touches[0].pageY - e.touches[1].pageY
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
                 );
                 const zoomDelta = currentDistance / initialPinchDistance;
-                currentScale = Math.min(Math.max(1, initialScale * zoomDelta), 5); // Лимит увеличения 5x
+                currentScale = Math.min(Math.max(1, initialScale * zoomDelta), 5); // Лимит от 1x до 5x
                 updateImageTransform(false);
             } else if (e.touches.length === 1 && isZoomDragging && currentScale > 1) {
-                // Двигаем
-                currentTranslateX = e.touches[0].pageX - startDragX;
-                currentTranslateY = e.touches[0].pageY - startDragY;
+                // Перетаскиваем
+                currentTranslateX = e.touches[0].clientX - startDragX;
+                currentTranslateY = e.touches[0].clientY - startDragY;
                 updateImageTransform(false);
             }
         }, { passive: false });
 
         viewerImg.addEventListener('touchend', (e) => {
-            isZoomDragging = false;
-            initialPinchDistance = null;
+            // Если отпустили один из пальцев при зуме — плавно переходим в режим таскания
+            if (e.touches.length < 2) {
+                initialPinchDistance = null;
+            }
 
-            // Если отдалили слишком сильно (меньше 100%), плавно возвращаем к оригиналу
-            if (currentScale <= 1) {
+            if (e.touches.length === 1 && currentScale > 1) {
+                // Страховка: пересчитываем координаты для оставшегося пальца
+                isZoomDragging = true;
+                startDragX = e.touches[0].clientX - currentTranslateX;
+                startDragY = e.touches[0].clientY - currentTranslateY;
+            } else if (e.touches.length === 0) {
+                isZoomDragging = false;
+            }
+
+            // Плавный сброс, если отдалили меньше 100%
+            if (currentScale <= 1 && e.touches.length === 0) {
                 window.resetImageZoom();
             }
 
-            // Обработка двойного тапа (сработает ТОЛЬКО если пальцы не скользили по экрану)
-            if (!hasMoved && e.changedTouches.length === 1) {
+            // Двойной тап (работает только если пальцы не скользили)
+            if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
                 const currentTime = new Date().getTime();
                 const tapLength = currentTime - lastTapTime;
 
                 if (tapLength < 300 && tapLength > 0) {
-                    // Двойной тап распознан
                     if (currentScale > 1) {
-                        window.resetImageZoom(); // Отдаляем
+                        window.resetImageZoom(); // Сброс
                     } else {
-                        currentScale = 2.5; // Приближаем
+                        currentScale = 2.5; // Резкое приближение
                         updateImageTransform(true);
                     }
-                    lastTapTime = 0; // Сбрасываем таймер, чтобы не было тройного клика
+                    lastTapTime = 0;
                 } else {
                     lastTapTime = currentTime;
                 }
