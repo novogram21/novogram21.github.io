@@ -9696,20 +9696,29 @@
                 let percentComplete = 0;
                 let isUploading = true;
 
-                // Получаем текущую скорость интернета юзера (по умолчанию берем 3 Мбит/с, если браузер скрывает)
-                let networkSpeedMbps = (navigator.connection && navigator.connection.downlink) ? navigator.connection.downlink : 3;
-                let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 2; // Перевод в Мегабайты
+                // --- 2. УМНЫЙ АДАПТИВНЫЙ ПРОГРЕСС (ОТКАЛИБРОВАННЫЙ) ---
+                let percentComplete = 0;
+                let isUploading = true;
 
-                // Вычисляем идеальное время отправки именно этой фотки (ограничиваем от 1.5 до 30 секунд)
-                let estimatedSeconds = Math.max(1.5, Math.min(totalMb / estimatedUploadSpeedMb, 30));
-                let progressStep = (1 / (estimatedSeconds * 10)); // Шаг для интервала в 100мс
+                let networkSpeedMbps = (navigator.connection && navigator.connection.downlink) ? navigator.connection.downlink : 3;
+
+                // ЖЕСТКАЯ КАЛИБРОВКА: Делим на 4, так как отдавать файл всегда медленнее, чем качать
+                let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 4;
+
+                // Вычисляем время + добавляем 2.5 секунды (ровно столько Гугл думает над файлом)
+                let estimatedSeconds = Math.max(3.0, Math.min((totalMb / estimatedUploadSpeedMb) + 2.5, 45));
+                let progressStep = (1 / (estimatedSeconds * 10));
 
                 const progressInterval = setInterval(() => {
                     if (!isUploading) return clearInterval(progressInterval);
 
                     if (percentComplete < 0.95) {
-                        // Эффект реалистичности: в конце (на 95%) замедляемся, имитируя сохранение на сервере
-                        let currentStep = percentComplete > 0.8 ? progressStep * 0.3 : progressStep;
+                        let currentStep = progressStep;
+
+                        // Плавное торможение начинается раньше, чтобы не было "зависания"
+                        if (percentComplete > 0.70) currentStep = progressStep * 0.5;
+                        if (percentComplete > 0.85) currentStep = progressStep * 0.15;
+
                         percentComplete += currentStep;
                         if (percentComplete > 0.95) percentComplete = 0.95;
                     }
