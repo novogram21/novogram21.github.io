@@ -6955,8 +6955,8 @@
             else if (msgType === 'image') {
                 let imgSrc = m.txt;
                 if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
-                // Чистая картинка без лишних div-оберток
-                contentHtml += `<img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
+                // Чистая картинка без лишних div-оберток + УМНЫЙ СКРОЛЛ
+                contentHtml += `<img src="${imgSrc}" class="chat-media-img" onload="handleImageLoadScroll(this)" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
             }
             else if (msgType === 'call') {
                 // ... (тут твой код для звонков, оставляем как было, я его просто копирую чтобы ничего не сломать)
@@ -9525,8 +9525,9 @@
                 div.className = 'msg msg-me msg-image-only';
                 const url = URL.createObjectURL(file);
 
+                // Добавили onload="scrollToBottom()"
                 contentHtml = `
-                    <img src="${url}" class="chat-media-img loading-overlay" style="opacity: 0.8;">
+                    <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="opacity: 0.8;">
                     <div class="upload-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
                 `;
             }
@@ -11479,6 +11480,19 @@
                 });
             }
         }
+
+        // --- НОВОЕ: УМНЫЙ СКРОЛЛ ПРИ ЗАГРУЗКЕ ФОТО ---
+        window.handleImageLoadScroll = function (imgEl) {
+            const list = imgEl.closest('.messages');
+            if (!list) return;
+
+            // Если ползунок находится близко к низу (в пределах 500px), 
+            // значит мы читаем новые сообщения — скроллим вниз!
+            const isNearBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 500;
+            if (isNearBottom) {
+                list.scrollTo({ top: list.scrollHeight + 1000, behavior: 'smooth' });
+            }
+        };
 
         // --- УМНАЯ ФУНКЦИЯ ДЛЯ ВВОДА (С РАЗДЕЛЕНИЕМ ПК / ТЕЛЕФОН) ---
         function handleChatInput(e) {
