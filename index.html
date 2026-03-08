@@ -12224,12 +12224,23 @@
             let tapStartY = 0;
             let lastTapTime = 0;
             let tapTimeout = null;
+
+            // ПЕРЕМЕННЫЕ ДЛЯ ИНЕРЦИИ
+            let lastTouchX = 0;
+            let lastTouchY = 0;
+            let velocityX = 0;
+            let velocityY = 0;
             viewerImg.addEventListener('touchstart', (e) => {
                 touchHasMoved = false;
 
                 if (e.touches.length === 1) {
                     tapStartX = e.touches[0].clientX;
                     tapStartY = e.touches[0].clientY;
+                    // ЗАПИСЫВАЕМ СТАРТ ДЛЯ ИНЕРЦИИ
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                    velocityX = 0;
+                    velocityY = 0;
                 }
 
                 if (e.touches.length === 2) {
@@ -12261,6 +12272,14 @@
                 if (e.touches.length === 1) {
                     const moveDist = Math.hypot(e.touches[0].clientX - tapStartX, e.touches[0].clientY - tapStartY);
                     if (moveDist > 10) touchHasMoved = true;
+
+                    // СЧИТАЕМ СКОРОСТЬ ПАЛЬЦА
+                    let currentX = e.touches[0].clientX;
+                    let currentY = e.touches[0].clientY;
+                    velocityX = currentX - lastTouchX;
+                    velocityY = currentY - lastTouchY;
+                    lastTouchX = currentX;
+                    lastTouchY = currentY;
                 } else {
                     touchHasMoved = true;
                 }
@@ -12389,6 +12408,19 @@
                     // ВОТ ЭТА СТРОКА ДЕЛАЕТ СКОЛЬЖЕНИЕ (true включает transition в CSS)
                     if (needsSnap) {
                         updateImageTransform(true);
+                    } else if (Math.abs(velocityX) > 2 || Math.abs(velocityY) > 2) {
+                        // ЕСЛИ ФОТО НЕ ВЫЛЕТЕЛО ЗА КРАЯ, НО БЫЛ РЕЗКИЙ СВАЙП - ДЕЛАЕМ ИНЕРЦИЮ
+                        currentTranslateX += velocityX * 7; // Множитель силы скольжения
+                        currentTranslateY += velocityY * 7;
+
+                        // Гасим инерцию о края экрана (чтобы фото не улетело в космос)
+                        const bounds = getPanBounds();
+                        if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
+                        if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
+                        if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
+                        if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
+
+                        updateImageTransform(true); // Включаем плавное скольжение
                     }
                 }
 
