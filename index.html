@@ -9808,6 +9808,82 @@
                 resetInput();
             }
         }
+
+
+        // --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ГАЛЕРЕИ ---
+        window.viewerImagesList = [];
+        window.viewerCurrentIndex = 0;
+
+        // Собираем все картинки из активного чата
+        function getChatImages() {
+            if (!currentMsgList) return [];
+            // Ищем все элементы с классом chat-media-img
+            const imgs = currentMsgList.querySelectorAll('.chat-media-img');
+            const arr = [];
+            imgs.forEach(img => {
+                const msgEl = img.closest('.msg');
+                arr.push({
+                    src: img.src,
+                    msgId: msgEl ? msgEl.id.replace('msg-', '') : null,
+                    isMine: msgEl ? msgEl.classList.contains('msg-me') : false,
+                    el: img
+                });
+            });
+            return arr;
+        }
+
+        // Плавное перелистывание (Apple Style)
+        window.navigateViewer = function (direction) {
+            if (!window.viewerImagesList || window.viewerImagesList.length <= 1) {
+                // Если фото всего одно — пружиним обратно
+                const viewerImg = document.getElementById('imageViewerImg');
+                viewerImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+                viewerImg.style.transform = `translate(0px, 0px) scale(1)`;
+                return;
+            }
+
+            let newIndex = window.viewerCurrentIndex + direction;
+            // Зацикливаем галерею (после последней идет первая)
+            if (newIndex < 0) newIndex = window.viewerImagesList.length - 1;
+            if (newIndex >= window.viewerImagesList.length) newIndex = 0;
+
+            window.viewerCurrentIndex = newIndex;
+            const nextItem = window.viewerImagesList[newIndex];
+            const viewerImg = document.getElementById('imageViewerImg');
+
+            // 1. Улетает текущая фотография
+            viewerImg.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+            viewerImg.style.transform = `translateX(${direction * -100}vw) scale(0.9)`;
+            viewerImg.style.opacity = '0';
+
+            setTimeout(() => {
+                // 2. Мгновенно телепортируем невидимую картинку на противоположную сторону
+                viewerImg.style.transition = 'none';
+                viewerImg.style.transform = `translateX(${direction * 100}vw) scale(0.9)`;
+
+                // 3. Подменяем данные (HD качество, ID и кнопку удаления)
+                currentViewerMsgId = nextItem.msgId;
+                let highResSrc = nextItem.src;
+                if (highResSrc.includes('lh3.googleusercontent.com')) {
+                    highResSrc = highResSrc.split('=')[0] + '=w2000';
+                }
+                viewerImg.src = highResSrc;
+
+                const deleteBtn = document.getElementById('viewerDeleteBtn');
+                if (deleteBtn) deleteBtn.style.display = (nextItem.isMine && nextItem.msgId) ? 'flex' : 'none';
+
+                // Форсируем перерисовку браузера (обязательно для анимации)
+                void viewerImg.offsetWidth;
+
+                // 4. Плавно выезжает новая фотография
+                viewerImg.style.transition = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease';
+                viewerImg.style.transform = `translate(0px, 0px) scale(1)`;
+                viewerImg.style.opacity = '1';
+
+                if (window.resetImageZoom) window.resetImageZoom();
+            }, 250);
+        };
+
         // Функции для просмотра фото
         function openImageViewer(src) {
             const viewer = document.getElementById('imageViewer');
@@ -12568,30 +12644,31 @@
 
 
 
-            // --- СЕНСОРНЫЕ СОБЫТИЯ (ТЕЛЕФОН) ---
+            // --- СЕНСОРНЫЕ СОБЫТИЯ (ТЕЛЕФОН) ПРЕМИУМ ---
             let touchHasMoved = false;
             let isSwipeToClose = false;
             let swipeCloseStartY = 0;
             let swipeCloseCurrentY = 0;
 
-            // Переменные для умных тапов
+            // НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ПЕРЕЛИСТЫВАНИЯ
+            let isViewerSwipeHorizontal = false;
+            let viewerSwipeX = 0;
+
             let tapStartX = 0;
             let tapStartY = 0;
             let lastTapTime = 0;
             let tapTimeout = null;
 
-            // ПЕРЕМЕННЫЕ ДЛЯ ИНЕРЦИИ (Премиум)
             let lastTouchX = 0;
             let lastTouchY = 0;
             let velocityX = 0;
             let velocityY = 0;
             let lastTouchTime = 0;
-            let wasZooming = false; // Флаг: защищает от улета фотки при отпускании зума
+            let wasZooming = false;
 
             viewerImg.addEventListener('touchstart', (e) => {
                 touchHasMoved = false;
 
-                // Блокируем инерцию, если на экране больше одного пальца (это зум)
                 if (e.touches.length > 1) {
                     wasZooming = true;
                 }
@@ -12600,19 +12677,24 @@
                     tapStartX = e.touches[0].clientX;
                     tapStartY = e.touches[0].clientY;
 
-                    lastTouchX = e.touches[0].clientX;
-                    lastTouchY = e.touches[0].clientY;
+                    lastTouchX = tapStartX;
+                    lastTouchY = tapStartY;
                     velocityX = 0;
                     velocityY = 0;
                     lastTouchTime = Date.now();
 
-                    // Мгновенно "хватаем" летящую фотку
                     viewerImg.style.transition = 'none';
+
+                    // Сбрасываем флаги
+                    isSwipeToClose = false;
+                    isViewerSwipeHorizontal = false;
+                    viewerSwipeX = 0;
                 }
 
                 if (e.touches.length === 2) {
                     isZoomDragging = false;
                     isSwipeToClose = false;
+                    isViewerSwipeHorizontal = false;
                     initialPinchDistance = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
@@ -12621,13 +12703,8 @@
                 } else if (e.touches.length === 1 && !wasZooming) {
                     if (currentScale > 1) {
                         isZoomDragging = true;
-                        isSwipeToClose = false;
                         startDragX = e.touches[0].clientX - currentTranslateX;
                         startDragY = e.touches[0].clientY - currentTranslateY;
-                    } else if (currentScale === 1) {
-                        isSwipeToClose = true;
-                        swipeCloseStartY = e.touches[0].clientY;
-                        swipeCloseCurrentY = 0;
                     }
                 }
             }, { passive: false });
@@ -12636,60 +12713,74 @@
                 e.preventDefault();
 
                 if (e.touches.length === 1) {
-                    const moveDist = Math.hypot(e.touches[0].clientX - tapStartX, e.touches[0].clientY - tapStartY);
+                    let currentX = e.touches[0].clientX;
+                    let currentY = e.touches[0].clientY;
+
+                    const moveDist = Math.hypot(currentX - tapStartX, currentY - tapStartY);
                     if (moveDist > 10) touchHasMoved = true;
 
-                    // Вычисляем скорость только если мы не заканчиваем зум
-                    if (!wasZooming) {
-                        let currentX = e.touches[0].clientX;
-                        let currentY = e.touches[0].clientY;
+                    // Если масштаб 100%, определяем: свайп ВНИЗ (закрыть) или ВБОК (перелистнуть)
+                    if (currentScale === 1 && !wasZooming) {
+                        const dx = currentX - tapStartX;
+                        const dy = currentY - tapStartY;
+
+                        if (!isSwipeToClose && !isViewerSwipeHorizontal && moveDist > 5) {
+                            if (Math.abs(dy) > Math.abs(dx)) {
+                                isSwipeToClose = true;
+                                swipeCloseStartY = currentY;
+                            } else {
+                                isViewerSwipeHorizontal = true;
+                            }
+                        }
+
+                        // Тянем вниз
+                        if (isSwipeToClose) {
+                            const deltaY = currentY - swipeCloseStartY;
+                            swipeCloseCurrentY = deltaY;
+                            const opacity = Math.max(0, 0.9 - Math.abs(deltaY) / (window.innerHeight / 1.5));
+                            document.getElementById('imageViewer').style.backgroundColor = `rgba(0, 0, 0, ${opacity})`;
+                            const pullScale = Math.max(0.7, 1 - Math.abs(deltaY) / window.innerHeight);
+                            viewerImg.style.transition = 'none';
+                            viewerImg.style.transform = `translate(0px, ${deltaY}px) scale(${pullScale})`;
+                        }
+                        // Тянем вбок
+                        else if (isViewerSwipeHorizontal) {
+                            viewerSwipeX = dx;
+                            viewerImg.style.transition = 'none';
+                            viewerImg.style.transform = `translate(${dx}px, 0px) scale(1)`;
+                        }
+                    }
+                    // Логика инерции (осталась из старого кода)
+                    else if (!wasZooming) {
                         let now = Date.now();
                         let dt = now - lastTouchTime;
-
                         if (dt > 0 && dt < 100) {
-                            // Low-pass filter: сглаживаем рывки сенсора
                             let rawVx = (currentX - lastTouchX) / dt;
                             let rawVy = (currentY - lastTouchY) / dt;
                             velocityX = velocityX * 0.4 + rawVx * 0.6;
                             velocityY = velocityY * 0.4 + rawVy * 0.6;
                         }
-
                         lastTouchX = currentX;
                         lastTouchY = currentY;
                         lastTouchTime = now;
                     }
-                } else {
-                    touchHasMoved = true;
                 }
 
+                // ... ЛОГИКА ЗУМА (остается без изменений)
                 if (e.touches.length === 2 && initialPinchDistance) {
-                    // Ищем точный центр между двумя пальцами
                     const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                     const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-
                     const currentDistance = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
                     );
-
                     let targetScale = initialScale * (currentDistance / initialPinchDistance);
-
-                    const MAX_SCALE = 5;
-                    const MIN_SCALE = 1;
-
-                    if (targetScale > MAX_SCALE) {
-                        targetScale = MAX_SCALE + (targetScale - MAX_SCALE) * 0.25;
-                    } else if (targetScale < MIN_SCALE) {
-                        targetScale = MIN_SCALE - (MIN_SCALE - targetScale) * 0.35;
-                    }
-
+                    if (targetScale > 5) targetScale = 5 + (targetScale - 5) * 0.25;
+                    else if (targetScale < 1) targetScale = 1 - (1 - targetScale) * 0.35;
                     const scaleRatio = targetScale / currentScale;
-
-                    // Плавно сдвигаем фокус прямо между пальцами
                     currentTranslateX -= ((cx - window.innerWidth / 2) - currentTranslateX) * (scaleRatio - 1);
                     currentTranslateY -= ((cy - window.innerHeight / 2) - currentTranslateY) * (scaleRatio - 1);
                     currentScale = targetScale;
-
                     const bounds = getPanBounds();
                     if (currentScale >= 1) {
                         if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
@@ -12697,48 +12788,26 @@
                         if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
                         if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
                     }
-
                     updateImageTransform(false);
                 } else if (e.touches.length === 1) {
                     if (isZoomDragging && currentScale > 1 && !wasZooming) {
                         let rawTx = e.touches[0].clientX - startDragX;
                         let rawTy = e.touches[0].clientY - startDragY;
-
                         const bounds = getPanBounds();
-
-                        // Резиновый оттяг за краями
                         if (rawTx > bounds.maxTx) currentTranslateX = bounds.maxTx + (rawTx - bounds.maxTx) * 0.25;
                         else if (rawTx < -bounds.maxTx) currentTranslateX = -bounds.maxTx + (rawTx + bounds.maxTx) * 0.25;
                         else currentTranslateX = rawTx;
-
                         if (rawTy > bounds.maxTy) currentTranslateY = bounds.maxTy + (rawTy - bounds.maxTy) * 0.25;
                         else if (rawTy < -bounds.maxTy) currentTranslateY = -bounds.maxTy + (rawTy + bounds.maxTy) * 0.25;
                         else currentTranslateY = rawTy;
-
                         updateImageTransform(false);
-                    } else if (isSwipeToClose && currentScale === 1 && !wasZooming) {
-                        const deltaY = e.touches[0].clientY - swipeCloseStartY;
-                        swipeCloseCurrentY = deltaY;
-
-                        const opacity = Math.max(0, 0.9 - Math.abs(deltaY) / (window.innerHeight / 1.5));
-                        document.getElementById('imageViewer').style.backgroundColor = `rgba(0, 0, 0, ${opacity})`;
-
-                        const pullScale = Math.max(0.7, 1 - Math.abs(deltaY) / window.innerHeight);
-
-                        viewerImg.style.transition = 'none';
-                        viewerImg.style.transform = `translate(0px, ${deltaY}px) scale(${pullScale})`;
                     }
                 }
             }, { passive: false });
 
             viewerImg.addEventListener('touchend', (e) => {
-                if (e.touches.length === 0) {
-                    wasZooming = false; // Снимаем защиту от зума только когда убрали все пальцы
-                }
-
-                if (e.touches.length < 2) {
-                    initialPinchDistance = null;
-                }
+                if (e.touches.length === 0) wasZooming = false;
+                if (e.touches.length < 2) initialPinchDistance = null;
 
                 if (e.touches.length === 1 && currentScale > 1) {
                     if (wasZooming) {
@@ -12750,6 +12819,23 @@
                     isZoomDragging = false;
                 }
 
+                // --- НОВАЯ ЛОГИКА: ОТПУСКАЕМ ГОРИЗОНТАЛЬНЫЙ СВАЙП ---
+                if (isViewerSwipeHorizontal && currentScale === 1) {
+                    if (viewerSwipeX < -50) {
+                        navigateViewer(1); // Влево -> Следующее фото
+                    } else if (viewerSwipeX > 50) {
+                        navigateViewer(-1); // Вправо -> Предыдущее фото
+                    } else {
+                        // Недотянул -> Пружиним обратно
+                        viewerImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+                        viewerImg.style.transform = `translate(0px, 0px) scale(1)`;
+                    }
+                    isViewerSwipeHorizontal = false;
+                    viewerSwipeX = 0;
+                    return;
+                }
+
+                // Логика закрытия (свайп вниз)
                 if (isSwipeToClose && currentScale === 1 && e.touches.length === 0) {
                     isSwipeToClose = false;
                     if (Math.abs(swipeCloseCurrentY) > 100) {
@@ -12767,23 +12853,15 @@
                     return;
                 }
 
+                // Ограничители зума и инерция (осталось из старого кода)
                 if (e.touches.length === 0) {
                     let needsSnap = false;
-
-                    if (currentScale < 1) {
-                        currentScale = 1;
-                        currentTranslateX = 0;
-                        currentTranslateY = 0;
-                        needsSnap = true;
-                    } else if (currentScale > 5) {
-                        currentScale = 5;
-                        needsSnap = true;
-                    }
+                    if (currentScale < 1) { currentScale = 1; currentTranslateX = 0; currentTranslateY = 0; needsSnap = true; }
+                    else if (currentScale > 5) { currentScale = 5; needsSnap = true; }
 
                     const bounds = getPanBounds();
                     let isOutOfBounds = false;
 
-                    // Если вышли за рамки экрана — возвращаем на место
                     if (currentScale >= 1) {
                         if (currentTranslateX > bounds.maxTx || currentTranslateX < -bounds.maxTx ||
                             currentTranslateY > bounds.maxTy || currentTranslateY < -bounds.maxTy) {
@@ -12796,37 +12874,27 @@
                     }
 
                     if (needsSnap || isOutOfBounds) {
-                        updateImageTransform(true); // Упругий отскок от краев
+                        updateImageTransform(true);
                     } else if (!wasZooming && touchHasMoved) {
-                        // ПРЕМИУМ ИНЕРЦИЯ ВНУТРИ ГРАНИЦ
                         let timeSinceLastMove = Date.now() - lastTouchTime;
-
                         if (timeSinceLastMove < 50 && (Math.abs(velocityX) > 0.1 || Math.abs(velocityY) > 0.1)) {
-                            // Ограничиваем неадекватные скорости
                             let clampVx = Math.max(-2.5, Math.min(2.5, velocityX));
                             let clampVy = Math.max(-2.5, Math.min(2.5, velocityY));
-
                             currentTranslateX += clampVx * 250;
                             currentTranslateY += clampVy * 250;
-
-                            // Гасим об края
                             if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
                             if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
                             if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
                             if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
-
-                            // Идеальная масляная кривая, как в Телеграм
                             viewerImg.style.transition = 'transform 0.8s cubic-bezier(0.1, 0.85, 0.25, 1)';
                             viewerImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
                         }
                     }
                 }
 
-                // 🔥 НАДЕЖНЫЙ ОДИНОЧНЫЙ И ДВОЙНОЙ ТАП (ПО ВРЕМЕНИ)
-                // 🔥 НАДЕЖНЫЙ ОДИНОЧНЫЙ И ДВОЙНОЙ ТАП (ПО ВРЕМЕНИ)
+                // Двойной тап (без изменений)
                 if (!touchHasMoved && e.changedTouches.length === 1 && e.touches.length === 0) {
-                    e.preventDefault(); // Защита от фантомных кликов
-
+                    e.preventDefault();
                     const currentTime = Date.now();
                     const tapLength = currentTime - lastTapTime;
 
@@ -12836,21 +12904,17 @@
                         if (currentScale > 1) {
                             window.resetImageZoom();
                         } else {
-                            // ЗУМ В ТОЧКУ ТАПА
                             const cx = tapStartX;
                             const cy = tapStartY;
                             const targetScale = 2.5;
-
                             currentTranslateX -= (cx - window.innerWidth / 2) * (targetScale - 1);
                             currentTranslateY -= (cy - window.innerHeight / 2) * (targetScale - 1);
                             currentScale = targetScale;
-
                             const bounds = getPanBounds();
                             if (currentTranslateX > bounds.maxTx) currentTranslateX = bounds.maxTx;
                             if (currentTranslateX < -bounds.maxTx) currentTranslateX = -bounds.maxTx;
                             if (currentTranslateY > bounds.maxTy) currentTranslateY = bounds.maxTy;
                             if (currentTranslateY < -bounds.maxTy) currentTranslateY = -bounds.maxTy;
-
                             updateImageTransform(true);
                         }
                     } else {
@@ -12862,7 +12926,6 @@
                     }
                 }
             });
-        });
 
 
 
@@ -12870,12 +12933,17 @@
 
         
 
-        // Обновленная функция открытия (с проверкой прав на удаление)
+        // Обновленная функция открытия (с галереей)
         window.openImageViewer = function (src, msgId = null, isMine = false) {
             const viewer = document.getElementById('imageViewer');
             const img = document.getElementById('imageViewerImg');
             const deleteBtn = document.getElementById('viewerDeleteBtn');
             const tb = document.querySelector('.viewer-toolbar');
+
+            // --- НОВОЕ: Инициализируем список картинок ---
+            window.viewerImagesList = getChatImages();
+            window.viewerCurrentIndex = window.viewerImagesList.findIndex(item => item.src === src || item.msgId === msgId);
+            if (window.viewerCurrentIndex === -1) window.viewerCurrentIndex = 0;
 
             if (tb) tb.classList.remove('hidden-ui');
             currentViewerMsgId = msgId;
@@ -12887,24 +12955,19 @@
 
             if (window.resetImageZoom) window.resetImageZoom();
 
-            // === МАГИЯ TELEGRAM (БЕСШОВНАЯ ЗАГРУЗКА) ===
-            // 1. Мгновенно показываем ту фотку, которая уже загружена в чате (она в кэше)
             img.src = src;
             viewer.classList.add('active');
             history.pushState({ isImageViewer: true }, "", window.location.href);
 
-            // 2. Вычисляем ссылку на 4K оригинал
+            // Подгружаем оригинал
             let highResSrc = src;
             if (src.includes('lh3.googleusercontent.com')) {
                 highResSrc = src.split('=')[0] + '=w2000';
             }
 
-            // 3. Загружаем оригинал В ФОНЕ (невидимкой)
             if (highResSrc !== src) {
                 const tempImg = new Image();
                 tempImg.onload = function () {
-                    // 4. Как только оригинал скачался — бесшовно подменяем src.
-                    // Никакой прорисовки сверху вниз! Фото просто моментально станет резким.
                     if (viewer.classList.contains('active')) {
                         img.src = highResSrc;
                     }
