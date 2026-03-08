@@ -9842,14 +9842,21 @@
                 return;
             }
 
+            const viewerImg = document.getElementById('imageViewerImg');
             let newIndex = window.viewerCurrentIndex + direction;
-            // Зацикливаем галерею (после последней идет первая)
-            if (newIndex < 0) newIndex = window.viewerImagesList.length - 1;
-            if (newIndex >= window.viewerImagesList.length) newIndex = 0;
+
+            // --- НОВОЕ: Запрещаем бесконечную прокрутку (Упираемся в края) ---
+            if (newIndex < 0 || newIndex >= window.viewerImagesList.length) {
+                // Фотографий больше нет -> пружиним обратно
+                viewerImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+                viewerImg.style.transform = `translate(0px, 0px) scale(1)`;
+                return; // Прерываем функцию, не переключаем индекс
+            }
 
             window.viewerCurrentIndex = newIndex;
             const nextItem = window.viewerImagesList[newIndex];
-            const viewerImg = document.getElementById('imageViewerImg');
+
+            // 1. Улетает текущая фотография
 
             // 1. Улетает текущая фотография
             viewerImg.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
@@ -12745,9 +12752,19 @@
                         }
                         // Тянем вбок
                         else if (isViewerSwipeHorizontal) {
-                            viewerSwipeX = dx;
+                            // --- ПРЕМИУМ ЭФФЕКТ: Сопротивление на краях галереи ---
+                            const isFirst = window.viewerCurrentIndex === 0;
+                            const isLast = window.viewerCurrentIndex === window.viewerImagesList.length - 1;
+
+                            let resistedDx = dx;
+                            // Если мы на первой фотке и тянем вправо, ИЛИ на последней и тянем влево -> делаем свайп "тугим"
+                            if ((isFirst && dx > 0) || (isLast && dx < 0)) {
+                                resistedDx = dx / 3;
+                            }
+
+                            viewerSwipeX = resistedDx;
                             viewerImg.style.transition = 'none';
-                            viewerImg.style.transform = `translate(${dx}px, 0px) scale(1)`;
+                            viewerImg.style.transform = `translate(${resistedDx}px, 0px) scale(1)`;
                         }
                     }
                     // Логика инерции (осталась из старого кода)
