@@ -9697,16 +9697,43 @@
                 // Длина нашей SVG-линии (из CSS)
                 const circumference = 135;
 
-                // --- МАГИЯ: УМНАЯ ИМИТАЦИЯ ПРОГРЕССА ---
+                // =================================================================
+                // --- ЭЛИТАРНАЯ МАГИЯ: АДАПТИВНЫЙ ПРОГРЕСС С УЧЕТОМ СЕТИ ---
+                // =================================================================
                 let percentComplete = 0;
                 let isUploading = true;
 
-                // Плавная анимация загрузки (замедляется у 95%, ждет ответа сервера)
+                // 1. Узнаем реальную скорость скачивания у пользователя в мегабитах/сек
+                // (Если браузер iOS/Safari не отдает эти данные, берем среднюю 3G скорость = 3 Mbps)
+                let networkSpeedMbps = (navigator.connection && navigator.connection.downlink)
+                    ? navigator.connection.downlink : 3;
+
+                // 2. Скорость отдачи (upload) обычно в 2 раза ниже загрузки (download)
+                // Переводим Mbps в Мегабайты в секунду (MB/s)
+                let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 2;
+
+                // 3. Вычисляем ИДЕАЛЬНОЕ время загрузки ИМЕННО ЭТОГО файла в секундах
+                let estimatedSeconds = totalMb / estimatedUploadSpeedMb;
+
+                // Страховочные лимиты: анимация не должна быть быстрее 1.5 сек и дольше 45 сек
+                estimatedSeconds = Math.max(1.5, Math.min(estimatedSeconds, 45));
+
+                // 4. Шаг заливки каждые 100 миллисекунд (10 раз в секунду)
+                let progressStep = (1 / (estimatedSeconds * 10));
+
                 const progressInterval = setInterval(() => {
                     if (!isUploading) return clearInterval(progressInterval);
 
-                    // Хитрый алгоритм: быстро до 70%, потом медленно ползет к 95%
-                    percentComplete += (0.95 - percentComplete) * 0.08;
+                    if (percentComplete < 0.95) {
+                        // Умное физическое замедление: в самом конце скорость падает, 
+                        // имитируя процесс обработки файла на сервере Google
+                        let currentStep = progressStep;
+                        if (percentComplete > 0.8) currentStep = progressStep * 0.4;
+                        if (percentComplete > 0.9) currentStep = progressStep * 0.1;
+
+                        percentComplete += currentStep;
+                        if (percentComplete > 0.95) percentComplete = 0.95;
+                    }
 
                     const loadedMb = (file.size * percentComplete / (1024 * 1024)).toFixed(1);
 
@@ -9718,7 +9745,8 @@
                         const offset = circumference - (percentComplete * circumference);
                         circleEl.style.strokeDashoffset = offset;
                     }
-                }, 150);
+                }, 100);
+                // =================================================================
 
                 // Используем AbortController для аппаратной работы крестика отмены
                 const controller = new AbortController();
@@ -9728,7 +9756,7 @@
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     redirect: "follow",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    headers: { "Content-Type": "text/plain" },
                     body: JSON.stringify({
                         action: "upload",
                         secret: APP_SECRET_KEY,
