@@ -2186,14 +2186,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9); /* Темный фон */
+            background: #000000; /* Идеально черный фон, как в ТГ */
             z-index: 9999; /* Поверх всего */
             display: none; /* Скрыто по умолчанию */
             justify-content: center;
             align-items: center;
             opacity: 0;
             transition: opacity 0.3s;
-            backdrop-filter: blur(5px); /* Размытие фона */
         }
 
             .image-viewer.active {
@@ -9594,8 +9593,21 @@
             viewer.classList.add('active');
         }
 
-        window.closeImageViewer = function (event) {
+        // --- ПРЕМИАЛЬНОЕ ЗАКРЫТИЕ ФОТО (С ВОЗВРАТОМ В ЧАТ) ---
+        window.isViewerClosing = false; // Флаг защиты от багов
+
+        window.closeImageViewer = function (event, fromPopState = false) {
             if (event) event.stopPropagation();
+
+            // Защита от двойного вызова (если нажали Назад во время свайпа)
+            if (window.isViewerClosing) return;
+            window.isViewerClosing = true;
+
+            // Если закрыли крестиком или свайпом, то программно нажимаем "Назад", 
+            // чтобы выровнять системную историю
+            if (!fromPopState) {
+                history.back();
+            }
 
             const viewer = document.getElementById('imageViewer');
             const viewerImg = document.getElementById('imageViewerImg');
@@ -9610,64 +9622,49 @@
                 const msgEl = document.getElementById('msg-' + currentViewerMsgId);
                 if (msgEl) targetThumbnail = msgEl.querySelector('img');
             } else {
-                // Если фото открыто из аватарки профиля
                 const friendAvatar = document.getElementById('friendProfileAvatarPreview');
                 const myAvatar = document.getElementById('profileAvatarPreview');
                 if (friendAvatar && friendAvatar.style.display !== 'none') targetThumbnail = friendAvatar;
                 else if (myAvatar && myAvatar.style.display !== 'none') targetThumbnail = myAvatar;
             }
 
-            // 3. Плавно убираем черный фон
+            // 3. Плавно убираем фон
             viewer.style.transition = 'background-color 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
             viewer.style.backgroundColor = 'rgba(0, 0, 0, 0)';
 
             // 4. Запускаем математический полет картинки
             if (targetThumbnail && targetThumbnail.getBoundingClientRect) {
-                // Вычисляем координаты миниатюры на экране
                 const rect = targetThumbnail.getBoundingClientRect();
-
-                // Вычисляем центры
                 const targetX = rect.left + rect.width / 2;
                 const targetY = rect.top + rect.height / 2;
                 const screenX = window.innerWidth / 2;
                 const screenY = window.innerHeight / 2;
-
-                // Дистанция полета
                 const moveX = targetX - screenX;
                 const moveY = targetY - screenY;
 
-                // Вычисляем масштаб сжатия (учитывая object-fit: contain)
                 const imgRatio = (viewerImg.naturalWidth || 1) / (viewerImg.naturalHeight || 1);
                 const screenRatio = window.innerWidth / window.innerHeight;
                 let renderedW = window.innerWidth;
                 let renderedH = window.innerHeight;
 
-                if (imgRatio > screenRatio) {
-                    renderedH = window.innerWidth / imgRatio;
-                } else {
-                    renderedW = window.innerHeight * imgRatio;
-                }
-                const scale = Math.max(rect.width / renderedW, rect.height / renderedH);
+                if (imgRatio > screenRatio) renderedH = window.innerWidth / imgRatio;
+                else renderedW = window.innerHeight * imgRatio;
 
-                // Проверяем круглая ли это аватарка или фото с обычным скруглением
+                const scale = Math.max(rect.width / renderedW, rect.height / renderedH);
                 const isAvatar = targetThumbnail.id.toLowerCase().includes('avatar') || targetThumbnail.classList.contains('user-item-avatar');
 
-                // Запускаем премиум-анимацию!
                 viewerImg.style.transition = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), border-radius 0.35s ease, opacity 0.25s ease 0.1s';
                 viewerImg.style.transform = `translate(${moveX}px, ${moveY}px) scale(${scale})`;
                 viewerImg.style.borderRadius = isAvatar ? '50%' : '12px';
-                viewerImg.style.opacity = '0'; // Растворяется прямо перед тем, как встать на место
+                viewerImg.style.opacity = '0';
             } else {
-                // Если исходной фотки нет на экране (удалили или сильно проскроллили чат)
                 viewerImg.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
                 const startY = typeof swipeCloseCurrentY !== 'undefined' ? swipeCloseCurrentY : 0;
-
-                // Картинка просто плавно падает вниз и уменьшается
                 viewerImg.style.transform = `translate(0px, ${startY > 0 ? startY + 150 : startY - 150}px) scale(0.6)`;
                 viewerImg.style.opacity = '0';
             }
 
-            // 5. Жесткая очистка после завершения анимации
+            // 5. Жесткая очистка
             setTimeout(() => {
                 viewer.classList.remove('active');
                 viewer.style.transition = '';
@@ -9679,9 +9676,10 @@
                 viewerImg.style.borderRadius = '0';
                 viewerImg.style.opacity = '1';
 
-                // Сбрасываем зум и координаты свайпа для следующих открытий
                 if (typeof window.resetImageZoom === 'function') window.resetImageZoom();
                 if (typeof swipeCloseCurrentY !== 'undefined') swipeCloseCurrentY = 0;
+
+                window.isViewerClosing = false; // Снимаем блокировку
             }, 350);
         };
         function closeChat() {
@@ -12641,6 +12639,7 @@
             }
             img.src = highResSrc;
             viewer.classList.add('active');
+            history.pushState({ isImageViewer: true }, "", window.location.href);
         };
 
         // --- ФУНКЦИИ КНОПОК ПАНЕЛИ ---
