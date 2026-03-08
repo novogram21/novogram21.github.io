@@ -1073,7 +1073,47 @@
             }
 
 
+        /* --- ПРЕМИАЛЬНЫЕ ФОТО (TELEGRAM STYLE) --- */
+        .msg-image-only {
+            padding: 0 !important; /* Убираем отступы */
+            background: transparent !important; /* Убираем цветной фон пузыря */
+            border-radius: 14px !important;
+            overflow: hidden; /* Чтобы углы картинки обрезались ровно */
+            position: relative; /* Для времени снизу */
+            border: 1px solid rgba(255,255,255,0.05); /* Едва заметная грань */
+        }
 
+            .msg-image-only .chat-media-img {
+                max-width: 280px;
+                width: 100%;
+                height: auto;
+                max-height: 400px;
+                display: block;
+                margin: 0 !important;
+                border-radius: 14px !important;
+                box-shadow: none !important;
+            }
+
+            /* Плашка со временем и галочками поверх фото */
+            .msg-image-only .msg-meta {
+                position: absolute;
+                bottom: 6px;
+                right: 6px;
+                background: rgba(0, 0, 0, 0.45);
+                padding: 4px 8px;
+                border-radius: 12px;
+                z-index: 10;
+                margin: 0;
+                height: auto;
+                line-height: 1;
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+            }
+
+            .msg-image-only .msg-time,
+            .msg-image-only .msg-ticks {
+                color: #ffffff !important; /* На фото текст всегда белый */
+            }
 
 
 
@@ -6712,12 +6752,18 @@
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
 
+                           
                             // 1. ОПРЕДЕЛЯЕМ ТИП И КЛАССЫ
                             if (m.sys) {
                                 div.className = 'msg msg-sys';
                             } else {
                                 const isMine = m.from === currentUser.uid;
                                 div.className = isMine ? 'msg msg-me' : 'msg msg-other';
+
+                                // ЕСЛИ ЭТО КАРТИНКА - ПРИМЕНЯЕМ СТИЛЬ БЕЗ РАМОК
+                                if (msgType === 'image') {
+                                    div.classList.add('msg-image-only');
+                                }
 
                                 // --- ПРЕМИУМ: Анимируем только новые сообщения в реальном времени ---
                                 if (!isChatInitialLoad) {
@@ -6856,6 +6902,7 @@
         }
 
         // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
+        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
         function buildMessageHTML(m, msgId, msgType) {
             let contentHtml = '';
 
@@ -6874,10 +6921,10 @@
             // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                                                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                                                            <div class="msg-reply-name">${m.replyTo.name}</div>
-                                                                            <div class="msg-reply-text">${m.replyTo.text}</div>
-                                                                            </div>`;
+                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                        <div class="msg-reply-name">${m.replyTo.name}</div>
+                        <div class="msg-reply-text">${m.replyTo.text}</div>
+                    </div>`;
             }
 
             // Основной контент
@@ -6887,9 +6934,11 @@
             else if (msgType === 'image') {
                 let imgSrc = m.txt;
                 if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
-                contentHtml += `<div class="media-container"><img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';"></div>`;
+                // Чистая картинка без лишних div-оберток
+                contentHtml += `<img src="${imgSrc}" class="chat-media-img" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
             }
             else if (msgType === 'call') {
+                // ... (тут твой код для звонков, оставляем как было, я его просто копирую чтобы ничего не сломать)
                 const parts = m.txt.split('|');
                 const callState = parts[0] || 'success';
                 const durationStr = parts[1] || '';
@@ -6897,9 +6946,8 @@
 
                 let titleText = '';
                 let arrowHtml = '';
-                let arrowColor = '#50a758'; // Зеленый
+                let arrowColor = '#50a758';
 
-                // Логика текстов и стрелочек
                 if (isMine) {
                     titleText = (callState === 'canceled' || callState === 'missed') ? 'Отмененный звонок' : 'Исходящий звонок';
                     arrowColor = (callState === 'canceled' || callState === 'missed') ? '#ff595a' : '#50a758';
@@ -6910,7 +6958,6 @@
                     arrowHtml = `<svg style="color:${arrowColor}; margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 7 17 7 7"></polyline></svg>`;
                 }
 
-                // Форматируем длительность
                 let durationDisplay = '';
                 if (durationStr && durationStr !== '00:00') {
                     const dParts = durationStr.split(':');
@@ -6922,30 +6969,21 @@
                     }
                 }
 
-                // ВАЖНО: Добавлено style="color: currentColor;" к SVG и убран onclick из верстки, чтобы не было конфликтов
                 contentHtml += `
-                                                                            <div class="chat-call-card">
-                                                                            <div class="call-icon-wrapper">
-                                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                                                                            </svg>
-                                                                            </div>
-                                                                            <div class="call-info">
-                                                                            <div class="call-title">${titleText}</div>
-                                                                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                                                                            </div>
-                                                                            </div>
-                                                                            `;
+                    <div class="chat-call-card">
+                        <div class="call-icon-wrapper">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        </div>
+                        <div class="call-info">
+                            <div class="call-title">${titleText}</div>
+                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                        </div>
+                    </div>`;
             }
             else {
-                // Сначала обрабатываем ссылки, как и раньше
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
-
-                // --- ПРЕМИУМ: Если это новое сообщение (не загрузка истории), анимируем буквы ---
-                // Проверяем глобальную переменную isChatInitialLoad (которую мы используем в loadMessages)
                 let finalContent = formattedText;
 
-                // Если сообщение новое и это НЕ ссылка (ссылки анимировать сложно из-за HTML-тегов)
                 if (typeof isChatInitialLoad !== 'undefined' && !isChatInitialLoad && !m.sys && msgType === 'text' && !m.txt.includes('http')) {
                     finalContent = applyPremiumTextEffect(m.txt);
                 }
@@ -6957,25 +6995,15 @@
                 contentHtml += `<span class="msg-text">${safeHtml}</span>`;
             }
 
-            // Мета-данные (Время + Галочки) (убираем их для звонков, так как они встроены в карточку)
+            // Аккуратная мета-информация
             if (!m.sys && msgType !== 'call') {
-                let metaStyle = "";
-                if (msgType === 'image') {
-                    // Для картинок мета-данные поверх изображения
-                    metaStyle = "position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2;";
-                    // Обертка для позиционирования
-                    contentHtml = `<div style="position: relative; display: inline-block; vertical-align: top; min-width: 200px;">${contentHtml}`;
-                }
-
                 let metaHtml = `
-                                                                            <span class="msg-meta" style="${metaStyle}">
-                                                                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.6); margin-right: 5px;">изм.</span>' : ''}
-                                                                            <span class="msg-time" style="color: rgba(255,255,255,0.6); font-size: 11px;">${timeStr}</span>
-                                                                            ${m.from === currentUser.uid ? `<span class="msg-ticks" style="color: white; font-size: 12px; margin-left: 3px;">${ticksHtml}</span>` : ''}
-                                                                            </span>`;
-
-                if (msgType === 'image') contentHtml += metaHtml + `</div>`;
-                else contentHtml += metaHtml;
+                    <span class="msg-meta">
+                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                        <span class="msg-time">${timeStr}</span>
+                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                    </span>`;
+                contentHtml += metaHtml;
             }
 
             return contentHtml;
@@ -9461,45 +9489,48 @@
 
 
         // --- 1. Функция для показа "временного" сообщения (превью) ---
+        // --- 1. Функция для показа "временного" сообщения (превью) ---
         function showTempMessage(file) {
             const list = currentMsgList;
             const tempId = 'temp-' + Date.now();
             const div = document.createElement('div');
             div.id = tempId;
-            div.className = 'msg msg-me'; // Сразу как "своё"
+
             let contentHtml = '';
+
             // Если это картинка — показываем её сразу
             if (file.type.startsWith('image/')) {
+                // Применяем новые классы
+                div.className = 'msg msg-me msg-image-only';
                 const url = URL.createObjectURL(file);
+
                 contentHtml = `
-                                                                            <div class="media-container loading-overlay" style="position: relative; display: inline-block;">
-                                                                            <img src="${url}" class="chat-media-img" style="opacity: 1;">
-                                                                            <div class="upload-spinner"></div>
-                                                                            </div>
-                                                                            `;
+                    <img src="${url}" class="chat-media-img loading-overlay" style="opacity: 0.8;">
+                    <div class="upload-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                `;
             }
             // Если это файл — показываем карточку
             else {
+                div.className = 'msg msg-me';
                 contentHtml = `
-                                                                            <div class="chat-file-card" style="opacity: 0.7;">
-                                                                            <div class="file-icon">📄</div>
-                                                                            <div class="file-info">
-                                                                            <div class="file-name">${file.name}</div>
-                                                                            <div class="file-action">Загрузка...</div>
-                                                                            </div>
-                                                                            <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
-                                                                            </div>
-                                                                            `;
+                    <div class="chat-file-card" style="opacity: 0.7;">
+                        <div class="file-icon">📄</div>
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-action">Загрузка...</div>
+                        </div>
+                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                    </div>`;
             }
+
             div.innerHTML = contentHtml;
             list.appendChild(div);
 
-            // --- НОВОЕ: Плавный скролл при прикреплении файла ---
+            // Плавный скролл при прикреплении файла
             setTimeout(() => {
-                // Используем плавный скролл, чтобы видеть, как сообщение "вылетает" снизу
                 list.scrollTo({
                     top: list.scrollHeight,
-                    behavior: isChatInitialLoad ? 'auto' : 'smooth'
+                    behavior: typeof isChatInitialLoad !== 'undefined' && isChatInitialLoad ? 'auto' : 'smooth'
                 });
             }, 60);
 
