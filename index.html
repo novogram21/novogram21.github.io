@@ -12076,20 +12076,27 @@
         let initialScale = 1;
         let lastTapTime = 0;
 
-        // Применяем трансформацию (ищем картинку динамически)
+
+
+
+
+
+        // Применяем трансформацию с премиальной анимацией (Apple/Telegram Style)
         function updateImageTransform(withTransition = false) {
             const viewerImg = document.getElementById('imageViewerImg');
             if (!viewerImg) return;
 
             if (withTransition) {
-                viewerImg.style.transition = 'transform 0.2s ease-out';
+                // Идеальная кривая Безье для эффекта упругого отскока
+                viewerImg.style.transition = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
             } else {
+                // Мгновенное следование за пальцем
                 viewerImg.style.transition = 'none';
             }
             viewerImg.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
         }
 
-        // Сброс зума (делаем функцию глобальной, чтобы её видела модалка)
+        // Сброс зума (выносим глобально, чтобы его могли вызывать другие функции)
         window.resetImageZoom = function () {
             currentScale = 1;
             currentTranslateX = 0;
@@ -12184,7 +12191,22 @@
                         e.touches[0].clientY - e.touches[1].clientY
                     );
                     const zoomDelta = currentDistance / initialPinchDistance;
-                    currentScale = Math.min(Math.max(1, initialScale * zoomDelta), 5); // Лимит от 1x до 5x
+                    let rawScale = initialScale * zoomDelta;
+
+                    // 🔥 ПРЕМИУМ-ФИШКА: Эффект "резинки"
+                    const MAX_SCALE = 5;
+                    const MIN_SCALE = 1;
+
+                    if (rawScale > MAX_SCALE) {
+                        // Тянется тяжело при превышении максимума (замедляем в 4 раза)
+                        currentScale = MAX_SCALE + (rawScale - MAX_SCALE) * 0.25;
+                    } else if (rawScale < MIN_SCALE) {
+                        // Сжимается тяжело при отдалении меньше оригинала (замедляем в 3 раза)
+                        currentScale = MIN_SCALE - (MIN_SCALE - rawScale) * 0.35;
+                    } else {
+                        currentScale = rawScale;
+                    }
+
                     updateImageTransform(false);
                 } else if (e.touches.length === 1 && isZoomDragging && currentScale > 1) {
                     // Перетаскиваем
@@ -12201,7 +12223,6 @@
                 }
 
                 if (e.touches.length === 1 && currentScale > 1) {
-                    // Страховка: пересчитываем координаты для оставшегося пальца
                     isZoomDragging = true;
                     startDragX = e.touches[0].clientX - currentTranslateX;
                     startDragY = e.touches[0].clientY - currentTranslateY;
@@ -12209,9 +12230,16 @@
                     isZoomDragging = false;
                 }
 
-                // Плавный сброс, если отдалили меньше 100%
-                if (currentScale <= 1 && e.touches.length === 0) {
-                    window.resetImageZoom();
+                // 🔥 ПРЕМИУМ-ФИШКА: Плавный отскок при отпускании пальцев
+                if (e.touches.length === 0) {
+                    if (currentScale < 1) {
+                        // Отдалили слишком сильно — отскок к 1x и по центру
+                        window.resetImageZoom();
+                    } else if (currentScale > 5) {
+                        // Приблизили слишком сильно — отскок обратно к 5x
+                        currentScale = 5;
+                        updateImageTransform(true);
+                    }
                 }
 
                 // Двойной тап (работает только если пальцы не скользили)
@@ -12233,7 +12261,7 @@
                 }
             });
 
-        }); // <--- ТЕПЕРЬ БЛОК ЗАГРУЗКИ ЗАКРЫВАЕТСЯ ЗДЕСЬ (ПРАВИЛЬНО!)
+        });
 
         // Сброс зума (выносим глобально, чтобы его могли вызывать другие функции)
         function resetImageZoom() {
