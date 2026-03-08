@@ -2344,26 +2344,84 @@
 
 
 
-        /* Крутилка загрузки */
-        .upload-spinner {
+        /* --- ПРЕМИАЛЬНАЯ ЗАГРУЗКА ФАЙЛОВ (TELEGRAM STYLE) --- */
+        .upload-progress-container {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             z-index: 10;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        @keyframes spin {
-            to {
-                transform: translate(-50%, -50%) rotate(360deg);
+        .upload-progress-circle {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 50%;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+            .upload-progress-circle:active {
+                transform: scale(0.9);
+                background: rgba(0, 0, 0, 0.6);
             }
+
+        .upload-progress-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg); /* Начинаем заливку ровно сверху */
+        }
+
+        .upload-progress-circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.15);
+            stroke-width: 3;
+        }
+
+        .upload-progress-circle-value {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 3;
+            stroke-linecap: round;
+            /* Длина окружности для радиуса 21.5 (2 * pi * 21.5 = ~135) */
+            stroke-dasharray: 135;
+            stroke-dashoffset: 135; /* Сначала круг пустой */
+            transition: stroke-dashoffset 0.15s linear;
+        }
+
+        .upload-cancel-icon {
+            color: white;
+            width: 20px;
+            height: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .upload-progress-text {
+            color: white;
+            font-size: 11.5px;
+            font-weight: 600;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 3px 10px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            letter-spacing: 0.3px;
         }
 
 
@@ -9516,39 +9574,55 @@
             const tempId = 'temp-' + Date.now();
             const div = document.createElement('div');
             div.id = tempId;
+            // Добавляем transition для плавного удаления при отмене
+            div.style.transition = 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
             let contentHtml = '';
 
-            // Если это картинка — показываем её сразу
+            // Вычисляем мегабайты заранее
+            const totalMb = (file.size / (1024 * 1024)).toFixed(1);
+
+            // UI прогресс-бара (используется и для фото, и для файлов)
+            const progressHtml = `
+                <div class="upload-progress-container">
+                    <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
+                        <svg class="upload-progress-svg" viewBox="0 0 50 50">
+                            <circle class="upload-progress-circle-bg" cx="25" cy="25" r="21.5"></circle>
+                            <circle class="upload-progress-circle-value" id="progress-val-${tempId}" cx="25" cy="25" r="21.5"></circle>
+                        </svg>
+                        <svg class="upload-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </div>
+                    <div class="upload-progress-text" id="progress-txt-${tempId}">0.0 / ${totalMb} МБ</div>
+                </div>
+            `;
+
+            // Если это картинка
             if (file.type.startsWith('image/')) {
-                // Применяем новые классы
                 div.className = 'msg msg-me msg-image-only';
                 const url = URL.createObjectURL(file);
 
-                // Добавили onload="scrollToBottom()"
                 contentHtml = `
-                    <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="opacity: 0.8;">
-                    <div class="upload-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                    <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
+                    ${progressHtml}
                 `;
             }
-            // Если это файл — показываем карточку
+            // Если это документ
             else {
                 div.className = 'msg msg-me';
                 contentHtml = `
-                    <div class="chat-file-card" style="opacity: 0.7;">
-                        <div class="file-icon">📄</div>
-                        <div class="file-info">
+                    <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
+                        <div class="file-icon" style="opacity: 0.2;">📄</div>
+                        <div class="file-info" style="opacity: 0.2;">
                             <div class="file-name">${file.name}</div>
                             <div class="file-action">Загрузка...</div>
                         </div>
-                        <div class="upload-spinner" style="width: 20px; height: 20px; border-width: 2px; left: auto; right: 10px; transform: translateY(-50%);"></div>
+                        ${progressHtml}
                     </div>`;
             }
 
             div.innerHTML = contentHtml;
             list.appendChild(div);
 
-            // Плавный скролл при прикреплении файла
             setTimeout(() => {
                 list.scrollTo({
                     top: list.scrollHeight,
@@ -9556,11 +9630,40 @@
                 });
             }, 60);
 
-            return tempId; // Возвращаем ID, чтобы потом удалить это сообщение
+            return tempId;
         }
 
         // --- 2. Основная функция загрузки ---
-        // !!! Убедись, что переменная GOOGLE_SCRIPT_URL объявлена выше !!!
+        // Глобальный объект для хранения активных загрузок (чтобы их можно было убить крестиком)
+        window.activeUploads = {};
+
+        // ФУНКЦИЯ ОТМЕНЫ ЗАГРУЗКИ ПОЛЬЗОВАТЕЛЕМ
+        window.cancelUpload = function (tempId) {
+            // Убиваем процесс отправки в браузере
+            if (window.activeUploads[tempId]) {
+                window.activeUploads[tempId].abort();
+                delete window.activeUploads[tempId];
+            }
+
+            // Красиво и плавно удаляем пузырь из чата
+            const el = document.getElementById(tempId);
+            if (el) {
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.8)';
+                setTimeout(() => el.remove(), 300);
+            }
+
+            // Разблокируем поле ввода
+            const msgInput = document.getElementById('msgInput');
+            if (msgInput && msgInput.disabled) {
+                msgInput.placeholder = "Сообщение";
+                msgInput.disabled = false;
+                msgInput.focus();
+            }
+            showToast("Отправка отменена");
+        };
+
+        // --- 2. ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ (С ПОДДЕРЖКОЙ ПРОГРЕССА) ---
         async function uploadFile(input) {
             const file = input.files[0];
             if (!file) return;
@@ -9568,11 +9671,12 @@
             // Ограничение 10 МБ
             if (file.size > 10 * 1024 * 1024) {
                 alert("Файл слишком большой! Максимум 10 МБ.");
+                input.value = '';
                 return;
             }
 
-            // Показываем превью
             const tempMsgId = showTempMessage(file);
+            const totalMb = (file.size / (1024 * 1024)).toFixed(1);
 
             const msgInput = document.getElementById('msgInput');
             const originalPlaceholder = msgInput.placeholder;
@@ -9580,7 +9684,7 @@
             msgInput.disabled = true;
 
             try {
-                // Конвертируем в Base64
+                // Конвертируем в Base64 (в памяти телефона это быстро)
                 const toBase64 = f => new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(f);
@@ -9590,44 +9694,103 @@
 
                 const base64Data = await toBase64(file);
 
-                // ОТПРАВЛЯЕМ ЗАПРОС С СЕКРЕТОМ И ACTION
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    redirect: "follow",
-                    headers: {
-                        "Content-Type": "text/plain;charset=utf-8"
-                    },
-                    body: JSON.stringify({
-                        action: "upload",  // <--- ВАЖНО: говорим серверу, что это загрузка
-                        secret: "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc", // <--- ВАЖНО: твой ключ
-                        filename: file.name,
-                        mimeType: file.type,
-                        base64: base64Data
-                    })
-                });
+                // Длина нашей SVG-линии (из CSS)
+                const circumference = 135;
 
-                const data = await response.json();
+                // ИСПОЛЬЗУЕМ XMLHttpRequest ДЛЯ ОТСЛЕЖИВАНИЯ ПРОГРЕССА
+                const xhr = new XMLHttpRequest();
+                window.activeUploads[tempMsgId] = xhr; // Запоминаем процесс для возможности отмены
 
-                // Удаляем превью
-                const tempEl = document.getElementById(tempMsgId);
-                if (tempEl) tempEl.remove();
+                // Событие обновления процентов
+                xhr.upload.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        let percentComplete = event.loaded / event.total;
 
-                if (data.result === "success") {
-                    const type = file.type.startsWith('image/') ? 'image' : 'file';
-                    sendMsg(data.url, false, type);
-                } else {
-                    throw new Error(data.message || "Ошибка скрипта");
+                        // Защита от слишком быстрого скачка до 100% (ждем ответа Гугла)
+                        if (percentComplete > 0.95) percentComplete = 0.95;
+
+                        const loadedMb = (file.size * percentComplete / (1024 * 1024)).toFixed(1);
+
+                        // 1. Обновляем текст мегабайтов
+                        const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
+                        if (txtEl) txtEl.innerText = `${loadedMb} / ${totalMb} МБ`;
+
+                        // 2. Двигаем белую обводку круга
+                        const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
+                        if (circleEl) {
+                            const offset = circumference - (percentComplete * circumference);
+                            circleEl.style.strokeDashoffset = offset;
+                        }
+                    }
+                };
+
+                // Ответ от сервера получен
+                xhr.onload = function () {
+                    delete window.activeUploads[tempMsgId];
+                    if (xhr.status === 200 || xhr.status === 302) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+
+                            const tempEl = document.getElementById(tempMsgId);
+                            if (tempEl) tempEl.remove(); // Удаляем превью
+
+                            if (data.result === "success") {
+                                const type = file.type.startsWith('image/') ? 'image' : 'file';
+                                sendMsg(data.url, false, type); // Отправляем финальное сообщение
+                            } else {
+                                showToast("Ошибка диска: " + (data.message || ""));
+                            }
+                        } catch (e) {
+                            showToast("Ошибка ответа сервера");
+                            const tempEl = document.getElementById(tempMsgId);
+                            if (tempEl) tempEl.remove();
+                        }
+                    } else {
+                        showToast("Сетевая ошибка");
+                        const tempEl = document.getElementById(tempMsgId);
+                        if (tempEl) tempEl.remove();
+                    }
+                    resetInput();
+                };
+
+                // Ошибка сети (например, пропал интернет)
+                xhr.onerror = function () {
+                    delete window.activeUploads[tempMsgId];
+                    showToast("Интернет отключился");
+                    const tempEl = document.getElementById(tempMsgId);
+                    if (tempEl) tempEl.remove();
+                    resetInput();
+                };
+
+                function resetInput() {
+                    if (msgInput) {
+                        msgInput.placeholder = originalPlaceholder;
+                        msgInput.disabled = false;
+                        msgInput.focus();
+                    }
+                    input.value = '';
                 }
+
+                // Начинаем отправку
+                xhr.open("POST", GOOGLE_SCRIPT_URL, true);
+                xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
+
+                xhr.send(JSON.stringify({
+                    action: "upload",
+                    secret: APP_SECRET_KEY,
+                    filename: file.name,
+                    mimeType: file.type,
+                    base64: base64Data
+                }));
+
             } catch (error) {
-                console.error("Ошибка загрузки:", error);
+                console.error("Ошибка подготовки файла:", error);
                 const tempEl = document.getElementById(tempMsgId);
                 if (tempEl) tempEl.remove();
-                alert("Ошибка загрузки: " + error.message);
-            } finally {
+                showToast("Ошибка чтения файла");
                 msgInput.placeholder = originalPlaceholder;
                 msgInput.disabled = false;
                 input.value = '';
-                msgInput.focus();
             }
         }
         // Функции для просмотра фото
