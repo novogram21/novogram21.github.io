@@ -2215,17 +2215,19 @@
 
         /* --- СТИЛИ ДЛЯ КАРТИНОК В ЧАТЕ --- */
         .chat-media-img {
-            /* Делаем их крупнее */
             width: 100%;
-            max-width: 320px; /* Было 240, стало шире */
-            height: auto; /* Авто-высота, чтобы не искажалось */
+            max-width: 320px;
+            height: auto;
             max-height: 400px;
+            min-height: 150px; /* НОВОЕ: Резерв места до загрузки фото */
+            min-width: 150px; /* НОВОЕ: Резерв места до загрузки фото */
             border-radius: 12px;
-            cursor: zoom-in; /* Курсор лупы */
+            cursor: zoom-in;
             display: block;
             object-fit: cover;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Тень для красоты */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             transition: transform 0.2s;
+            background: #222; /* Цвет заглушки пока грузится */
         }
 
             
@@ -11883,8 +11885,15 @@
             const list = imgEl.closest('.messages');
             if (!list) return;
 
-            // Картинка подтянет экран вниз, ТОЛЬКО если мы сейчас читаем новые сообщения
-            smartScrollToBottom(list, false, false);
+            // МАГИЯ ЗДЕСЬ: Когда картинка прогрузилась, она УЖЕ раздвинула контейнер чата.
+            // Поэтому мы прибавляем её высоту (imgEl.clientHeight) к нашему допуску "низа" (150px).
+            const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= (150 + imgEl.clientHeight);
+
+            if (isAtBottom) {
+                // Если до того как картинка прогрузилась мы находились внизу диалога,
+                // принудительно и плавно докручиваем экран до самого конца!
+                smartScrollToBottom(list, true, false);
+            }
         };
 
         // --- УМНАЯ ФУНКЦИЯ ДЛЯ ВВОДА (С РАЗДЕЛЕНИЕМ ПК / ТЕЛЕФОН) ---
