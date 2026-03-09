@@ -6786,8 +6786,14 @@
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
 
-                    // Удаления
+                    // ФИКС 1: Отслеживаем, появились ли РЕАЛЬНО новые сообщения
+                    let hasNewMessages = false;
+
+                    // Удаления и новые сообщения
                     snap.docChanges().forEach(change => {
+                        if (change.type === 'added' && !isChatInitialLoad) {
+                            hasNewMessages = true; // Сработает только на настоящие новые СМС
+                        }
                         if (change.type === 'removed') {
                             const el = document.getElementById('msg-' + change.doc.id);
                             if (el) animateMessageRemoval(el); // Используем плавное удаление!
@@ -6932,8 +6938,9 @@
                             }
                             list.classList.remove('is-loading'); // Чат появляется без дерганий
                         }, 10);
-                    } else if (isScrolledToBottom) {
-                        // --- НОВОЕ: Плавный автоскролл, если мы уже были внизу и пришло новое сообщение ---
+                    } else if (isScrolledToBottom && hasNewMessages) {
+                        // ФИКС 2: Тянем вниз ТОЛЬКО если это реальное новое сообщение от юзера,
+                        // а не просто обновление галочек (прочитано/доставлено).
                         setTimeout(() => {
                             list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
                         }, 50);
@@ -11813,9 +11820,7 @@
             const list = imgEl.closest('.messages');
             if (!list) return;
 
-            // Если ползунок находится близко к низу (в пределах 500px), 
-            // значит мы читаем новые сообщения — скроллим вниз!
-            const isNearBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 500;
+            const isNearBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 50;
             if (isNearBottom) {
                 list.scrollTo({ top: list.scrollHeight + 1000, behavior: 'smooth' });
             }
