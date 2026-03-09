@@ -4515,6 +4515,124 @@
             font-size: 11px;
         }
 
+        /* --- ПРЕМИАЛЬНЫЕ РЕАКЦИИ И ИДЕАЛЬНОЕ ВЫРАВНИВАНИЕ --- */
+
+        @keyframes reactionPop {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+
+            60% {
+                transform: scale(1.15);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Контейнер, который держит реакции и время на одной линии */
+        .msg-footer {
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+            margin-top: 5px;
+            flex-wrap: wrap; /* Защита от переполнения */
+        }
+
+            .msg-footer.has-reactions {
+                width: 100%; /* Растягиваем, чтобы разнести по краям */
+            }
+
+        /* Сбрасываем старые флоаты у времени, чтобы флекс работал идеально */
+        .msg-meta {
+            float: none !important;
+            margin-top: 0 !important;
+            position: relative !important;
+            top: 0 !important;
+        }
+
+        .msg-reactions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 0;
+            margin-right: auto; /* МАГИЯ: Автоматически отталкивает время вправо! */
+        }
+
+        .msg-image-only .msg-footer {
+            padding: 4px 6px 6px 6px;
+        }
+
+        .msg-reaction {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 14px;
+            padding: 4px 8px;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid transparent;
+            animation: reactionPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transition: background 0.2s, border-color 0.2s, transform 0.1s;
+        }
+
+            .msg-reaction:active {
+                transform: scale(0.85) !important;
+            }
+
+            /* Картинка 3D-эмодзи */
+            .msg-reaction img {
+                width: 18px;
+                height: 18px;
+                pointer-events: none;
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); /* Легкий объем */
+            }
+
+        .reaction-count {
+            margin-left: 5px;
+            font-weight: 700;
+            font-size: 12px;
+            color: #fff;
+        }
+
+        .msg-me .msg-reaction {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .msg-reaction.reacted-by-me {
+            background: rgba(115, 106, 240, 0.25);
+            border: 1px solid rgba(115, 106, 240, 0.6);
+        }
+
+        .msg-me .msg-reaction.reacted-by-me {
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        /* Анимация 3D эмодзи в меню */
+        .reactions-bar span {
+            display: inline-flex;
+            width: 32px;
+            height: 32px;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+
+            .reactions-bar span img {
+                width: 28px;
+                height: 28px;
+                object-fit: contain;
+                filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+            }
+
+            .reactions-bar span:hover {
+                transform: scale(1.35) translateY(-5px);
+            }
 
 
 
@@ -4673,12 +4791,12 @@
     <div id="overlaySheet" class="overlay-sheet" onclick="if(!window.isMenuJustOpened) closeAllSheets();" oncontextmenu="event.preventDefault(); event.stopPropagation();"></div>
     <div id="contextMenu" class="context-menu" oncontextmenu="event.preventDefault();">
         <div class="reactions-bar">
-            <span onclick="toggleReaction('🔥')">🔥</span>
-            <span onclick="toggleReaction('👍')">👍</span>
-            <span onclick="toggleReaction('❤️')">❤️</span>
-            <span onclick="toggleReaction('🥰')">🥰</span>
-            <span onclick="toggleReaction('👏')">👏</span>
-            <span onclick="toggleReaction('💩')">💩</span>
+            <span onclick="toggleReaction('🔥')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Fire.png" alt="🔥"></span>
+            <span onclick="toggleReaction('👍')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Thumbs%20Up.png" alt="👍"></span>
+            <span onclick="toggleReaction('❤️')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Red%20Heart.png" alt="❤️"></span>
+            <span onclick="toggleReaction('🥰')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Smiling%20Face%20with%20Hearts.png" alt="🥰"></span>
+            <span onclick="toggleReaction('👏')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Clapping%20Hands.png" alt="👏"></span>
+            <span onclick="toggleReaction('💩')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Pile%20of%20Poo.png" alt="💩"></span>
         </div>
 
         <div class="context-list">
@@ -7277,7 +7395,50 @@
                 contentHtml += reactionsHtml;
             }
 
-            return contentHtml;
+            let reactionsHtml = '';
+            let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
+
+            if (hasReactions) {
+                const reactionCounts = {};
+                let myReaction = null;
+
+                for (const uid in m.reactions) {
+                    const emoji = m.reactions[uid];
+                    if (uid === currentUser.uid) myReaction = emoji;
+                    if (!reactionCounts[emoji]) reactionCounts[emoji] = 0;
+                    reactionCounts[emoji]++;
+                }
+
+                reactionsHtml = '<div class="msg-reactions">';
+                Object.entries(reactionCounts).forEach(([emoji, count]) => {
+                    const isMy = myReaction === emoji;
+                    const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
+                    const imgSrc = premiumEmojis[emoji] || ''; // Берем 3D картинку
+
+                    reactionsHtml += `
+                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emoji}')">
+                            <img src="${imgSrc}" alt="${emoji}">
+                            ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
+                        </div>`;
+                });
+                reactionsHtml += '</div>';
+            }
+
+            // Время и галочки
+            let metaHtml = '';
+            if (!m.sys && msgType !== 'call') {
+                metaHtml = `
+                    <span class="msg-meta">
+                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                        <span class="msg-time">${timeStr}</span>
+                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                    </span>`;
+            }
+
+            // Оборачиваем во Flex-контейнер для идеального выравнивания!
+            if (hasReactions || (!m.sys && msgType !== 'call')) {
+                contentHtml += `<div class="msg-footer ${hasReactions ? 'has-reactions' : ''}">${reactionsHtml}${metaHtml}</div>`;
+            }
 
             return contentHtml;
         }
@@ -13544,6 +13705,42 @@
                     }
                 }, { merge: true }).catch(() => { });
             }
+        }
+
+
+        const premiumEmojis = {
+            '🔥': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Fire.png',
+            '👍': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Thumbs%20Up.png',
+            '❤️': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Red%20Heart.png',
+            '🥰': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Smiling%20Face%20with%20Hearts.png',
+            '👏': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Clapping%20Hands.png',
+            '💩': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Pile%20of%20Poo.png'
+        };
+
+        function toggleReaction(emoji) {
+            toggleReactionDirect(selectedMsgId, emoji);
+            closeAllSheets();
+        }
+
+        // Надежная логика снятия/установки через базу
+        function toggleReactionDirect(msgId, emoji) {
+            if (!msgId || !currentChatId || !currentUser) return;
+            const msgRef = db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId);
+
+            msgRef.get().then(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    const currentReaction = data.reactions ? data.reactions[currentUser.uid] : null;
+
+                    // Если кликнули по той же самой реакции — удаляем её
+                    if (currentReaction === emoji) {
+                        msgRef.update({ [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete() });
+                    } else {
+                        // Иначе ставим новую
+                        msgRef.set({ reactions: { [currentUser.uid]: emoji } }, { merge: true });
+                    }
+                }
+            });
         }
 
 
