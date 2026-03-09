@@ -5875,6 +5875,11 @@
                     // ТЕПЕРЬ, КОГДА ОКНО СПРЯТАНО, ЗАПУСКАЕМ ТЯЖЕЛЫЕ ФУНКЦИИ И СБРОС СЕТИ
                     managePresence(u.uid);
                     listenToAllStatuses();
+
+                    if (!history.state || history.state.page !== 'home') {
+                        history.replaceState({ page: 'base' }, null, window.location.pathname + window.location.search);
+                        history.pushState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                    }
                     
                     loadTurnServers();
                     loadData(); // <-- Сброс сети произойдет здесь, но UI уже разблокирован
@@ -6751,7 +6756,6 @@
         }
         function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
         function openChat(fid, name, nick) {
-            // Отменяем таймер закрытия, если юзер очень быстро передумал
             if (typeof closeChatTimeout !== 'undefined' && closeChatTimeout) {
                 clearTimeout(closeChatTimeout);
                 closeChatTimeout = null;
@@ -6759,8 +6763,6 @@
 
             const newHash = "#chat/" + fid;
 
-            // 1. ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ UI ЧАТА
-            // Это решает баг "пустого заднего фона", если браузер затупил после возврата в PWA
             document.getElementById('noChat').classList.add('hidden');
             const activeChatElement = document.getElementById('activeChat');
             activeChatElement.classList.remove('hidden');
@@ -6770,24 +6772,29 @@
                 document.getElementById('mainChatArea').classList.add('active');
             }
 
-            // 2. Если мы УЖЕ сидим в этом диалоге
             if (currentFriendId === fid) {
                 const inp = document.getElementById('msgInput');
                 if (inp) inp.focus();
 
                 if (window.location.hash !== newHash) {
-                    history.replaceState(null, null, newHash);
+                    history.replaceState({ page: 'chat' }, null, newHash);
                 }
                 return;
             }
 
-            // 3. Записываем в историю и ПРИНУДИТЕЛЬНО запускаем загрузку
-            // На iOS Safari PWA часто игнорирует события hashchange, поэтому вызываем логику руками!
+            // ПРЕМИУМ ФИКС ИСТОРИИ ДИАЛОГОВ:
+            // Если мы уже сидим в каком-то чате и открываем новый (например, из поиска) - ЗАМЕНЯЕМ шаг.
+            // Иначе, если мы открываем с главного экрана - СОЗДАЕМ новый шаг.
+            // Это навсегда решает баг "бесконечной истории чатов" по кнопке Назад.
             if (window.location.hash !== newHash) {
-                history.pushState(null, null, newHash);
+                if (window.location.hash.startsWith('#chat/')) {
+                    history.replaceState({ page: 'chat' }, null, newHash);
+                } else {
+                    history.pushState({ page: 'chat' }, null, newHash);
+                }
             }
 
-            handleHashChange();
+            handleHashChange(); // запускает загрузку
         }
 
 
@@ -9252,30 +9259,26 @@
     <!-- OneSignal Push Logic (Вставь это в самый низ перед </body>) -->
     <script>
         // Функция для красивого открытия чата с задержкой (Элитарный UX)
+        // Функция для красивого открытия чата с задержкой (Элитарный UX)
         window.triggerPendingNotificationChat = function () {
             const pendingFid = localStorage.getItem('pendingNotifChat');
             if (!pendingFid) return;
-
-            // Если Firebase еще не прогрузил профиль, просто ждем
             if (!currentUser) return;
 
-            // Очищаем, чтобы не открывалось дважды
             localStorage.removeItem('pendingNotifChat');
 
-            // Если мы уже сидим в этом чате - ничего не делаем
             if (currentFriendId === pendingFid && document.getElementById('mainChatArea').classList.contains('active')) {
                 return;
             }
 
-            // 1. Сначала принудительно показываем главный экран (список друзей)
-            window.location.hash = '';
-            if (typeof performCloseUI === 'function') performCloseUI();
+            // ПРЕМИУМ ФИКС: Выходим из текущего чата аппаратно перед открытием нового
+            if (window.location.hash.startsWith('#chat/')) {
+                history.back();
+            }
 
-            // 2. Делаем "дорогую" паузу в 400мс. Пользователь видит список чатов,
-            // и затем нужный диалог плавно выезжает сбоку.
             setTimeout(() => {
-                window.location.hash = "#chat/" + pendingFid;
-                if (typeof handleHashChange === 'function') handleHashChange();
+                // Используем правильную функцию открытия (в ней уже есть защита истории)
+                openChat(pendingFid, "Загрузка...", "");
             }, 400);
         };
 
@@ -10086,12 +10089,13 @@
             }, 350);
         };
         function closeChat() {
-            // 1. Безопасно очищаем URL от хэша без перезагрузки страницы
-            if (window.location.hash) {
-                history.replaceState(null, null, window.location.pathname + window.location.search);
+            // Имитируем нажатие системной кнопки "Назад", чтобы история очистилась аппаратно.
+            // Наш popstate-слушатель (из Шага 2) сам поймает это и закроет интерфейс.
+            if (window.location.hash.startsWith('#chat/')) {
+                history.back();
+            } else {
+                performCloseUI();
             }
-            // 2. Принудительно закрываем интерфейс чата
-            performCloseUI();
         }
         function closeSearch() {
             const searchInput = document.getElementById('searchInput');
@@ -11991,37 +11995,69 @@
             }
         });
 
-        // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
-        // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
-        // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" (И СВАЙПА НА ТЕЛЕФОНЕ) ---
-        window.addEventListener('popstate', (e) => {
+        
+        let isExitReady = false;
 
-            // 1. САМЫЙ ВЫСОКИЙ ПРИОРИТЕТ: Открыта ли фотография на весь экран?
+        window.addEventListener('popstate', (e) => {
+            // 1. САМЫЙ ВЫСОКИЙ ПРИОРИТЕТ: Фото на весь экран
             const viewer = document.getElementById('imageViewer');
-            // Проверяем, активна ли фотка и НЕ находится ли она в процессе полета
             if (viewer && viewer.classList.contains('active') && !window.isViewerClosing) {
-                // Передаем true, чтобы функция поняла: кнопку Назад УЖЕ нажали
                 closeImageViewer(null, true);
-                return; // Прерываем выполнение, чтобы шторки не закрылись
+                return;
             }
 
-            // 2. Если фото не было, проверяем открытые меню/шторки
+            // 2. МЕНЮ И ШТОРКИ
             if (typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 sheetHistoryStack--;
-
                 if (document.getElementById('friendProfileSheet')?.classList.contains('open')) {
                     closeFriendProfile(true);
                 } else if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
                     closeEditProfile(true);
                 } else if (document.getElementById('generalSettingsSheet')?.classList.contains('open')) {
                     closeGeneralSettings(true);
-                } else if (document.getElementById('profileSheet')?.classList.contains('open')) {
-                    closeAllSheets(true);
                 } else if (document.getElementById('botEditorSheet')?.classList.contains('open')) {
                     closeBotEditor(true);
                 } else if (document.getElementById('botsListSheet')?.classList.contains('open')) {
                     closeBotsList(true);
+                } else {
+                    closeAllSheets(true);
                 }
+                return;
+            }
+
+            // 3. ЗАКРЫТИЕ ЧАТА ИЛИ ВЫХОД ИЗ ПРИЛОЖЕНИЯ
+            if (!window.location.hash.startsWith('#chat/')) {
+                // Если мы вернулись из чата на главный экран
+                if (document.getElementById('mainChatArea').classList.contains('active') ||
+                    !document.getElementById('activeChat').classList.contains('hidden')) {
+                    performCloseUI();
+
+                    // Обязательно восстанавливаем "ловушку" главного экрана
+                    history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                    return;
+                }
+
+                // 4. ДВОЙНОЕ НАЖАТИЕ НАЗАД ДЛЯ ВЫХОДА ИЗ ПРИЛОЖЕНИЯ
+                if (!isExitReady) {
+                    isExitReady = true;
+                    showToast("Нажмите еще раз для выхода");
+                    // Восстанавливаем шаг, чтобы следующий клик снова попал сюда
+                    history.pushState({ page: 'home' }, null, window.location.pathname + window.location.search);
+
+                    setTimeout(() => { isExitReady = false; }, 2000);
+                } else {
+                    // Выходим!
+                    if (window.mauiInterop) {
+                        window.mauiInterop.postMessage("exit_app");
+                    } else {
+                        // Для браузеров - разрешаем шаг назад (который закроет вкладку/приложение)
+                        history.back();
+                        setTimeout(() => window.close(), 100);
+                    }
+                }
+            } else {
+                // Если мы шагнули ВПЕРЕД по истории в какой-то чат
+                handleHashChange();
             }
         });
 
