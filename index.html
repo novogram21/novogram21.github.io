@@ -4460,6 +4460,62 @@
                 opacity: 1;
                 transform: scale(1);
             }
+
+        /* --- ПРЕМИАЛЬНАЯ ЗАГРУЗКА ДОКУМЕНТОВ --- */
+        .file-upload-icon-wrapper {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            background: rgba(115, 106, 240, 0.15); /* Цвет акцента с прозрачностью */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+            .file-upload-icon-wrapper:active {
+                transform: scale(0.9);
+                background: rgba(115, 106, 240, 0.25);
+            }
+
+        .file-upload-progress-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg); /* Круг заполняется сверху */
+        }
+
+        .file-upload-circle-bg {
+            fill: none;
+            stroke: rgba(115, 106, 240, 0.2);
+            stroke-width: 2;
+        }
+
+        .file-upload-circle-value {
+            fill: none;
+            stroke: #736AF0;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-dasharray: 120; /* Математическая длина этого круга */
+            stroke-dashoffset: 120;
+            transition: stroke-dashoffset 0.15s linear;
+        }
+
+        .file-upload-cancel {
+            color: #736AF0;
+            width: 18px;
+            height: 18px;
+            position: relative;
+            z-index: 2;
+        }
+
+
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -7113,12 +7169,11 @@
             }
             else if (msgType === 'image') {
                 let imgSrc = m.txt;
-                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
-                // Чистая картинка без лишних div-оберток + УМНЫЙ СКРОЛЛ
+                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/$${fileId}=w600`; } catch (e) { } }
                 contentHtml += `<img src="${imgSrc}" class="chat-media-img" onload="handleImageLoadScroll(this)" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
             }
             else if (msgType === 'call') {
-                // ... (тут твой код для звонков, оставляем как было, я его просто копирую чтобы ничего не сломать)
+                
                 const parts = m.txt.split('|');
                 const callState = parts[0] || 'success';
                 const durationStr = parts[1] || '';
@@ -7159,6 +7214,19 @@
                                 <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
                             </div>
                         </div>`;
+            }
+
+            else if (msgType === 'file') {
+                contentHtml += `
+                    <a href="${m.txt}" target="_blank" class="chat-file-card" style="text-decoration: none; border-color: rgba(115, 106, 240, 0.3); background: rgba(115, 106, 240, 0.05); padding: 8px 12px 8px 8px; display: flex; align-items: center;">
+                        <div class="file-icon" style="background: rgba(115, 106, 240, 0.15); color: #736AF0; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                        </div>
+                        <div class="file-info" style="margin-left: 12px;">
+                            <div class="file-name" style="color: #ffffff; font-size: 15px;">Вложение</div>
+                            <div class="file-action" style="color: #736AF0; font-size: 12px; font-weight: 500; margin-top: 4px;">Скачать файл</div>
+                        </div>
+                    </a>`;
             }
             else {
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
@@ -9699,23 +9767,22 @@
 
 
 
-        // --- 1. Функция для показа "временного" сообщения (превью) ---
-        // --- 1. Функция для показа "временного" сообщения (превью) ---
         function showTempMessage(file) {
             const list = currentMsgList;
             const tempId = 'temp-' + Date.now();
             const div = document.createElement('div');
             div.id = tempId;
-            // Добавляем transition для плавного удаления при отмене
             div.style.transition = 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
             let contentHtml = '';
-
-            // Вычисляем мегабайты заранее
             const totalMb = (file.size / (1024 * 1024)).toFixed(1);
 
-            // UI прогресс-бара (используется и для фото, и для файлов)
-            const progressHtml = `
+            
+            if (file.type.startsWith('image/')) {
+                div.className = 'msg msg-me msg-image-only';
+                const url = URL.createObjectURL(file);
+
+                const progressHtml = `
                     <div class="upload-progress-container">
                         <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
                             <svg class="upload-progress-svg" viewBox="0 0 50 50">
@@ -9728,35 +9795,49 @@
                     </div>
                 `;
 
-            // Если это картинка
-            if (file.type.startsWith('image/')) {
-                div.className = 'msg msg-me msg-image-only';
-                const url = URL.createObjectURL(file);
-
                 contentHtml = `
-                        <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
-                        ${progressHtml}
-                    `;
+                    <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
+                    ${progressHtml}
+                `;
             }
-            // Если это документ
+           
             else {
                 div.className = 'msg msg-me';
+
+               
+                let shortName = file.name;
+                if (shortName.length > 25) {
+                    const extIndex = shortName.lastIndexOf('.');
+                    if (extIndex !== -1 && shortName.length - extIndex < 7) {
+                        const ext = shortName.substring(extIndex);
+                        const namePart = shortName.substring(0, extIndex);
+                        shortName = namePart.substring(0, 18) + '...' + ext;
+                    } else {
+                        shortName = shortName.substring(0, 22) + '...';
+                    }
+                }
+
                 contentHtml = `
-                        <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
-                            <div class="file-icon" style="opacity: 0.2;">📄</div>
-                            <div class="file-info" style="opacity: 0.2;">
-                                <div class="file-name">${file.name}</div>
-                                <div class="file-action">Загрузка...</div>
-                            </div>
-                            ${progressHtml}
-                        </div>`;
+                    <div class="chat-file-card" style="background: rgba(115, 106, 240, 0.05); border: 1px solid rgba(115, 106, 240, 0.2); padding: 8px 12px 8px 8px; min-width: 200px;">
+                        <div class="file-upload-icon-wrapper" onclick="cancelUpload('${tempId}')" title="Отменить загрузку">
+                            <svg class="file-upload-progress-svg" viewBox="0 0 44 44">
+                                <circle class="file-upload-circle-bg" cx="22" cy="22" r="19"></circle>
+                                <circle class="file-upload-circle-value" id="progress-val-${tempId}" cx="22" cy="22" r="19"></circle>
+                            </svg>
+                            <svg class="file-upload-cancel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </div>
+                        <div class="file-info" style="margin-left: 4px; opacity: 1;">
+                            <div class="file-name" style="color: #ffffff; font-size: 15px;">${shortName}</div>
+                            <div class="file-action" id="progress-txt-${tempId}" style="color: #736AF0; font-size: 12px; font-weight: 500; margin-top: 4px;">0.0 / ${totalMb} МБ</div>
+                        </div>
+                    </div>`;
             }
 
             div.innerHTML = contentHtml;
             list.appendChild(div);
 
             setTimeout(() => {
-                smartScrollToBottom(list, true, false); // Принудительно и плавно!
+                smartScrollToBottom(list, true, false);
             }, 50);
 
             return tempId;
@@ -9801,9 +9882,12 @@
                 return;
             }
 
+            const isImage = file.type.startsWith('image/');
             const tempMsgId = showTempMessage(file);
             const totalMb = (file.size / (1024 * 1024)).toFixed(1);
-            const circumference = 135; // Длина круга
+
+            // ФИКС: Для фото длина круга 135, для файла 120 (радиус меньше)
+            const circumference = isImage ? 135 : 120;
 
             const msgInput = document.getElementById('msgInput');
             const originalPlaceholder = msgInput.placeholder;
