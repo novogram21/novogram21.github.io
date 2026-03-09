@@ -6753,59 +6753,46 @@
                 window.msgUnsub = null;
             }
 
-            // Мгновенно достаем или создаем слой чата
             const { list, isNew } = getOrCreateMsgList(currentChatId);
-
-            // --- ПРЕМИУМ: Достаем кэш ДО любых манипуляций ---
             const savedScroll = sessionStorage.getItem('scroll_' + currentChatId);
 
+            // Включаем защиту от прыжков картинок при открытии чата
+            window.isChatJustOpened = true;
+
             if (isNew) {
-                list.classList.add('is-loading'); // Первый заход
+                list.classList.add('is-loading');
                 list.innerHTML = '<div class="tg-spinner-container" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;"><div class="tg-spinner"></div></div>';
-            } else {
-                // Если заходим повторно - мгновенно ставим скролл без прыжков
-                if (savedScroll !== null) {
-                    list.scrollTop = parseInt(savedScroll, 10);
-                } else {
-                    list.scrollTop = list.scrollHeight;
-                }
             }
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
-
             let isChatInitialLoad = true;
+
             window.msgUnsub = db.collection('chats').doc(currentChatId).collection('msgs')
                 .orderBy('ts', 'asc')
                 .onSnapshot({ includeMetadataChanges: true }, snap => {
 
-                    // --- НОВОЕ: Удаляем крутилку, как только Firebase прислал ответ ---
                     const spinner = list.querySelector('.tg-spinner-container');
                     if (spinner) spinner.remove();
 
                     const batch = db.batch();
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
+                    let hasRealNewMessages = false; // Отслеживаем новые СМС
 
-                    // ФИКС 1: Отслеживаем, появились ли РЕАЛЬНО новые сообщения
-                    let hasNewMessages = false;
-
-                    // Удаления и новые сообщения
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added' && !isChatInitialLoad) {
-                            hasNewMessages = true; // Сработает только на настоящие новые СМС
+                            // Проверяем, наше ли это сообщение. Если не наше - фиксируем как "новое входящее"
+                            if (change.doc.data().from !== currentUser.uid) {
+                                hasRealNewMessages = true;
+                            }
                         }
                         if (change.type === 'removed') {
                             const el = document.getElementById('msg-' + change.doc.id);
-                            if (el) animateMessageRemoval(el); // Используем плавное удаление!
+                            if (el) animateMessageRemoval(el);
                         }
                     });
 
-                    // Проверка скролла (если мы уже видим чат)
-                    // Важно: если чат скрыт (is-loading), считаем что скролл нам не важен, мы всё равно прыгнем вниз
-                    const isScrolledToBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 300;
-
                     let allDocs = snap.docs;
-
                     allDocs.sort((a, b) => {
                         const timeA = a.data().ts ? a.data().ts.toMillis() : Date.now() + 999999999;
                         const timeB = b.data().ts ? b.data().ts.toMillis() : Date.now() + 999999999;
@@ -6825,78 +6812,53 @@
                         const m = { ...rawData };
                         m.txt = decryptText(rawData.txt, currentChatId);
                         const msgType = m.type || 'text';
-
                         const tsMillis = m.ts ? m.ts.toMillis() : Date.now();
                         const dateStr = getChatSeparatorDate(tsMillis);
-
-                        // НОВОЕ: Генерируем "машинную" дату для поиска календарем (формат YYYY-MM-DD)
                         const dObj = new Date(tsMillis);
                         const rawDate = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
 
                         let div = document.getElementById('msg-' + msgId);
-                        const isNew = !div;
+                        const isNewMsg = !div;
 
-                        if (isNew) {
+                        if (isNewMsg) {
                             div = document.createElement('div');
                             div.id = 'msg-' + msgId;
 
-                           
-                            // 1. ОПРЕДЕЛЯЕМ ТИП И КЛАССЫ
                             if (m.sys) {
                                 div.className = 'msg msg-sys';
                             } else {
                                 const isMine = m.from === currentUser.uid;
                                 div.className = isMine ? 'msg msg-me' : 'msg msg-other';
+                                if (msgType === 'image') div.classList.add('msg-image-only');
 
-                                // ЕСЛИ ЭТО КАРТИНКА - ПРИМЕНЯЕМ СТИЛЬ БЕЗ РАМОК
-                                if (msgType === 'image') {
-                                    div.classList.add('msg-image-only');
-                                }
-
-                                // --- ПРЕМИУМ: Анимируем только новые сообщения в реальном времени ---
                                 if (!isChatInitialLoad) {
                                     div.classList.add(isMine ? 'msg-anim-me' : 'msg-anim-other');
                                 }
                             }
 
-                            // 2. КОНТЕКСТНОЕ МЕНЮ (ПКМ на десктопе)
                             div.oncontextmenu = (e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-
-                                // Игнорируем на мобилках (там работает long-press)
+                                e.preventDefault(); e.stopPropagation();
                                 if (window.innerWidth <= 850 || window.innerHeight <= 500) return;
-
                                 const menu = document.getElementById('contextMenu');
                                 if (menu && menu.classList.contains('active')) {
-                                    if (selectedMsgId === msgId) {
-                                        closeAllSheets();
-                                        return;
-                                    }
+                                    if (selectedMsgId === msgId) { closeAllSheets(); return; }
                                 }
                                 openContextMenu(e, msgId, m.from === currentUser.uid);
                             };
 
-                            // 3. ДОБАВЛЯЕМ В СПИСОК
                             list.appendChild(div);
 
-                            // 4. УВЕДОМЛЕНИЯ (Только для новых входящих)
                             if (!isChatInitialLoad && m.from !== currentUser.uid) {
                                 try {
                                     playNotificationSound('in-chat');
-                                    if (typeof window.TitleNotifier !== 'undefined' && typeof window.TitleNotifier.onNewMessage === 'function') {
-                                        TitleNotifier.onNewMessage();
-                                    }
-                                } catch (notificationError) {
-                                    console.warn("[NOVOGRAM_LOG] Ошибка уведомления:", notificationError);
-                                }
+                                    if (typeof window.TitleNotifier !== 'undefined') TitleNotifier.onNewMessage();
+                                } catch (e) { }
                             }
                         }
 
                         div.setAttribute('data-datestr', dateStr);
-                        div.setAttribute('data-rawdate', rawDate); // Добавляем машинную дату для календаря
+                        div.setAttribute('data-rawdate', rawDate);
 
-                        // Рендер контента
                         const newHtml = buildMessageHTML(m, msgId, msgType);
                         if (div.innerHTML !== newHtml) div.innerHTML = newHtml;
 
@@ -6911,39 +6873,24 @@
                     });
 
                     if (needCommit) batch.commit();
-
                     updateDateSeparators();
-                    // <--- !!! ИЗМЕНЕНИЕ 2: ЛОГИКА СКРОЛЛА И ПОЯВЛЕНИЯ
 
-                    // Если список сейчас скрыт (значит это ПЕРВАЯ загрузка при открытии)
-                    // Если список сейчас скрыт (значит это ПЕРВАЯ загрузка при открытии)
+                    // --- МАГИЯ СКРОЛЛА ---
                     if (list.classList.contains('is-loading')) {
-
-                        // --- ПРЕМИУМ: Достаем сохраненную позицию из кэша ---
-                        const savedScroll = sessionStorage.getItem('scroll_' + currentChatId);
-
+                        // 1. Первый рендер чата (открытие)
+                        list.classList.remove('is-loading');
                         if (savedScroll !== null) {
                             list.scrollTop = parseInt(savedScroll, 10);
                         } else {
-                            list.scrollTop = list.scrollHeight; // Если зашли впервые - кидаем в самый низ
+                            smartScrollToBottom(list, true, true); // Принудительно, моментально (без анимации)
                         }
 
-                        // Уменьшили задержку до 50мс, чтобы чат открывался молниеносно
-                        // Делаем появление практически моментальным (10мс)
-                        setTimeout(() => {
-                            if (savedScroll !== null) {
-                                list.scrollTop = parseInt(savedScroll, 10);
-                            } else {
-                                list.scrollTop = list.scrollHeight;
-                            }
-                            list.classList.remove('is-loading'); // Чат появляется без дерганий
-                        }, 10);
-                    } else if (isScrolledToBottom && hasNewMessages) {
-                        // ФИКС 2: Тянем вниз ТОЛЬКО если это реальное новое сообщение от юзера,
-                        // а не просто обновление галочек (прочитано/доставлено).
-                        setTimeout(() => {
-                            list.scrollTo({ top: list.scrollHeight + 500, behavior: 'smooth' });
-                        }, 50);
+                        // Снимаем блокировку загрузки картинок через 300мс (когда всё точно отрисовалось)
+                        setTimeout(() => { window.isChatJustOpened = false; }, 300);
+
+                    } else if (!isChatInitialLoad && hasRealNewMessages) {
+                        // 2. Пришло НОВОЕ чужое сообщение в процессе общения
+                        smartScrollToBottom(list, false, false);
                     }
 
                     isChatInitialLoad = false;
@@ -7239,14 +7186,13 @@
 
             if (!txt) {
                 inputEl.value = '';
-                inputEl.style.height = '40px'; // Сброс высоты
-                checkInputState(); // Обновление кнопок
+                inputEl.style.height = '40px';
+                checkInputState();
                 inputEl.focus();
 
-                // Скроллим только если пользователь сам нажал "Отправить"
-                // (В этот момент t - это текст сообщения)
+                // Мы сами отправили текст, 100% тянем вниз
                 if (t && currentMsgList) {
-                    currentMsgList.scrollTo({ top: currentMsgList.scrollHeight + 500, behavior: 'smooth' });
+                    smartScrollToBottom(currentMsgList, true, false);
                 }
             }
             // УВЕДОМЛЕНИЯ (БЕЗОПАСНО ЧЕРЕЗ СЕРВЕР)
@@ -9669,11 +9615,8 @@
             list.appendChild(div);
 
             setTimeout(() => {
-                list.scrollTo({
-                    top: list.scrollHeight,
-                    behavior: typeof isChatInitialLoad !== 'undefined' && isChatInitialLoad ? 'auto' : 'smooth'
-                });
-            }, 60);
+                smartScrollToBottom(list, true, false); // Принудительно и плавно!
+            }, 50);
 
             return tempId;
         }
@@ -11806,29 +11749,43 @@
         }
 
 
-        function scrollToBottom() {
-            if (currentMsgList) {
-                // Мягко скроллим с запасом в самый низ
-                currentMsgList.scrollTo({
-                    top: currentMsgList.scrollHeight + 1000,
-                    behavior: 'smooth'
+        // ==========================================
+        // ПРЕМИУМ СИСТЕМА СКРОЛЛА (TELEGRAM STYLE)
+        // ==========================================
+        window.isChatJustOpened = false; // Блокиратор дерганий при входе
+
+        function smartScrollToBottom(list, force = false, instant = false) {
+            if (!list) return;
+
+            // Проверяем, находится ли пользователь у самого низа (запас 150px для надежности)
+            const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= 150;
+
+            // Скроллим ТОЛЬКО если нас заставили (force) или мы и так внизу
+            if (force || isAtBottom) {
+                list.scrollTo({
+                    top: list.scrollHeight + 5000, // С большим запасом
+                    behavior: instant ? 'auto' : 'smooth'
                 });
             }
         }
 
-        // --- НОВОЕ: УМНЫЙ СКРОЛЛ ПРИ ЗАГРУЗКЕ ФОТО ---
+        // Вызывается по кнопке "Вниз"
+        function scrollToBottom() {
+            if (currentMsgList) {
+                smartScrollToBottom(currentMsgList, true, false); // Принудительно, плавно
+            }
+        }
+
+        // Вызывается КАЖДЫЙ РАЗ, когда прогрузилась картинка
         window.handleImageLoadScroll = function (imgEl) {
+            // Если чат только что открылся, блокируем любые скачки от старых картинок!
+            if (window.isChatJustOpened) return;
+
             const list = imgEl.closest('.messages');
             if (!list) return;
 
-            // ФИКС: Скроллим только если мы реально "уперлись" в дно чата.
-            // Запас 5px нужен для погрешностей рендеринга.
-            const isAtBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 5;
-
-            if (isAtBottom) {
-                // Без плавной анимации, чтобы не дергало при загрузке старых фото
-                list.scrollTop = list.scrollHeight;
-            }
+            // Картинка подтянет экран вниз, ТОЛЬКО если мы сейчас читаем новые сообщения
+            smartScrollToBottom(list, false, false);
         };
 
         // --- УМНАЯ ФУНКЦИЯ ДЛЯ ВВОДА (С РАЗДЕЛЕНИЕМ ПК / ТЕЛЕФОН) ---
