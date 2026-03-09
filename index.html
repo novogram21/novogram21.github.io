@@ -4515,7 +4515,9 @@
             font-size: 11px;
         }
 
-        /* --- ПРЕМИАЛЬНЫЕ РЕАКЦИИ И ИДЕАЛЬНОЕ ВЫРАВНИВАНИЕ --- */
+        /* ==========================================
+           ПРЕМИАЛЬНЫЕ 3D-РЕАКЦИИ (ИДЕАЛЬНОЕ ВЫРАВНИВАНИЕ)
+           ========================================== */
 
         @keyframes reactionPop {
             0% {
@@ -4539,14 +4541,14 @@
             align-items: flex-end;
             justify-content: flex-end;
             margin-top: 5px;
-            flex-wrap: wrap; /* Защита от переполнения */
+            flex-wrap: wrap;
         }
 
             .msg-footer.has-reactions {
-                width: 100%; /* Растягиваем, чтобы разнести по краям */
+                width: 100%;
             }
 
-        /* Сбрасываем старые флоаты у времени, чтобы флекс работал идеально */
+        /* Сбрасываем старые отступы у времени */
         .msg-meta {
             float: none !important;
             margin-top: 0 !important;
@@ -4569,7 +4571,7 @@
         .msg-reaction {
             display: inline-flex;
             align-items: center;
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 14px;
             padding: 4px 8px;
             cursor: pointer;
@@ -4583,12 +4585,14 @@
                 transform: scale(0.85) !important;
             }
 
-            /* Картинка 3D-эмодзи */
+            /* Картинка 3D-эмодзи в самом чате */
             .msg-reaction img {
                 width: 18px;
                 height: 18px;
                 pointer-events: none;
-                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); /* Легкий объем */
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+                /* Если картинка не загрузилась, прячем сломанную иконку */
+                color: transparent;
             }
 
         .reaction-count {
@@ -4599,7 +4603,7 @@
         }
 
         .msg-me .msg-reaction {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .msg-reaction.reacted-by-me {
@@ -4612,7 +4616,7 @@
             border: 1px solid rgba(255, 255, 255, 0.6);
         }
 
-        /* Анимация 3D эмодзи в меню */
+        /* Анимация 3D эмодзи во всплывающем меню */
         .reactions-bar span {
             display: inline-flex;
             width: 32px;
@@ -4628,12 +4632,12 @@
                 height: 28px;
                 object-fit: contain;
                 filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+                color: transparent;
             }
 
             .reactions-bar span:hover {
                 transform: scale(1.35) translateY(-5px);
             }
-
 
 
 
@@ -4791,12 +4795,12 @@
     <div id="overlaySheet" class="overlay-sheet" onclick="if(!window.isMenuJustOpened) closeAllSheets();" oncontextmenu="event.preventDefault(); event.stopPropagation();"></div>
     <div id="contextMenu" class="context-menu" oncontextmenu="event.preventDefault();">
         <div class="reactions-bar">
-            <span onclick="toggleReaction('🔥')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Fire.png" alt="🔥"></span>
-            <span onclick="toggleReaction('👍')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Thumbs%20Up.png" alt="👍"></span>
-            <span onclick="toggleReaction('❤️')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Red%20Heart.png" alt="❤️"></span>
-            <span onclick="toggleReaction('🥰')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Smiling%20Face%20with%20Hearts.png" alt="🥰"></span>
-            <span onclick="toggleReaction('👏')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Clapping%20Hands.png" alt="👏"></span>
-            <span onclick="toggleReaction('💩')"><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Pile%20of%20Poo.png" alt="💩"></span>
+            <span onclick="toggleReaction('fire')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f525.png" alt="🔥"></span>
+            <span onclick="toggleReaction('like')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44d.png" alt="👍"></span>
+            <span onclick="toggleReaction('heart')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/2764.png" alt="❤️"></span>
+            <span onclick="toggleReaction('love')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f970.png" alt="🥰"></span>
+            <span onclick="toggleReaction('clap')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44f.png" alt="👏"></span>
+            <span onclick="toggleReaction('poop')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png" alt="💩"></span>
         </div>
 
         <div class="context-list">
@@ -7368,63 +7372,7 @@
                 contentHtml += metaHtml;
             }
 
-            // --- НОВОЕ: РЕНДЕР РЕАКЦИЙ ---
-            if (m.reactions && Object.keys(m.reactions).length > 0) {
-                const reactionCounts = {};
-                let myReaction = null;
-
-                for (const uid in m.reactions) {
-                    const emoji = m.reactions[uid];
-                    if (uid === currentUser.uid) myReaction = emoji;
-
-                    if (!reactionCounts[emoji]) reactionCounts[emoji] = 0;
-                    reactionCounts[emoji]++;
-                }
-
-                let reactionsHtml = '<div class="msg-reactions">';
-                Object.entries(reactionCounts).forEach(([emoji, count]) => {
-                    const isMy = myReaction === emoji;
-                    const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
-                    reactionsHtml += `
-                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emoji}')">
-                            ${emoji} <span class="reaction-count">${count > 1 ? count : ''}</span>
-                        </div>`;
-                });
-                reactionsHtml += '</div>';
-
-                contentHtml += reactionsHtml;
-            }
-
-            let reactionsHtml = '';
-            let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
-
-            if (hasReactions) {
-                const reactionCounts = {};
-                let myReaction = null;
-
-                for (const uid in m.reactions) {
-                    const emoji = m.reactions[uid];
-                    if (uid === currentUser.uid) myReaction = emoji;
-                    if (!reactionCounts[emoji]) reactionCounts[emoji] = 0;
-                    reactionCounts[emoji]++;
-                }
-
-                reactionsHtml = '<div class="msg-reactions">';
-                Object.entries(reactionCounts).forEach(([emoji, count]) => {
-                    const isMy = myReaction === emoji;
-                    const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
-                    const imgSrc = premiumEmojis[emoji] || ''; // Берем 3D картинку
-
-                    reactionsHtml += `
-                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emoji}')">
-                            <img src="${imgSrc}" alt="${emoji}">
-                            ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
-                        </div>`;
-                });
-                reactionsHtml += '</div>';
-            }
-
-            // Время и галочки
+            // Очищаем старые флоаты и собираем футер
             let metaHtml = '';
             if (!m.sys && msgType !== 'call') {
                 metaHtml = `
@@ -7435,6 +7383,46 @@
                     </span>`;
             }
 
+            // --- НОВАЯ СИСТЕМА РЕАКЦИЙ ---
+            const premiumEmojis = {
+                'fire': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f525.png',
+                'like': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44d.png',
+                'heart': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/2764.png',
+                'love': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f970.png',
+                'clap': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44f.png',
+                'poop': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png'
+            };
+
+            let reactionsHtml = '';
+            let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
+
+            if (hasReactions) {
+                const reactionCounts = {};
+                let myReaction = null;
+
+                for (const uid in m.reactions) {
+                    const emojiId = m.reactions[uid];
+                    if (uid === currentUser.uid) myReaction = emojiId;
+
+                    if (!reactionCounts[emojiId]) reactionCounts[emojiId] = 0;
+                    reactionCounts[emojiId]++;
+                }
+
+                reactionsHtml = '<div class="msg-reactions">';
+                Object.entries(reactionCounts).forEach(([emojiId, count]) => {
+                    const isMy = myReaction === emojiId;
+                    const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
+                    const imgSrc = premiumEmojis[emojiId] || premiumEmojis['like']; // Фоллбэк
+
+                    reactionsHtml += `
+                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
+                            <img src="${imgSrc}" alt="${emojiId}">
+                            ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
+                        </div>`;
+                });
+                reactionsHtml += '</div>';
+            }
+
             // Оборачиваем во Flex-контейнер для идеального выравнивания!
             if (hasReactions || (!m.sys && msgType !== 'call')) {
                 contentHtml += `<div class="msg-footer ${hasReactions ? 'has-reactions' : ''}">${reactionsHtml}${metaHtml}</div>`;
@@ -7442,6 +7430,32 @@
 
             return contentHtml;
         }
+
+        // --- ЕДИНСТВЕННЫЙ ЭКЗЕМПЛЯР ЛОГИКИ РЕАКЦИЙ ---
+        window.toggleReaction = function (emojiId) {
+            toggleReactionDirect(selectedMsgId, emojiId);
+            closeAllSheets();
+        };
+
+        window.toggleReactionDirect = function (msgId, emojiId) {
+            if (!msgId || !currentChatId || !currentUser) return;
+            const msgRef = db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId);
+
+            msgRef.get().then(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    const currentReaction = data.reactions ? data.reactions[currentUser.uid] : null;
+
+                    // Если кликнули по той же самой реакции — удаляем её
+                    if (currentReaction === emojiId) {
+                        msgRef.update({ [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete() });
+                    } else {
+                        // Иначе ставим новую
+                        msgRef.set({ reactions: { [currentUser.uid]: emojiId } }, { merge: true });
+                    }
+                }
+            });
+        };
 
 
         let closeChatTimeout = null;
@@ -13708,40 +13722,7 @@
         }
 
 
-        const premiumEmojis = {
-            '🔥': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Fire.png',
-            '👍': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Thumbs%20Up.png',
-            '❤️': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Red%20Heart.png',
-            '🥰': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Smiling%20Face%20with%20Hearts.png',
-            '👏': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Clapping%20Hands.png',
-            '💩': 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smileys/Pile%20of%20Poo.png'
-        };
-
-        function toggleReaction(emoji) {
-            toggleReactionDirect(selectedMsgId, emoji);
-            closeAllSheets();
-        }
-
-        // Надежная логика снятия/установки через базу
-        function toggleReactionDirect(msgId, emoji) {
-            if (!msgId || !currentChatId || !currentUser) return;
-            const msgRef = db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId);
-
-            msgRef.get().then(doc => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    const currentReaction = data.reactions ? data.reactions[currentUser.uid] : null;
-
-                    // Если кликнули по той же самой реакции — удаляем её
-                    if (currentReaction === emoji) {
-                        msgRef.update({ [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete() });
-                    } else {
-                        // Иначе ставим новую
-                        msgRef.set({ reactions: { [currentUser.uid]: emoji } }, { merge: true });
-                    }
-                }
-            });
-        }
+        
 
 
     </script>
