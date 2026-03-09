@@ -1093,23 +1093,25 @@
             }
 
         .msg.msg-image-only {
-            max-width: 85% !important; /* Было 75%, теперь фото занимает почти всю ширину на телефоне */
+            max-width: 85% !important; /* Сохраняем flexibility на мобильных */
         }
 
         /* 2. УВЕЛИЧИВАЕМ РАЗМЕРЫ САМОЙ КАРТИНКИ */
         .msg-image-only .chat-media-img {
-            max-width: 400px !important; /* Было 280px. Теперь картинки огромные и красивые! */
+            max-width: 360px !important; /* Было 400px, чуть-чуть убавили, чтобы вертикалки были еще аккуратнее */
             width: 100% !important;
             height: auto !important;
-            max-height: 450px !important; /* Чуть увеличили лимит высоты для вертикальных фото */
-            /* Резерв места для защиты от прыгающего скролла (мы делали это в прошлом шаге) */
-            min-height: 150px !important;
-            min-width: 200px !important;
+            /* --- ГЛАВНОЕ ОГРАНИЧЕНИЕ --- */
+            max-height: 360px !important; /* БЫЛО 450px. Теперь картинка не может быть выше 360px.
+                                              Это идеальный лимит для вертикальных фото в духе телеграма. */
+            /* Сохраняем резерв места (CLS) */
+            min-height: 120px !important;
+            min-width: 180px !important;
             display: block !important;
             margin: 0 !important;
             border-radius: 14px !important;
-            box-shadow: none !important;
-            object-fit: cover !important;
+            object-fit: cover !important; /* Картинка заполнит квадрат 360х360 (если она вертикальная), 
+                                              обрезав лишнее по высоте */
         }
             /* ИДЕАЛЬНАЯ ПЛАШКА ВРЕМЕНИ ВНИЗУ ФОТО */
             .msg-image-only .msg-meta {
