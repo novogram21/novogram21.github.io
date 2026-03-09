@@ -4535,6 +4535,23 @@
             }
         }
 
+        @keyframes reactionUnpop {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            30% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+        }
+
         /* Контейнер, который держит реакции и время на одной линии */
         .msg-footer {
             display: flex;
@@ -4578,8 +4595,15 @@
             user-select: none;
             border: 1px solid transparent;
             animation: reactionPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            transition: background 0.2s, border-color 0.2s, transform 0.1s;
+            transition: background 0.2s, border-color 0.2s;
+            will-change: transform, opacity;
         }
+
+            /* Класс, который мы будем добавлять программно перед удалением из базы */
+            .msg-reaction.removing {
+                animation: reactionUnpop 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+                pointer-events: none; /* Защита от повторных кликов во время анимации */
+            }
 
             .msg-reaction:active {
                 transform: scale(0.85) !important;
@@ -7448,12 +7472,35 @@
                     const data = doc.data();
                     const currentReaction = data.reactions ? data.reactions[currentUser.uid] : null;
 
-                    // Если кликнули по той же самой реакции — удаляем её
+                    // Если кликнули по той же самой реакции — запускаем анимацию и УДАЛЯЕМ
                     if (currentReaction === emojiId) {
-                        msgRef.update({ [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete() });
+                        // 1. Ищем конкретный пузырек реакции в DOM
+                        const msgEl = document.getElementById('msg-' + msgId);
+                        if (msgEl) {
+                            // Ищем среди всех реакций ту, которая "наша" (reacted-by-me) 
+                            // и содержит нужный emojiId (в alt картинки или по логике)
+                            const reactions = msgEl.querySelectorAll('.msg-reaction.reacted-by-me');
+                            reactions.forEach(el => {
+                                const img = el.querySelector('img');
+                                if (img && img.alt === emojiId) {
+                                    // 2. Добавляем класс анимации исчезновения
+                                    el.classList.add('removing');
+                                }
+                            });
+                        }
+
+                        // 3. Ждем завершения анимации (250мс) перед удалением из базы
+                        setTimeout(() => {
+                            msgRef.update({
+                                [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
+                            }).catch(() => { });
+                        }, 230);
+
                     } else {
-                        // Иначе ставим новую
-                        msgRef.set({ reactions: { [currentUser.uid]: emojiId } }, { merge: true });
+                        // Если ставим новую реакцию — просто сохраняем (анимация появления сработает через CSS автоматом)
+                        msgRef.set({
+                            reactions: { [currentUser.uid]: emojiId }
+                        }, { merge: true });
                     }
                 }
             });
