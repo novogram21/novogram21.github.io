@@ -12999,9 +12999,16 @@
             const tb = document.querySelector('.viewer-toolbar');
 
             // --- НОВОЕ: Инициализируем список картинок ---
-            window.viewerImagesList = getChatImages();
-            window.viewerCurrentIndex = window.viewerImagesList.findIndex(item => item.src === src || item.msgId === msgId);
-            if (window.viewerCurrentIndex === -1) window.viewerCurrentIndex = 0;
+            if (msgId) {
+                // Если передали msgId, значит это фото из чата — собираем всю галерею
+                window.viewerImagesList = getChatImages();
+                window.viewerCurrentIndex = window.viewerImagesList.findIndex(item => item.src === src || item.msgId === msgId);
+                if (window.viewerCurrentIndex === -1) window.viewerCurrentIndex = 0;
+            } else {
+                // Если msgId нет (это аватарка профиля), создаем "галерею" только из одного этого фото
+                window.viewerImagesList = [{ src: src, msgId: null, isMine: false }];
+                window.viewerCurrentIndex = 0;
+            }
 
             if (tb) tb.classList.remove('hidden-ui');
             currentViewerMsgId = msgId;
