@@ -1092,17 +1092,25 @@
                 transform: scale(0.97) !important;
             }
 
-            .msg-image-only .chat-media-img {
-                max-width: 280px !important;
-                width: 100% !important;
-                height: auto !important;
-                max-height: 400px !important;
-                display: block !important;
-                margin: 0 !important;
-                border-radius: 14px !important;
-                box-shadow: none !important;
-            }
+        .msg.msg-image-only {
+            max-width: 85% !important; /* Было 75%, теперь фото занимает почти всю ширину на телефоне */
+        }
 
+        /* 2. УВЕЛИЧИВАЕМ РАЗМЕРЫ САМОЙ КАРТИНКИ */
+        .msg-image-only .chat-media-img {
+            max-width: 400px !important; /* Было 280px. Теперь картинки огромные и красивые! */
+            width: 100% !important;
+            height: auto !important;
+            max-height: 450px !important; /* Чуть увеличили лимит высоты для вертикальных фото */
+            /* Резерв места для защиты от прыгающего скролла (мы делали это в прошлом шаге) */
+            min-height: 150px !important;
+            min-width: 200px !important;
+            display: block !important;
+            margin: 0 !important;
+            border-radius: 14px !important;
+            box-shadow: none !important;
+            object-fit: cover !important;
+        }
             /* ИДЕАЛЬНАЯ ПЛАШКА ВРЕМЕНИ ВНИЗУ ФОТО */
             .msg-image-only .msg-meta {
                 position: absolute !important;
