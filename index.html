@@ -5135,9 +5135,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // --- АНТИ-ZAPRET НАСТРОЙКИ ---
-        // Заставляем Firestore использовать старые-добрые HTTP-запросы
-        // вместо WebSockets и стримов, которые ломаются об прокси и DPI
+        
         db.settings({
             experimentalForceLongPolling: true,
             useFetchStreams: false
@@ -6692,7 +6690,7 @@
         }
         function reject(rid) { db.collection('friend_requests').doc(rid).delete(); }
         function openChat(fid, name, nick) {
-            // Отменяем таймер закрытия, если юзер очень быстро кликнул
+            // Отменяем таймер закрытия, если юзер очень быстро передумал
             if (typeof closeChatTimeout !== 'undefined' && closeChatTimeout) {
                 clearTimeout(closeChatTimeout);
                 closeChatTimeout = null;
@@ -6700,34 +6698,35 @@
 
             const newHash = "#chat/" + fid;
 
-            // Если кликнули на тот же самый чат, в котором уже находимся
-            if (window.location.hash === newHash) {
-                // Принудительно возвращаем фокус в поле ввода
+            // 1. ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ UI ЧАТА
+            // Это решает баг "пустого заднего фона", если браузер затупил после возврата в PWA
+            document.getElementById('noChat').classList.add('hidden');
+            const activeChatElement = document.getElementById('activeChat');
+            activeChatElement.classList.remove('hidden');
+
+            if (window.innerWidth <= 850 || window.innerHeight <= 500) {
+                document.getElementById('mainSidebar').classList.add('hidden-mobile');
+                document.getElementById('mainChatArea').classList.add('active');
+            }
+
+            // 2. Если мы УЖЕ сидим в этом диалоге
+            if (currentFriendId === fid) {
                 const inp = document.getElementById('msgInput');
                 if (inp) inp.focus();
 
-                // Если мы на мобильном телефоне, прячем меню, чтобы оно не перекрывало чат
-                if (window.innerWidth <= 850 || window.innerHeight <= 500) {
-                    document.getElementById('mainSidebar').classList.add('hidden-mobile');
-                    document.getElementById('mainChatArea').classList.add('active');
+                if (window.location.hash !== newHash) {
+                    history.replaceState(null, null, newHash);
                 }
-                return; // Прерываем дальнейшее выполнение
+                return;
             }
 
-            // --- ТОТ САМЫЙ МИКРО-ПРЫЖОК ---
-            if (window.location.hash.startsWith('#chat/')) {
-                // 1. Кидаем на главную (запишется в историю для кнопки Назад)
-                window.location.hash = '';
-
-                // 2. Через 15 миллисекунд (глаз не заметит) кидаем в новый диалог.
-                // Браузер сам вызовет handleHashChange, который чисто загрузит аватарки и ключи.
-                setTimeout(() => {
-                    window.location.hash = newHash;
-                }, 15);
-            } else {
-                // Если открываем чат прямо из главного меню
-                window.location.hash = newHash;
+            // 3. Записываем в историю и ПРИНУДИТЕЛЬНО запускаем загрузку
+            // На iOS Safari PWA часто игнорирует события hashchange, поэтому вызываем логику руками!
+            if (window.location.hash !== newHash) {
+                history.pushState(null, null, newHash);
             }
+
+            handleHashChange();
         }
 
 
@@ -10022,16 +10021,12 @@
             }, 350);
         };
         function closeChat() {
-            // 1. Проверяем, есть ли хеш (например, #chat/123)
+            // 1. Безопасно очищаем URL от хэша без перезагрузки страницы
             if (window.location.hash) {
-                // 2. Убираем хеш из адресной строки без перезагрузки
-                history.pushState("", document.title, window.location.pathname + window.location.search);
-                // 3. Вызываем обработчик смены хеша вручную, чтобы он запустил performCloseUI()
-                handleHashChange();
-            } else {
-                // Если хеша нет (странный случай), просто закрываем UI
-                performCloseUI();
+                history.replaceState(null, null, window.location.pathname + window.location.search);
             }
+            // 2. Принудительно закрываем интерфейс чата
+            performCloseUI();
         }
         function closeSearch() {
             const searchInput = document.getElementById('searchInput');
@@ -13150,14 +13145,13 @@
             }
         };
 
-        window.downloadViewerImage = async function () {
+        window.downloadViewerImage = async function (event) {
+            if (event) event.stopPropagation(); // Не закрываем галерею при клике
             const img = document.getElementById('imageViewerImg');
             if (!img.src) return;
 
             try {
                 showToast("Начало загрузки...");
-
-                // Пытаемся скачать картинку напрямую (обход CORS)
                 const response = await fetch(img.src);
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -13169,18 +13163,14 @@
                 document.body.appendChild(a);
                 a.click();
 
-                window.URL.revokeObjectURL(url);
-                a.remove();
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                }, 1000);
             } catch (e) {
-                console.error("Ошибка скачивания через Blob:", e);
-                // Запасной план: просто открываем ссылку в новой вкладке
-                const a = document.createElement('a');
-                a.href = img.src;
-                a.download = 'Photo.jpg';
-                a.target = '_blank';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                console.error("Ошибка скачивания:", e);
+                // БЕЗОПАСНЫЙ ФОЛЛБЭК ДЛЯ IOS PWA (чтобы не ломать историю приложения)
+                window.open(img.src, '_blank');
             }
         };
 
