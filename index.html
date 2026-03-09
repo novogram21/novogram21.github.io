@@ -6764,7 +6764,9 @@
             const activeChatElement = document.getElementById('activeChat');
             activeChatElement.classList.remove('hidden');
 
-            if (window.innerWidth <= 850 || window.innerHeight <= 500) {
+            const isMobile = window.innerWidth <= 850 || window.innerHeight <= 500;
+
+            if (isMobile) {
                 document.getElementById('mainSidebar').classList.add('hidden-mobile');
                 document.getElementById('mainChatArea').classList.add('active');
             }
@@ -6779,15 +6781,12 @@
                 return;
             }
 
-            // ПРЕМИУМ ФИКС ИСТОРИИ ДИАЛОГОВ:
-            // Если мы уже сидим в каком-то чате и открываем новый (например, из поиска) - ЗАМЕНЯЕМ шаг.
-            // Иначе, если мы открываем с главного экрана - СОЗДАЕМ новый шаг.
-            // Это навсегда решает баг "бесконечной истории чатов" по кнопке Назад.
+            // ПРЕМИУМ ФИКС: На ПК мы больше не создаем историю браузера!
             if (window.location.hash !== newHash) {
-                if (window.location.hash.startsWith('#chat/')) {
-                    history.replaceState({ page: 'chat' }, null, newHash);
-                } else {
+                if (isMobile && !window.location.hash.startsWith('#chat/')) {
                     history.pushState({ page: 'chat' }, null, newHash);
+                } else {
+                    history.replaceState({ page: 'chat' }, null, newHash);
                 }
             }
 
@@ -9268,13 +9267,19 @@
                 return;
             }
 
-            // ПРЕМИУМ ФИКС: Выходим из текущего чата аппаратно перед открытием нового
-            if (window.location.hash.startsWith('#chat/')) {
+            const isMobile = window.innerWidth <= 850 || window.innerHeight <= 500;
+
+            // Корректный выход из текущего чата перед открытием нового (разделяем ПК и телефоны)
+            if (isMobile && window.location.hash.startsWith('#chat/')) {
                 history.back();
+            } else if (!isMobile) {
+                if (window.location.hash) {
+                    history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                }
+                performCloseUI();
             }
 
             setTimeout(() => {
-                // Используем правильную функцию открытия (в ней уже есть защита истории)
                 openChat(pendingFid, "Загрузка...", "");
             }, 400);
         };
@@ -10086,11 +10091,16 @@
             }, 350);
         };
         function closeChat() {
-            // Имитируем нажатие системной кнопки "Назад", чтобы история очистилась аппаратно.
-            // Наш popstate-слушатель (из Шага 2) сам поймает это и закроет интерфейс.
-            if (window.location.hash.startsWith('#chat/')) {
+            const isMobile = window.innerWidth <= 850 || window.innerHeight <= 500;
+
+            // На мобильном мы добавляли шаг истории, поэтому откатываем аппаратно
+            if (isMobile && window.location.hash.startsWith('#chat/')) {
                 history.back();
             } else {
+                // На ПК просто чистим ссылку и закрываем UI
+                if (window.location.hash) {
+                    history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                }
                 performCloseUI();
             }
         }
