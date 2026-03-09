@@ -11996,6 +11996,7 @@
         });
 
         
+        // --- СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ "НАЗАД" И ЖЕСТОВ ---
         let isExitReady = false;
 
         window.addEventListener('popstate', (e) => {
@@ -12037,7 +12038,17 @@
                     return;
                 }
 
-                // 4. ДВОЙНОЕ НАЖАТИЕ НАЗАД ДЛЯ ВЫХОДА ИЗ ПРИЛОЖЕНИЯ
+                // --- НОВОЕ: ЖЕЛЕЗОБЕТОННАЯ ЗАЩИТА ДЛЯ ПК ---
+                const isDesktopBrowser = (window.innerWidth > 850 && window.innerHeight > 500) && !window.mauiInterop;
+
+                if (isDesktopBrowser) {
+                    // На десктопе мы просто постоянно возвращаем "ловушку" истории.
+                    // Пользователь физически не сможет выйти с сайта кнопкой "Назад".
+                    history.pushState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                    return;
+                }
+
+                // 4. ДВОЙНОЕ НАЖАТИЕ НАЗАД ДЛЯ ВЫХОДА (ТОЛЬКО ДЛЯ МОБИЛОК / MAUI)
                 if (!isExitReady) {
                     isExitReady = true;
                     showToast("Нажмите еще раз для выхода");
@@ -12050,9 +12061,8 @@
                     if (window.mauiInterop) {
                         window.mauiInterop.postMessage("exit_app");
                     } else {
-                        // Для браузеров - разрешаем шаг назад (который закроет вкладку/приложение)
+                        // Для мобильных PWA в браузере
                         history.back();
-                        setTimeout(() => window.close(), 100);
                     }
                 }
             } else {
