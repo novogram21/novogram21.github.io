@@ -4333,10 +4333,7 @@
             animation: msgInOther 0.3s cubic-bezier(0.1, 0.9, 0.2, 1.2) forwards;
         }
 
-        /* Плавность для самого контейнера, чтобы сообщения не прыгали */
-        .messages {
-            scroll-behavior: smooth;
-        }
+        
         /* --- ПРЕМИУМ ПОЯВЛЕНИЕ ТЕКСТА --- */
         .premium-letter {
             display: inline-block;
@@ -6759,13 +6756,19 @@
             // Мгновенно достаем или создаем слой чата
             const { list, isNew } = getOrCreateMsgList(currentChatId);
 
+            // --- ПРЕМИУМ: Достаем кэш ДО любых манипуляций ---
+            const savedScroll = sessionStorage.getItem('scroll_' + currentChatId);
+
             if (isNew) {
                 list.classList.add('is-loading'); // Первый заход
-                // --- ИСПРАВЛЕНО: Жесткое центрирование, игнорируя отступы списка ---
-                // Мы используем absolute позиционирование и transform для точного центра.
                 list.innerHTML = '<div class="tg-spinner-container" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;"><div class="tg-spinner"></div></div>';
             } else {
-                list.scrollTop = list.scrollHeight; // Повторный заход - чат появляется МГНОВЕННО
+                // Если заходим повторно - мгновенно ставим скролл без прыжков
+                if (savedScroll !== null) {
+                    list.scrollTop = parseInt(savedScroll, 10);
+                } else {
+                    list.scrollTop = list.scrollHeight;
+                }
             }
 
             const deletedLocal = JSON.parse(localStorage.getItem('deletedMsgs') || '[]');
@@ -6920,6 +6923,7 @@
                         }
 
                         // Уменьшили задержку до 50мс, чтобы чат открывался молниеносно
+                        // Делаем появление практически моментальным (10мс)
                         setTimeout(() => {
                             if (savedScroll !== null) {
                                 list.scrollTop = parseInt(savedScroll, 10);
@@ -6927,7 +6931,7 @@
                                 list.scrollTop = list.scrollHeight;
                             }
                             list.classList.remove('is-loading'); // Чат появляется без дерганий
-                        }, 50);
+                        }, 10);
                     } else if (isScrolledToBottom) {
                         // --- НОВОЕ: Плавный автоскролл, если мы уже были внизу и пришло новое сообщение ---
                         setTimeout(() => {
