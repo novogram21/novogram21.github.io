@@ -4418,6 +4418,34 @@
             .close-viewer-btn:active {
                 transform: scale(0.85);
             }
+
+
+        /* --- БЕЙДЖ ДЛЯ КНОПКИ СКРОЛЛА (TELEGRAM STYLE) --- */
+        .scroll-bottom-badge {
+            position: absolute;
+            top: -6px;
+            right: -2px;
+            background: #736AF0; /* Фирменный цвет */
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 12px;
+            border: 2px solid #17181c; /* Обводка в цвет кнопки для эффекта "прорези" */
+            min-width: 20px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none; /* Чтобы клик сквозь бейдж шел на саму кнопку */
+        }
+
+            .scroll-bottom-badge.visible {
+                opacity: 1;
+                transform: scale(1);
+            }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -4914,6 +4942,7 @@
                 <svg viewBox="0 0 24 24">
                     <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
                 </svg>
+                <div id="scrollToBottomBadge" class="scroll-bottom-badge">0</div>
             </div>
 
 
@@ -6873,7 +6902,8 @@
                         }
                     });
 
-                    updateDateSeparators(); // batch.commit больше здесь не нужен!
+                    updateDateSeparators();
+                    updateScrollBadge();
 
                     // --- МАГИЯ СКРОЛЛА ---
                     if (list.classList.contains('is-loading')) {
@@ -10707,6 +10737,7 @@
             if (!currentChatId || !currentUser || document.visibilityState !== 'visible') return;
 
             let maxSeenTs = 0;
+            let changed = false; // <-- ДОБАВЛЯЕМ ФЛАГ
 
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -10717,9 +10748,8 @@
 
                     window.chatObserver.unobserve(el);
                     el.classList.remove('is-unread');
+                    changed = true; // <-- ОТМЕЧАЕМ, ЧТО МЫ ПРОЧИТАЛИ СООБЩЕНИЕ
 
-                    // 1. Мгновенно обновляем Firestore для КАЖДОГО увиденного сообщения!
-                    // Это автоматически снимет бейдж в боковом меню
                     const msgId = el.id.replace('msg-', '');
                     if (msgId) {
                         db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId)
@@ -10728,14 +10758,16 @@
                 }
             });
 
-            // 2. Отправляем в быструю базу RTDB таймстемп, чтобы у друга за миллисекунду загорелись ✓✓
             if (maxSeenTs > window.myReadTs) {
                 window.myReadTs = maxSeenTs;
                 rtdb.ref(`chat_reads/${currentChatId}/${currentUser.uid}`).set(maxSeenTs);
             }
+
+            // <-- ВЫЗЫВАЕМ ОБНОВЛЕНИЕ БЕЙДЖА (списываем цифры при прочтении)
+            if (changed) updateScrollBadge();
         }, {
             root: null,
-            threshold: 0.5 // Сообщение "прочитано", если показалось на экране хотя бы на 50%
+            threshold: 0.5
         });
 
         function markCurrentChatRead() {
@@ -13173,7 +13205,22 @@
                 window.open(img.src, '_blank');
             }
         };
+        // --- ПРЕМИУМ: ОБНОВЛЕНИЕ СЧЕТЧИКА НА КНОПКЕ СКРОЛЛА ---
+        function updateScrollBadge() {
+            if (!currentMsgList) return;
+            const badge = document.getElementById('scrollToBottomBadge');
+            if (!badge) return;
 
+            // Считаем только чужие сообщения, которые мы еще не видели (у них висит класс is-unread)
+            const unreadCount = currentMsgList.querySelectorAll('.msg.is-unread').length;
+
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.classList.add('visible');
+            } else {
+                badge.classList.remove('visible');
+            }
+        }
 
 
     </script>
