@@ -7517,82 +7517,51 @@
 
 
 
-
-        // Загрузка данных в поля при открытии профиля
-
+        
         function closeAllSheets(fromPopState = false) {
-            // 1. Откатываем историю браузера, если мы закрываем по клику на фон
+            // 1. Откатываем историю
             if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 const steps = -sheetHistoryStack;
                 sheetHistoryStack = 0;
                 history.go(steps);
             }
 
-            // 2. Убираем класс 'open' у ВСЕХ возможных шторок
-            const sheets = ['editContactSheet', 'botsListSheet', 'botEditorSheet', 'actionSheet', 'deleteSheet', 'profileSheet', 'editProfileSheet', 'generalSettingsSheet', 'friendProfileSheet'];
+            // 2. Закрываем АБСОЛЮТНО ВСЕ возможные шторки
+            const sheets = [
+                'editContactSheet', 'friendProfileSheet', 'editProfileSheet', 'profileSheet',
+                'generalSettingsSheet', 'botEditorSheet', 'botsListSheet', 'actionSheet', 'deleteSheet'
+            ];
             sheets.forEach(id => {
-                document.getElementById(id)?.classList.remove('open');
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('open');
             });
 
-            // Прячем дополнительные модалки
+            // 3. Прячем модалки
             const removeFriendModal = document.getElementById('removeFriendModalOverlay');
             if (removeFriendModal) removeFriendModal.style.display = 'none';
 
-            // 3. Прячем контекстное меню сообщений
+            // 4. Прячем контекстное меню
             const menu = document.getElementById('contextMenu');
             if (menu) {
                 menu.classList.remove('active');
                 setTimeout(() => { menu.style.display = 'none'; }, 200);
             }
 
-            // 4. Отключаем размытие чата (эффект долгого нажатия)
+            // 5. Отключаем размытие чата
             document.body.classList.remove('chat-blur-active');
             document.querySelectorAll('.msg-highlighted').forEach(el => el.classList.remove('msg-highlighted'));
 
-            // 5. ПРЕМИУМ ФИКС: Плавно гасим серый фон!
+            // 6. ПРЕМИУМ ФИКС: Плавно гасим серый фон!
             const overlay = document.getElementById('overlaySheet');
             if (overlay) {
                 overlay.style.transition = 'opacity 0.3s ease';
-                overlay.style.opacity = '0'; // Запускаем плавное исчезновение
-            }
-
-            // 6. Окончательно прячем элемент через 300мс
-            setTimeout(() => {
-                if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
                     overlay.style.display = 'none';
-                    overlay.style.opacity = '1'; // Возвращаем для следующего открытия
+                    overlay.style.opacity = '1';
                     overlay.style.background = 'rgba(0,0,0,0.5)';
-                }
-            }, 300);
-
-            selectedMsgId = null;
-        }
-        function closeAllSheets() {
-            document.getElementById('actionSheet')?.classList.remove('open');
-            document.getElementById('deleteSheet')?.classList.remove('open');
-            document.getElementById('profileSheet')?.classList.remove('open');
-            document.getElementById('editProfileSheet')?.classList.remove('open');
-            document.getElementById('friendProfileSheet')?.classList.remove('open');
-
-            const menu = document.getElementById('contextMenu');
-            if (menu) {
-                menu.classList.remove('active');
-                setTimeout(() => menu.style.display = 'none', 200);
+                }, 300);
             }
-
-            // --- ОТКЛЮЧАЕМ РАЗМЫТИЕ ФОНА И ВЫДЕЛЕНИЕ ---
-            document.body.classList.remove('chat-blur-active');
-            document.querySelectorAll('.msg-highlighted').forEach(el => {
-                el.classList.remove('msg-highlighted');
-            });
-
-            setTimeout(() => {
-                const overlay = document.getElementById('overlaySheet');
-                if (overlay) {
-                    overlay.style.display = 'none';
-                    overlay.style.background = 'rgba(0,0,0,0.5)'; // Возвращаем стандартный цвет для других шторок
-                }
-            }, 300);
 
             selectedMsgId = null;
         }
@@ -10324,13 +10293,28 @@
                 scrollContainer.style.paddingBottom = '40px';
             }
 
-            // 2. Системное закрытие (как было у вас)
+            // 2. Системное закрытие
             if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 history.back();
                 return;
             }
 
             document.getElementById('editProfileSheet').classList.remove('open');
+
+            // ПРЕМИУМ ФИКС: Убираем серый фон, ТОЛЬКО если под низом нет других открытых окон
+            const overlay = document.getElementById('overlaySheet');
+            const hasOtherOpenSheets = document.querySelectorAll('.action-sheet.open').length > 0;
+
+            if (overlay && !hasOtherOpenSheets) {
+                overlay.style.transition = 'opacity 0.3s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    if (!document.querySelector('.action-sheet.open')) {
+                        overlay.style.display = 'none';
+                        overlay.style.opacity = '1';
+                    }
+                }, 300);
+            }
         }
 
         function updateBioCounter(el) {
@@ -12017,11 +12001,12 @@
                 return;
             }
 
-            // 2. МЕНЮ И ШТОРКИ
             if (typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
                 sheetHistoryStack--;
-                if (document.getElementById('friendProfileSheet')?.classList.contains('open')) {
-                    closeFriendProfile(true);
+
+                // Сначала закрываем вложенные окна (редактирование)
+                if (document.getElementById('editContactSheet')?.classList.contains('open')) {
+                    closeEditContactSheet(true);
                 } else if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
                     closeEditProfile(true);
                 } else if (document.getElementById('generalSettingsSheet')?.classList.contains('open')) {
@@ -12030,6 +12015,12 @@
                     closeBotEditor(true);
                 } else if (document.getElementById('botsListSheet')?.classList.contains('open')) {
                     closeBotsList(true);
+
+                    // Затем закрываем основные (профили)
+                } else if (document.getElementById('friendProfileSheet')?.classList.contains('open')) {
+                    closeFriendProfile(true);
+                } else if (document.getElementById('profileSheet')?.classList.contains('open')) {
+                    closeAllSheets(true);
                 } else {
                     closeAllSheets(true);
                 }
@@ -12236,21 +12227,21 @@
             if (document.activeElement) document.activeElement.blur();
             document.getElementById('editContactSheet').classList.remove('open');
 
-            // ПРЕМИУМ ФИКС: Плавно убираем полупрозрачный фон
+            // ПРЕМИУМ ФИКС: Убираем серый фон, ТОЛЬКО если под низом нет других открытых окон (профиля)
             const overlay = document.getElementById('overlaySheet');
-            if (overlay) {
+            const hasOtherOpenSheets = document.querySelectorAll('.action-sheet.open').length > 0;
+
+            if (overlay && !hasOtherOpenSheets) {
                 overlay.style.transition = 'opacity 0.3s ease';
                 overlay.style.opacity = '0';
-            }
-
-            setTimeout(() => {
-                if (!document.querySelector('.action-sheet.open')) {
-                    if (overlay) {
+                setTimeout(() => {
+                    // Еще раз проверяем, не открыли ли что-то за эти 300мс
+                    if (!document.querySelector('.action-sheet.open')) {
                         overlay.style.display = 'none';
-                        overlay.style.opacity = '1'; // Сбрасываем
+                        overlay.style.opacity = '1';
                     }
-                }
-            }, 300);
+                }, 300);
+            }
         }
 
         function updateContactNoteCounter(el) {
