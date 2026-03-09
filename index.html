@@ -5876,10 +5876,7 @@
                     managePresence(u.uid);
                     listenToAllStatuses();
 
-                    if (!history.state || history.state.page !== 'home') {
-                        history.replaceState({ page: 'base' }, null, window.location.pathname + window.location.search);
-                        history.pushState({ page: 'home' }, null, window.location.pathname + window.location.search);
-                    }
+                    history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
                     
                     loadTurnServers();
                     loadData(); // <-- Сброс сети произойдет здесь, но UI уже разблокирован
@@ -12028,31 +12025,31 @@
 
             // 3. ЗАКРЫТИЕ ЧАТА ИЛИ ВЫХОД ИЗ ПРИЛОЖЕНИЯ
             if (!window.location.hash.startsWith('#chat/')) {
-                // Если мы вернулись из чата на главный экран
+
+                // Если мы вернулись из чата на главный экран (список друзей)
                 if (document.getElementById('mainChatArea').classList.contains('active') ||
                     !document.getElementById('activeChat').classList.contains('hidden')) {
-                    performCloseUI();
 
-                    // Обязательно восстанавливаем "ловушку" главного экрана
+                    performCloseUI(); // Закрываем интерфейс чата
                     history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
                     return;
                 }
 
-                // --- НОВОЕ: ЖЕЛЕЗОБЕТОННАЯ ЗАЩИТА ДЛЯ ПК ---
+                // --- ЛОГИКА ГЛАВНОГО ЭКРАНА ---
                 const isDesktopBrowser = (window.innerWidth > 850 && window.innerHeight > 500) && !window.mauiInterop;
 
                 if (isDesktopBrowser) {
-                    // На десктопе мы просто постоянно возвращаем "ловушку" истории.
-                    // Пользователь физически не сможет выйти с сайта кнопкой "Назад".
-                    history.pushState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                    // НА ПК: Мы просто разрешаем браузеру делать свою работу.
+                    // Если юзер открыл мессенджер в новой вкладке, кнопка "Назад" 
+                    // физически не нажмется (она серая).
                     return;
                 }
 
-                // 4. ДВОЙНОЕ НАЖАТИЕ НАЗАД ДЛЯ ВЫХОДА (ТОЛЬКО ДЛЯ МОБИЛОК / MAUI)
+                // 4. ДВОЙНОЕ НАЖАТИЕ НАЗАД ДЛЯ ВЫХОДА (ТОЛЬКО ДЛЯ ТЕЛЕФОНОВ / MAUI)
                 if (!isExitReady) {
                     isExitReady = true;
                     showToast("Нажмите еще раз для выхода");
-                    // Восстанавливаем шаг, чтобы следующий клик снова попал сюда
+                    // Создаем временный шаг-буфер, чтобы спасти от закрытия при первом тапе
                     history.pushState({ page: 'home' }, null, window.location.pathname + window.location.search);
 
                     setTimeout(() => { isExitReady = false; }, 2000);
@@ -12061,12 +12058,11 @@
                     if (window.mauiInterop) {
                         window.mauiInterop.postMessage("exit_app");
                     } else {
-                        // Для мобильных PWA в браузере
-                        history.back();
+                        history.back(); // Разрешаем закрыть PWA / Вкладку
                     }
                 }
             } else {
-                // Если мы шагнули ВПЕРЕД по истории в какой-то чат
+                // Если шагнули вперед по истории (например, кнопкой "Вперед" в браузере)
                 handleHashChange();
             }
         });
