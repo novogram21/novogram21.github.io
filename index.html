@@ -4462,6 +4462,60 @@
             }
 
 
+        /* --- РЕАКЦИИ НА СООБЩЕНИЯ --- */
+        .msg-reactions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+            clear: both; /* Чтобы реакции падали строго под текст и время */
+        }
+
+        .msg-image-only .msg-reactions {
+            padding: 4px 8px 8px 8px; /* Отступы для картинок */
+        }
+
+        .msg-reaction {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 3px 8px;
+            font-size: 13px;
+            line-height: 1;
+            color: #fff;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid transparent;
+        }
+
+            .msg-reaction:active {
+                transform: scale(0.9);
+            }
+
+            /* Выделение, если реакция поставлена мной */
+            .msg-reaction.reacted-by-me {
+                background: rgba(115, 106, 240, 0.3);
+                border-color: rgba(115, 106, 240, 0.6);
+            }
+
+        .msg-me .msg-reaction {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+            .msg-me .msg-reaction.reacted-by-me {
+                background: rgba(255, 255, 255, 0.3);
+                border-color: rgba(255, 255, 255, 0.6);
+            }
+
+        .reaction-count {
+            margin-left: 4px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+
 
 
 
@@ -4619,7 +4673,12 @@
     <div id="overlaySheet" class="overlay-sheet" onclick="if(!window.isMenuJustOpened) closeAllSheets();" oncontextmenu="event.preventDefault(); event.stopPropagation();"></div>
     <div id="contextMenu" class="context-menu" oncontextmenu="event.preventDefault();">
         <div class="reactions-bar">
-            <span>🔥</span><span>👍</span><span>❤️</span><span>🥰</span><span>👏</span><span>💩</span>
+            <span onclick="toggleReaction('🔥')">🔥</span>
+            <span onclick="toggleReaction('👍')">👍</span>
+            <span onclick="toggleReaction('❤️')">❤️</span>
+            <span onclick="toggleReaction('🥰')">🥰</span>
+            <span onclick="toggleReaction('👏')">👏</span>
+            <span onclick="toggleReaction('💩')">💩</span>
         </div>
 
         <div class="context-list">
@@ -7190,6 +7249,35 @@
                         </span>`;
                 contentHtml += metaHtml;
             }
+
+            // --- НОВОЕ: РЕНДЕР РЕАКЦИЙ ---
+            if (m.reactions && Object.keys(m.reactions).length > 0) {
+                const reactionCounts = {};
+                let myReaction = null;
+
+                for (const uid in m.reactions) {
+                    const emoji = m.reactions[uid];
+                    if (uid === currentUser.uid) myReaction = emoji;
+
+                    if (!reactionCounts[emoji]) reactionCounts[emoji] = 0;
+                    reactionCounts[emoji]++;
+                }
+
+                let reactionsHtml = '<div class="msg-reactions">';
+                Object.entries(reactionCounts).forEach(([emoji, count]) => {
+                    const isMy = myReaction === emoji;
+                    const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
+                    reactionsHtml += `
+                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emoji}')">
+                            ${emoji} <span class="reaction-count">${count > 1 ? count : ''}</span>
+                        </div>`;
+                });
+                reactionsHtml += '</div>';
+
+                contentHtml += reactionsHtml;
+            }
+
+            return contentHtml;
 
             return contentHtml;
         }
@@ -13419,6 +13507,42 @@
                 badge.classList.add('visible');
             } else {
                 badge.classList.remove('visible');
+            }
+        }
+
+
+        function toggleReaction(emoji) {
+            toggleReactionDirect(selectedMsgId, emoji);
+            closeAllSheets();
+        }
+
+        function toggleReactionDirect(msgId, emoji) {
+            if (!msgId || !currentChatId || !currentUser) return;
+
+            const msgRef = db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId);
+            const msgEl = document.getElementById('msg-' + msgId);
+            let isRemoving = false;
+
+            // Проверяем, не кликнули ли мы по уже стоящей НАШЕЙ реакции (чтобы убрать её)
+            if (msgEl) {
+                const myReactionEl = msgEl.querySelector('.msg-reaction.reacted-by-me');
+                if (myReactionEl && myReactionEl.innerText.includes(emoji)) {
+                    isRemoving = true;
+                }
+            }
+
+            if (isRemoving) {
+                // Удаляем нашу реакцию из базы
+                msgRef.update({
+                    [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
+                }).catch(() => { });
+            } else {
+                // Ставим новую реакцию (перезаписывая старую, если она была)
+                msgRef.set({
+                    reactions: {
+                        [currentUser.uid]: emoji
+                    }
+                }, { merge: true }).catch(() => { });
             }
         }
 
