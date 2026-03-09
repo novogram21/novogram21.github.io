@@ -9849,7 +9849,14 @@
         }
 
         // Плавное перелистывание (Apple Style)
+        // Флаг для блокировки спама (когда зажимают стрелочку)
+        window.isViewerAnimating = false;
+
+        // Плавное перелистывание (Apple Style)
         window.navigateViewer = function (direction) {
+            // ФИКС 1: Блокируем новые нажатия, пока не закончится текущая анимация
+            if (window.isViewerAnimating) return;
+
             if (!window.viewerImagesList || window.viewerImagesList.length <= 1) {
                 // Если фото всего одно — пружиним обратно
                 const viewerImg = document.getElementById('imageViewerImg');
@@ -9861,18 +9868,16 @@
             const viewerImg = document.getElementById('imageViewerImg');
             let newIndex = window.viewerCurrentIndex + direction;
 
-            // --- НОВОЕ: Запрещаем бесконечную прокрутку (Упираемся в края) ---
+            // Запрещаем бесконечную прокрутку (Упираемся в края)
             if (newIndex < 0 || newIndex >= window.viewerImagesList.length) {
-                // Фотографий больше нет -> пружиним обратно
                 viewerImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
                 viewerImg.style.transform = `translate(0px, 0px) scale(1)`;
-                return; // Прерываем функцию, не переключаем индекс
+                return;
             }
 
+            window.isViewerAnimating = true; // Включаем защиту от спама
             window.viewerCurrentIndex = newIndex;
             const nextItem = window.viewerImagesList[newIndex];
-
-            // 1. Улетает текущая фотография
 
             // 1. Улетает текущая фотография
             viewerImg.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
@@ -9884,13 +9889,26 @@
                 viewerImg.style.transition = 'none';
                 viewerImg.style.transform = `translateX(${direction * 100}vw) scale(0.9)`;
 
-                // 3. Подменяем данные (HD качество, ID и кнопку удаления)
+                // 3. Подменяем данные
                 currentViewerMsgId = nextItem.msgId;
+
+                // ФИКС 2: Мгновенно ставим "мыльную" картинку, которая уже есть в памяти телефона/ПК
+                // Это полностью убирает эффект "мелькания" старого фото
+                viewerImg.src = nextItem.src;
+
+                // ФИКС 3: Подгружаем HD-качество в фоне, как настоящие профи
                 let highResSrc = nextItem.src;
                 if (highResSrc.includes('lh3.googleusercontent.com')) {
                     highResSrc = highResSrc.split('=')[0] + '=w2000';
+                    const tempImg = new Image();
+                    tempImg.onload = () => {
+                        // Подменяем на HD, только если мы всё ещё смотрим на эту же картинку
+                        if (currentViewerMsgId === nextItem.msgId) {
+                            viewerImg.src = highResSrc;
+                        }
+                    };
+                    tempImg.src = highResSrc;
                 }
-                viewerImg.src = highResSrc;
 
                 const deleteBtn = document.getElementById('viewerDeleteBtn');
                 if (deleteBtn) deleteBtn.style.display = (nextItem.isMine && nextItem.msgId) ? 'flex' : 'none';
@@ -9904,7 +9922,13 @@
                 viewerImg.style.opacity = '1';
 
                 if (window.resetImageZoom) window.resetImageZoom();
-            }, 250);
+
+                // Снимаем блокировку, когда анимация приезда (0.35s) закончится
+                setTimeout(() => {
+                    window.isViewerAnimating = false;
+                }, 350);
+
+            }, 250); // Это время улета старой фотки
         };
 
         // Функции для просмотра фото
