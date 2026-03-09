@@ -5927,14 +5927,17 @@
                         btn.style.opacity = "1";
                     }
 
-                    // ТЕПЕРЬ, КОГДА ОКНО СПРЯТАНО, ЗАПУСКАЕМ ТЯЖЕЛЫЕ ФУНКЦИИ И СБРОС СЕТИ
+
                     managePresence(u.uid);
                     listenToAllStatuses();
-
-                    history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                    if (!window.location.hash.startsWith('#chat/')) {
+                        history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
+                    } else {
+                        history.replaceState({ page: 'chat' }, null, window.location.href);
+                    }
 
                     loadTurnServers();
-                    loadData(); // <-- Сброс сети произойдет здесь, но UI уже разблокирован
+                    loadData(); 
                     listenForIncomingCalls();
                     loadTgId();
                     setTimeout(() => {
