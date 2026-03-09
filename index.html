@@ -6858,6 +6858,7 @@
 
                         div.setAttribute('data-datestr', dateStr);
                         div.setAttribute('data-rawdate', rawDate);
+                        div.setAttribute('data-ts', tsMillis); // ТАЙМСТЕМП ДЛЯ СКАНЕРА
 
                         const newHtml = buildMessageHTML(m, msgId, msgType);
                         if (div.innerHTML !== newHtml) div.innerHTML = newHtml;
@@ -6865,10 +6866,15 @@
                         if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate && m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
                             appendTranslation(div, m.txt, msgId);
                         }
+
+                        // --- ОТДАЕМ НЕПРОЧИТАННОЕ СКАНЕРУ ЭКРАНА ---
+                        if (m.from !== currentUser.uid && !m.read && tsMillis > window.myReadTs) {
+                            div.classList.add('is-unread');
+                            window.chatObserver.observe(div);
+                        }
                     });
 
-                    // Старую логику needCommit и batch.update отсюда убрали!
-                    updateDateSeparators();
+                    updateDateSeparators(); // batch.commit больше здесь не нужен!
 
                     // --- МАГИЯ СКРОЛЛА ---
                     if (list.classList.contains('is-loading')) {
@@ -6961,7 +6967,13 @@
                 timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
             }
 
-            let ticksHtml = m.read ? '<span style="margin-right: -4px;">✓</span>✓' : '✓';
+            let ticksHtml = '✓';
+            // Если время сообщения меньше или равно времени прочтения друга - рисуем две галки
+            if (m.ts && m.ts.toMillis() <= window.friendReadTs) {
+                ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
+            } else if (m.read) {
+                ticksHtml = '<span style="margin-right: -4px;">✓</span>✓'; // Запасной вариант из Firestore
+            }
 
             // Цитата (Reply)
             if (m.replyTo) {
@@ -7112,6 +7124,9 @@
 
             currentFriendId = null;
             currentChatId = null;
+            if (window.friendReadUnsub) { window.friendReadUnsub(); window.friendReadUnsub = null; }
+            window.friendReadTs = 0;
+            window.myReadTs = 0;
         }
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
         function sendMsg(txt, isSys = false, type = 'text') {
@@ -9404,6 +9419,7 @@
                     loadMessages();
                     listenTypingRTDB(currentChatId, userId);
                     listenActiveFriendStatus(userId);
+                    listenFriendReadStatus(currentChatId, userId);
 
                     // --- НОВОЕ: АВТОФОКУС ПРИ ВХОДЕ В ЧАТ ---
                     setTimeout(() => {
@@ -10687,65 +10703,102 @@
 
         // --- ЛОГИКА ПРОЧТЕНИЯ ПРИ ВОЗВРАЩЕНИИ НА ВКЛАДКУ ---
         // --- ПРЕМИУМ: Умное прочтение сообщений по скроллу ---
-        let readDebounceTimer = null;
+        // ==========================================
+        // ПРЕМИУМ ДВИЖОК ПРОЧТЕНИЙ (RTDB + OBSERVER)
+        // ==========================================
+        window.friendReadTs = 0;
+        window.myReadTs = 0;
 
+        // 1. Оптимизированный сканер экрана (работает без лагов)
+        window.chatObserver = new IntersectionObserver((entries) => {
+            if (!currentChatId || !currentUser || document.visibilityState !== 'visible') return;
+
+            let maxSeenTs = 0;
+            let newlyReadCount = 0;
+
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const ts = parseInt(el.getAttribute('data-ts') || 0, 10);
+
+                    if (ts > maxSeenTs) maxSeenTs = ts;
+
+                    window.chatObserver.unobserve(el);
+                    el.classList.remove('is-unread');
+                    newlyReadCount++;
+                }
+            });
+
+            if (maxSeenTs > 0 && maxSeenTs > window.myReadTs) {
+                window.myReadTs = maxSeenTs;
+
+                // Мгновенная отправка в быструю базу RTDB
+                rtdb.ref(`chat_reads/${currentChatId}/${currentUser.uid}`).set(maxSeenTs);
+
+                // Плавно списываем счетчик непрочитанных на иконке
+                rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).transaction((current) => {
+                    return Math.max(0, (current || 0) - newlyReadCount);
+                });
+
+                // Фоново обновляем Firestore (чтобы история осталась верной при перезагрузке)
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const msgId = entry.target.id.replace('msg-', '');
+                        db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId).update({ read: true }).catch(() => { });
+                    }
+                });
+            }
+        }, {
+            root: null, // Весь экран
+            threshold: 0.5 // Сообщение считается прочитанным, если оно показалось на 50%
+        });
+
+        // Функция-заглушка для системных событий (фокус окна и т.д.)
         function markCurrentChatRead() {
-            if (!currentChatId || !currentUser || !currentMsgList) return;
-            if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
+            if (!currentChatId || document.visibilityState !== 'visible') return;
+            if (currentMsgList) {
+                const unreadEls = currentMsgList.querySelectorAll('.is-unread');
+                unreadEls.forEach(el => {
+                    window.chatObserver.unobserve(el);
+                    window.chatObserver.observe(el);
+                });
+            }
+        }
 
-            // ОПТИМИЗАЦИЯ: Если нет непрочитанных, вообще не напрягаем базу!
-            if (!unreadCounts[currentChatId] || unreadCounts[currentChatId] === 0) return;
+        // 2. Слушатель чужих галочек в реальном времени
+        function listenFriendReadStatus(chatId, friendId) {
+            if (window.friendReadUnsub) window.friendReadUnsub();
 
-            if (readDebounceTimer) clearTimeout(readDebounceTimer);
-            readDebounceTimer = setTimeout(() => {
-                const list = currentMsgList;
-                // Проверяем, уперлись ли мы в самый низ
-                const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= 150;
-                const listRect = list.getBoundingClientRect();
+            // Получаем то, что мы уже прочитали
+            rtdb.ref(`chat_reads/${chatId}/${currentUser.uid}`).once('value', snap => {
+                window.myReadTs = snap.val() || 0;
+            });
 
-                db.collection('chats').doc(currentChatId).collection('msgs')
-                    .where('to', '==', currentUser.uid)
-                    .where('read', '==', false)
-                    .get()
-                    .then(snap => {
-                        if (snap.empty) return;
+            // Мгновенно ловим прочтения друга
+            const ref = rtdb.ref(`chat_reads/${chatId}/${friendId}`);
+            const listener = ref.on('value', snap => {
+                window.friendReadTs = snap.val() || 0;
+                updateTicksUI();
+            });
 
-                        const batch = db.batch();
-                        let needCommit = false;
-                        let readCount = 0;
+            window.friendReadUnsub = () => ref.off('value', listener);
+        }
 
-                        snap.docs.forEach(doc => {
-                            const msgEl = document.getElementById('msg-' + doc.id);
-                            let isVisible = isAtBottom; // Если мы внизу - читаем всё автоматом
+        // 3. Анимация двойной галочки
+        function updateTicksUI() {
+            if (!currentMsgList) return;
+            const myMsgs = currentMsgList.querySelectorAll('.msg-me');
 
-                            if (!isVisible && msgEl) {
-                                const rect = msgEl.getBoundingClientRect();
-                                // Сообщение считается видимым, если оно вылезло из-под нижней панели ввода
-                                if (rect.top < listRect.bottom && rect.bottom > listRect.top + 60) {
-                                    isVisible = true;
-                                }
-                            }
+            myMsgs.forEach(msgDiv => {
+                const ts = parseInt(msgDiv.getAttribute('data-ts') || 0, 10);
+                const tickEl = msgDiv.querySelector('.msg-ticks');
 
-                            if (isVisible) {
-                                batch.update(doc.ref, { read: true });
-                                needCommit = true;
-                                readCount++;
-                            }
-                        });
-
-                        if (needCommit) {
-                            batch.commit();
-
-                            // Если прочитали всё, что было (или мы на дне) - обнуляем бейдж полностью
-                            if (isAtBottom || readCount === snap.size) {
-                                rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).set(0);
-                            } else {
-                                // Иначе просто вычитаем то, что успели прочитать
-                                rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).set(snap.size - readCount);
-                            }
-                        }
-                    });
-            }, 150); // Легкая задержка, чтобы не спамить базу, пока палец скроллит
+                if (tickEl && ts > 0 && ts <= window.friendReadTs) {
+                    if (tickEl.innerHTML !== '<span style="margin-right: -4px;">✓</span>✓') {
+                        tickEl.innerHTML = '<span style="margin-right: -4px;">✓</span>✓';
+                    }
+                }
+            });
         }
 
         function listenAllUnreadRTDB() {
