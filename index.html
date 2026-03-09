@@ -4621,25 +4621,35 @@
 
         <div class="context-list">
             <div class="context-item" onclick="handleReply()">
-                <span class="context-icon">↩️</span> Ответить
+                <span class="context-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
+                </span> Ответить
             </div>
 
             <div id="ctxEdit" class="context-item" onclick="handleEdit()">
-                <span class="context-icon">✏️</span> Изменить
+                <span class="context-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </span> Изменить
             </div>
 
             <div class="context-item" onclick="handleCopy()">
-                <span class="context-icon">📄</span> Копировать текст
+                <span class="context-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </span> Копировать текст
             </div>
 
             <div class="context-item" onclick="alert('Функция закрепления скоро будет!')">
-                <span class="context-icon">📌</span> Закрепить
+                <span class="context-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.6V6a3 3 0 0 0-3-3v0a3 3 0 0 0-3 3v4.6a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
+                </span> Закрепить
             </div>
 
             <div class="context-divider"></div>
 
             <div class="context-item delete" onclick="openDeleteSheet()">
-                <span class="context-icon">🗑️</span> Удалить
+                <span class="context-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </span> Удалить
             </div>
         </div>
     </div>
@@ -4944,20 +4954,30 @@
 
             <div id="chatOptionsMenu" class="chat-options-dropdown">
                 <div class="chat-option-item" onclick="closeChatOptionsMenu(); startVideoCall();">
-                    <span class="chat-option-icon">📹</span> Видеозвонок
+                    <span class="chat-option-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                    </span> Видеозвонок
                 </div>
                 <div class="chat-option-item" onclick="closeChatOptionsMenu(); toggleChatSearch();">
-                    <span class="chat-option-icon">🔍</span> Поиск
+                    <span class="chat-option-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </span> Поиск
                 </div>
                 <div class="chat-option-item" onclick="closeChatOptionsMenu(); alert('Функция отключения уведомлений скоро появится!');">
-                    <span class="chat-option-icon">🔕</span> Без звука
+                    <span class="chat-option-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"></path><path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path><path d="M18 8a6 6 0 0 0-9.33-5"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    </span> Без звука
                 </div>
                 <div class="chat-option-item" onclick="closeChatOptionsMenu(); openEditContactSheet();">
-                    <span class="chat-option-icon">✏️</span> Изменить контакт
+                    <span class="chat-option-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </span> Изменить контакт
                 </div>
                 <div class="context-divider"></div>
                 <div class="chat-option-item danger" onclick="closeChatOptionsMenu(); deleteChatAction();">
-                    <span class="chat-option-icon">🧹</span> Очистить историю
+                    <span class="chat-option-icon" style="color: #ff595a;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </span> Очистить историю
                 </div>
             </div>
 
@@ -13462,15 +13482,21 @@
 
             <div class="friend-actions-row">
                 <div class="friend-action-btn" onclick="startCall()">
-                    <div class="icon">📞</div>
+                    <div class="icon" style="display: flex; justify-content: center; align-items: center; height: 24px; margin-bottom: 2px;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#736AF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    </div>
                     <span>Звонок</span>
                 </div>
                 <div class="friend-action-btn" onclick="alert('Уведомления отключены')">
-                    <div class="icon">🔕</div>
+                    <div class="icon" style="display: flex; justify-content: center; align-items: center; height: 24px; margin-bottom: 2px;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#736AF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"></path><path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path><path d="M18 8a6 6 0 0 0-9.33-5"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    </div>
                     <span>Без звука</span>
                 </div>
                 <div class="friend-action-btn" onclick="closeFriendProfile(); toggleChatSearch();">
-                    <div class="icon">🔍</div>
+                    <div class="icon" style="display: flex; justify-content: center; align-items: center; height: 24px; margin-bottom: 2px;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#736AF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
                     <span>Поиск</span>
                 </div>
             </div>
