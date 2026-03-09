@@ -11558,14 +11558,12 @@
             swipeStartX = touch.clientX;
             swipeStartY = touch.clientY;
 
-            // 🔥 ИСПРАВЛЕНИЕ: Если свайп начинается от левого края экрана (меньше 40px),
-            // мы полностью отключаем наш скрипт. Это позволит родному жесту
-            // "Назад" на iPhone работать идеально плавно и без лагов.
+            // Если свайп от самого левого края экрана (жест "Назад" в iOS), отключаем скрипт
             if (swipeStartX < 40) {
                 swipeTarget = null;
                 isBackSwiping = false;
                 isSwipeHorizontal = false;
-                isSwipeVertical = true; // Разрешаем родной скролл системы
+                isSwipeVertical = true;
                 return;
             }
 
@@ -11575,17 +11573,27 @@
             isSwipeVertical = false;
             swipeHapticTriggered = false;
             isLongPressTriggered = false;
-
             isBackSwiping = false;
             backSwipeCurrentX = 0;
 
             if (swipeTarget) {
+                // ПРЕМИУМ ФИКС 1: Если меню УЖЕ открыто, блокируем новые нажатия
+                const menu = document.getElementById('contextMenu');
+                if (menu && menu.classList.contains('active')) {
+                    swipeTarget = null;
+                    return;
+                }
+
                 if (longPressTimer) clearTimeout(longPressTimer);
+
                 longPressTimer = setTimeout(() => {
-                    // Если палец не двигался и мы не делаем свайп назад
+                    // Проверяем, что палец не превратил тап в свайп
                     if (!isSwipeHorizontal && !isSwipeVertical && swipeTarget && !isBackSwiping) {
                         isLongPressTriggered = true;
-                        if (navigator.vibrate) navigator.vibrate(40);
+
+                        // ПРЕМИУМ ФИКС 2: Удален ручной navigator.vibrate(40)! 
+                        // Android и iOS сами дадут идеальный тактильный отклик (haptic feedback) 
+                        // без "двойного жужжания".
 
                         const msgId = swipeTarget.id.replace('msg-', '');
                         const isMine = swipeTarget.classList.contains('msg-me');
@@ -11611,39 +11619,37 @@
             const deltaX = touch.clientX - swipeStartX;
             const deltaY = touch.clientY - swipeStartY;
 
-            // Если палец дрогнул - отменяем долгое нажатие
-            if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
+            // ПРЕМИУМ ФИКС 3: Мертвая зона (Deadzone). Если палец дрогнул меньше чем на 10px,
+            // мы не отменяем таймер долгого нажатия. Это делает интерфейс в разы послушнее!
+            if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
                 if (longPressTimer) clearTimeout(longPressTimer);
             }
 
             if (!isSwipeHorizontal && !isSwipeVertical) {
-                if (Math.abs(deltaY) > Math.abs(deltaX)) {
+                // Активируем логику свайпов только после выхода из мертвой зоны (10px)
+                if (Math.abs(deltaY) > 10) {
                     isSwipeVertical = true;
-                } else if (Math.abs(deltaX) > 5) {
+                } else if (Math.abs(deltaX) > 10) {
                     isSwipeHorizontal = true;
 
-                    // 🔥 Улучшенное определение Apple устройств (включая новые iPad)
                     const isIOS = /Mac|iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
                     if (deltaX > 0) {
                         if (isIOS) {
-                            // На iOS жестко запрещаем кастомный свайп вправо, отдаем управление системе
                             isSwipeHorizontal = false;
                             isBackSwiping = false;
                         } else {
-                            // На Android делаем нашу кастомную анимацию выхода из чата
                             isBackSwiping = true;
                             swipeTarget = null;
                         }
                     } else if (deltaX < 0 && swipeTarget) {
-                        // Свайп ВЛЕВО по сообщению (Ответ)
                         isBackSwiping = false;
                     } else {
                         isSwipeHorizontal = false;
                         isSwipeVertical = true;
                     }
                 } else {
-                    return;
+                    return; // Ждем, пока палец выйдет из зоны в 10px
                 }
             }
 
@@ -11653,7 +11659,6 @@
                 if (e.cancelable) e.preventDefault(); // Блокируем системную физику
 
                 if (isBackSwiping) {
-                    // --- АНИМАЦИЯ ЗАКРЫТИЯ ЧАТА (ТОЛЬКО ANDROID) ---
                     backSwipeCurrentX = Math.max(0, deltaX);
 
                     const chatArea = document.getElementById('mainChatArea');
@@ -11671,7 +11676,6 @@
                     sidebar.style.transform = `translateX(${sidebarOffset}%)`;
 
                 } else if (swipeTarget) {
-                    // --- АНИМАЦИЯ ОТВЕТА НА СООБЩЕНИЕ ---
                     swipeCurrentX = Math.max(deltaX, -65);
                     swipeTarget.classList.add('swiping');
                     swipeTarget.style.transform = `translateX(${swipeCurrentX}px)`;
@@ -11681,7 +11685,8 @@
                         if (swipeCurrentX <= -50) {
                             icon.classList.add('active');
                             if (!swipeHapticTriggered) {
-                                if (navigator.vibrate) navigator.vibrate(30);
+                                // Легкая микро-вибрация для свайпа "ответить" (с ней всё в порядке)
+                                if (navigator.vibrate) navigator.vibrate(20);
                                 swipeHapticTriggered = true;
                             }
                         } else {
