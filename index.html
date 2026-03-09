@@ -7243,8 +7243,9 @@
                 checkInputState(); // Обновление кнопок
                 inputEl.focus();
 
-                // --- НОВОЕ: Мгновенная плавная прокрутка вниз при отправке ---
-                if (currentMsgList) {
+                // Скроллим только если пользователь сам нажал "Отправить"
+                // (В этот момент t - это текст сообщения)
+                if (t && currentMsgList) {
                     currentMsgList.scrollTo({ top: currentMsgList.scrollHeight + 500, behavior: 'smooth' });
                 }
             }
@@ -11820,9 +11821,13 @@
             const list = imgEl.closest('.messages');
             if (!list) return;
 
-            const isNearBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 50;
-            if (isNearBottom) {
-                list.scrollTo({ top: list.scrollHeight + 1000, behavior: 'smooth' });
+            // ФИКС: Скроллим только если мы реально "уперлись" в дно чата.
+            // Запас 5px нужен для погрешностей рендеринга.
+            const isAtBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 5;
+
+            if (isAtBottom) {
+                // Без плавной анимации, чтобы не дергало при загрузке старых фото
+                list.scrollTop = list.scrollHeight;
             }
         };
 
