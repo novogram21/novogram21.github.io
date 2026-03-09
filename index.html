@@ -8878,14 +8878,30 @@
         }
 
         // --- ЕДИНЫЙ ОБРАБОТЧИК ESC ---
+        // --- ЕДИНЫЙ ОБРАБОТЧИК КЛАВИАТУРЫ (ПК) ---
         document.addEventListener('keydown', function (e) {
-            if (e.key === "Escape") {
-                const viewer = document.getElementById('imageViewer');
-                const searchRes = document.getElementById('searchResults');
-                const searchInp = document.getElementById('searchInput');
+            const viewer = document.getElementById('imageViewer');
+            const searchRes = document.getElementById('searchResults');
+            const searchInp = document.getElementById('searchInput');
 
+            // --- НОВОЕ: УПРАВЛЕНИЕ ГАЛЕРЕЕЙ СТРЕЛОЧКАМИ ---
+            if (viewer && viewer.classList.contains('active')) {
+                if (e.key === "ArrowLeft") {
+                    e.preventDefault(); // Блокируем стандартный скролл страницы
+                    navigateViewer(-1); // Листаем влево
+                    return;
+                }
+                if (e.key === "ArrowRight") {
+                    e.preventDefault(); // Блокируем стандартный скролл страницы
+                    navigateViewer(1); // Листаем вправо
+                    return;
+                }
+            }
+
+            // --- ОБРАБОТКА КНОПКИ ESCAPE ---
+            if (e.key === "Escape") {
                 // 1. САМЫЙ ВЫСОКИЙ ПРИОРИТЕТ: Закрыть просмотр картинки
-                if (viewer.classList.contains('active')) {
+                if (viewer && viewer.classList.contains('active')) {
                     closeImageViewer();
                     return;
                 }
@@ -8905,7 +8921,7 @@
                 }
 
                 // 3. ЗАКРЫТЬ ПОИСК
-                if (searchRes.classList.contains('active') || searchInp.value.trim() !== '' || document.activeElement === searchInp) {
+                if ((searchRes && searchRes.classList.contains('active')) || (searchInp && searchInp.value.trim() !== '') || document.activeElement === searchInp) {
                     e.preventDefault();
                     closeSearch();
                     return;
