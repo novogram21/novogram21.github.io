@@ -7110,7 +7110,9 @@
             }
 
             if (currentChatId && currentUser) {
-                rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`).remove();
+                const typingRef = rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`);
+                typingRef.remove();
+                typingRef.onDisconnect().cancel();
             }
 
             // Убиваем таймер, чтобы он не сработал после выхода
@@ -7142,15 +7144,13 @@
                 clearTimeout(typingTimeout);
             }
 
-            // Сбрасываем флаг и пишем в базу false
             if (typeof isTyping !== 'undefined') isTyping = false;
 
             if (currentChatId && currentUser) {
-                db.collection('chats').doc(currentChatId).collection('typing').doc(currentUser.uid).set({
-                    isTyping: false
-                }).catch(() => { }); // Игнорируем ошибки (не критично)
+                const typingRef = rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`);
+                typingRef.remove();
+                typingRef.onDisconnect().cancel();
             }
-            // ========================================================
 
 
             // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
@@ -10808,17 +10808,20 @@
         });
 
         // 1. Отправка статуса
+        // 1. Отправка статуса
         function handleTyping() {
             if (!currentChatId || !currentUser) return;
 
             const inputEl = document.getElementById('msgInput');
             const currentText = inputEl ? inputEl.value.trim() : '';
+            const typingRef = rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`);
 
-            // 🔥 ИСПРАВЛЕНИЕ: Если поле пустое - сразу сбрасываем статус "печатает" и выходим
+            // 🔥 ИСПРАВЛЕНИЕ: Если поле пустое - сразу сбрасываем статус и отменяем onDisconnect
             if (currentText.length === 0) {
                 if (isTyping) {
                     isTyping = false;
-                    rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`).remove();
+                    typingRef.remove();
+                    typingRef.onDisconnect().cancel();
                     if (typingTimeout) clearTimeout(typingTimeout);
                 }
                 return;
@@ -10826,19 +10829,21 @@
 
             const now = Date.now();
 
-            // Отправляем true, только если прошло больше 2 секунд с прошлой отправки
+            // Отправляем статус, только если прошло больше 2 секунд с прошлой отправки
             if (!isTyping || (now - lastTypingTime > 2000)) {
                 isTyping = true;
                 lastTypingTime = now;
-                rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`).set(true);
+                typingRef.set(true);
+                // ВАЖНО: Приказываем серверу Firebase самому удалить статус, если пропадет интернет!
+                typingRef.onDisconnect().remove();
             }
 
             if (typingTimeout) clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => {
                 isTyping = false;
-                // ВАЖНО: используем .remove(), чтобы ветка исчезла
-                rtdb.ref(`typing/${currentChatId}/${currentUser.uid}`).remove();
-            }, 3000); // Через 3 секунды бездействия статус удалится
+                typingRef.remove();
+                typingRef.onDisconnect().cancel(); // Отменяем приказ серверу, так как удалили сами
+            }, 3000);
         }
 
         // Эту функцию вызови ОДИН РАЗ внутри handleHashChange, когда открывается чат
