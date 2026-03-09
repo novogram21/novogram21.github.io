@@ -6865,32 +6865,28 @@
                         if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate && m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
                             appendTranslation(div, m.txt, msgId);
                         }
-
-                        if (m.to === currentUser.uid && !m.read && isWindowActive) {
-                            batch.update(doc.ref, { read: true });
-                            needCommit = true;
-                        }
                     });
 
-                    if (needCommit) batch.commit();
+                    // Старую логику needCommit и batch.update отсюда убрали!
                     updateDateSeparators();
 
                     // --- МАГИЯ СКРОЛЛА ---
                     if (list.classList.contains('is-loading')) {
-                        // 1. Первый рендер чата (открытие)
                         list.classList.remove('is-loading');
                         if (savedScroll !== null) {
                             list.scrollTop = parseInt(savedScroll, 10);
                         } else {
-                            smartScrollToBottom(list, true, true); // Принудительно, моментально (без анимации)
+                            smartScrollToBottom(list, true, true);
                         }
 
-                        // Снимаем блокировку загрузки картинок через 300мс (когда всё точно отрисовалось)
-                        setTimeout(() => { window.isChatJustOpened = false; }, 300);
+                        setTimeout(() => {
+                            window.isChatJustOpened = false;
+                            markCurrentChatRead(); // <--- ДОБАВИТЬ ЭТО
+                        }, 300);
 
                     } else if (!isChatInitialLoad && hasRealNewMessages) {
-                        // 2. Пришло НОВОЕ чужое сообщение в процессе общения
                         smartScrollToBottom(list, false, false);
+                        markCurrentChatRead(); // <--- И ДОБАВИТЬ ЭТО
                     }
 
                     isChatInitialLoad = false;
@@ -10690,20 +10686,66 @@
         });
 
         // --- ЛОГИКА ПРОЧТЕНИЯ ПРИ ВОЗВРАЩЕНИИ НА ВКЛАДКУ ---
+        // --- ПРЕМИУМ: Умное прочтение сообщений по скроллу ---
+        let readDebounceTimer = null;
 
         function markCurrentChatRead() {
-            if (!currentChatId || !currentUser) return;
-            // Обнуляем счетчик в RTDB
-            rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).set(0);
+            if (!currentChatId || !currentUser || !currentMsgList) return;
+            if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
 
-            // В фоне помечаем в Firestore (для истории), но это уже не горит
-            db.collection('chats').doc(currentChatId).collection('msgs')
-                .where('to', '==', currentUser.uid).where('read', '==', false).get()
-                .then(snap => {
-                    const batch = db.batch();
-                    snap.docs.forEach(doc => batch.update(doc.ref, { read: true }));
-                    batch.commit();
-                });
+            // ОПТИМИЗАЦИЯ: Если нет непрочитанных, вообще не напрягаем базу!
+            if (!unreadCounts[currentChatId] || unreadCounts[currentChatId] === 0) return;
+
+            if (readDebounceTimer) clearTimeout(readDebounceTimer);
+            readDebounceTimer = setTimeout(() => {
+                const list = currentMsgList;
+                // Проверяем, уперлись ли мы в самый низ
+                const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= 150;
+                const listRect = list.getBoundingClientRect();
+
+                db.collection('chats').doc(currentChatId).collection('msgs')
+                    .where('to', '==', currentUser.uid)
+                    .where('read', '==', false)
+                    .get()
+                    .then(snap => {
+                        if (snap.empty) return;
+
+                        const batch = db.batch();
+                        let needCommit = false;
+                        let readCount = 0;
+
+                        snap.docs.forEach(doc => {
+                            const msgEl = document.getElementById('msg-' + doc.id);
+                            let isVisible = isAtBottom; // Если мы внизу - читаем всё автоматом
+
+                            if (!isVisible && msgEl) {
+                                const rect = msgEl.getBoundingClientRect();
+                                // Сообщение считается видимым, если оно вылезло из-под нижней панели ввода
+                                if (rect.top < listRect.bottom && rect.bottom > listRect.top + 60) {
+                                    isVisible = true;
+                                }
+                            }
+
+                            if (isVisible) {
+                                batch.update(doc.ref, { read: true });
+                                needCommit = true;
+                                readCount++;
+                            }
+                        });
+
+                        if (needCommit) {
+                            batch.commit();
+
+                            // Если прочитали всё, что было (или мы на дне) - обнуляем бейдж полностью
+                            if (isAtBottom || readCount === snap.size) {
+                                rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).set(0);
+                            } else {
+                                // Иначе просто вычитаем то, что успели прочитать
+                                rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).set(snap.size - readCount);
+                            }
+                        }
+                    });
+            }, 150); // Легкая задержка, чтобы не спамить базу, пока палец скроллит
         }
 
         function listenAllUnreadRTDB() {
@@ -11707,6 +11749,9 @@
             if (currentChatId) {
                 sessionStorage.setItem('scroll_' + currentChatId, list.scrollTop);
             }
+
+            // --- НОВОЕ: Проверяем, не докрутили ли мы до новых сообщений ---
+            markCurrentChatRead();
 
             // --- НОВОЕ: Логика кнопки "Вниз" ---
             const scrollBtn = document.getElementById('scrollToBottomBtn');
