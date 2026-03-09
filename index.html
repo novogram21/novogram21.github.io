@@ -7270,12 +7270,7 @@
             }
             // УВЕДОМЛЕНИЯ (БЕЗОПАСНО ЧЕРЕЗ СЕРВЕР)
             if (!isSys && currentFriendId) {
-                sendNotificationSecure(currentFriendId, t, type);
-            }
-            if (!isSys && currentFriendId) {
-                sendNotificationSecure(currentFriendId, t, type);
-
-                // === МАГИЯ АВТООТВЕТЧИКА ===
+                sendNotificationSecure(currentFriendId, t, type, type === 'call');
                 if (type === 'text') {
                     checkAndTriggerBot(currentFriendId, t, currentChatId);
                 }
@@ -7991,6 +7986,7 @@
         }
         async function startCall(isVideoCall = false) {
             if (!currentFriendId || !currentUser) return;
+            if (currentCallId || pc) return;
             updateCallControlsVisibility();
 
             amICaller = true;
@@ -8104,6 +8100,7 @@
         }
 
         async function answerCall() {
+            if (isConnected || pc) return;
             document.getElementById('ringtone').pause();
             document.getElementById('incomingPopup').style.display = 'none';
             document.getElementById('callScreen').style.display = 'flex';
@@ -8517,10 +8514,30 @@
 
             // 2. Блок интерфейса: Гарантированное закрытие звонка
             try {
-                if (pc) pc.close();
-                if (localStream) localStream.getTracks().forEach(t => t.stop());
+                if (pc) { pc.close(); pc = null; }
+                if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
                 if (callTimerInt) clearInterval(callTimerInt);
                 if (pingInterval) clearInterval(pingInterval);
+
+               
+                if (currentCallId) {
+                    const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
+                    sessionRef.off('value');
+                    sessionRef.child('answerCandidates').off('child_added');
+                    sessionRef.child('offerCandidates').off('child_added');
+
+                    if (isInitiator) {
+                        sessionRef.update({ status: 'ended' }).catch(() => { });
+                    }
+                }
+
+                // Сбрасываем флаги немедленно, блокируя дублирование
+                amICaller = false;
+                isConnected = false;
+                wasCallConnected = false;
+                currentCallId = null;
+                candidateQueue = [];
+                callStartTime = 0;
 
                 // Останавливаем невидимый аудио-плеер
                 const remoteAudio = document.getElementById('remoteAudio');
@@ -8540,31 +8557,18 @@
                 const timerEl = document.getElementById('callTimer');
                 if (timerEl) timerEl.style.display = 'none';
 
-                try { playEndTone(); } catch (err) { console.log("Звук сброса заблокирован браузером"); }
+                try { playEndTone(); } catch (err) { console.log("Звук сброса заблокирован"); }
 
                 const screen = document.getElementById('callScreen');
-                if (screen) screen.style.pointerEvents = 'none'; // Блокируем двойные клики
+                if (screen) screen.style.pointerEvents = 'none';
 
                 const popup = document.getElementById('incomingPopup');
                 if (popup) popup.style.display = 'none';
 
-                if (isInitiator && currentCallId) {
-                    rtdb.ref('call_sessions/' + currentCallId).update({ status: 'ended' }).catch(() => { });
-                }
-
-                pc = null;
-                localStream = null;
-                candidateQueue = [];
-                isConnected = false;
-                currentCallId = null;
-                wasCallConnected = false;
-                amICaller = false;
-                callStartTime = 0;
-
                 setTimeout(() => {
                     if (screen) {
                         screen.style.display = 'none';
-                        screen.style.pointerEvents = 'auto'; // Возвращаем кликабельность для будущих звонков
+                        screen.style.pointerEvents = 'auto'; // Возвращаем кликабельность
                     }
                     if (timerEl) timerEl.innerText = "00:00";
 
@@ -8578,7 +8582,6 @@
                 }, 1500);
             } catch (e) {
                 console.error("Критическая ошибка UI при сбросе:", e);
-                // Жесткий фоллбэк: если что-то упало выше, просто прячем окно
                 const screenFallback = document.getElementById('callScreen');
                 if (screenFallback) screenFallback.style.display = 'none';
             }
