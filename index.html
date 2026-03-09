@@ -7502,7 +7502,6 @@
             closeAllSheets();
         }
 
-        // --- ИЗМЕНИТЬ ---
         function handleEdit() {
             const msgEl = document.getElementById('msg-' + selectedMsgId);
             if (!msgEl) return closeAllSheets();
@@ -7511,7 +7510,10 @@
             const textSpan = msgEl.querySelector('.msg-text');
             if (textSpan) text = textSpan.innerText;
 
-            // Если это картинка, редактирование текста пока не делаем сложным
+            if (msgEl.querySelector('.chat-call-card')) {
+                return closeAllSheets();
+            }
+
             if (!text && (msgEl.querySelector('img') || msgEl.querySelector('a'))) {
                 alert("Редактирование медиа пока недоступно");
                 return closeAllSheets();
@@ -7533,7 +7535,8 @@
             bar.classList.remove('hidden', 'editing');
             title.innerText = name;
             txt.innerText = text;
-            icon.innerText = "↩️";
+
+            icon.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#736AF0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>';
 
             document.getElementById('msgInput').focus();
             if (currentMsgList) {
@@ -7543,7 +7546,7 @@
         }
 
         function startEditUI(id, text) {
-            cancelReplyOrEdit();
+            cancelReplyOrEdit(); 
             isEditingMode = true;
             editMessageId = id;
 
@@ -7557,7 +7560,8 @@
             bar.classList.add('editing'); 
             title.innerText = "Редактирование";
             txt.innerText = text;
-            icon.innerText = "✏️";
+
+            icon.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#007bff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
 
             input.value = text;
             input.focus();
@@ -7566,6 +7570,7 @@
                 autoResize(input);
                 checkInputState();
             }, 10);
+
             if (currentMsgList) {
                 currentMsgList.style.paddingBottom = '75px';
                 setTimeout(() => smartScrollToBottom(currentMsgList, true, false), 50);
@@ -10220,9 +10225,12 @@
             const menu = document.getElementById('contextMenu');
             const btnEdit = document.getElementById('ctxEdit');
             const msgEl = document.getElementById('msg-' + msgId);
-
-            if (isMine) btnEdit.style.display = 'flex';
-            else btnEdit.style.display = 'none';
+            const isCall = msgEl ? msgEl.querySelector('.chat-call-card') !== null : false;
+            if (isMine && !isCall) {
+                btnEdit.style.display = 'flex';
+            } else {
+                btnEdit.style.display = 'none';
+            }
 
             // --- ВКЛЮЧАЕМ РАЗМЫТИЕ И ВЫДЕЛЯЕМ СООБЩЕНИЕ ---
             document.body.classList.add('chat-blur-active');
@@ -11682,7 +11690,7 @@
                 if (!icon) {
                     icon = document.createElement('div');
                     icon.className = 'swipe-reply-icon';
-                    icon.innerHTML = '↩️';
+                    icon.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>';
                     swipeTarget.appendChild(icon);
                 }
             }
