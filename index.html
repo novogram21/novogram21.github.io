@@ -864,10 +864,9 @@
             background: transparent;
             position: relative;
             z-index: 1;
-            /* ВАЖНО: Это гарантирует, что список не будет больше выделенного ему места */
             min-height: 0;
-            height: 0; /* Флекс сам растянет его до нужного размера */
-            transition: opacity 0.15s ease-out;
+            height: 0; 
+            transition: opacity 0.15s ease-out, padding-bottom 0.25s cubic-bezier(0.2, 0.85, 0.3, 1);
         }
 
             .messages.visible {
@@ -7194,10 +7193,10 @@
         let closeChatTimeout = null;
 
         function performCloseUI() {
-            closeAllSheets(); // <--- НОВОЕ: Принудительно закрываем все меню, блюр и шторки при выходе!
+            closeAllSheets(); 
             document.getElementById('scrollToBottomBtn')?.classList.remove('visible');
-
-            // --- ПРЕМИУМ: Запоминаем скролл прямо перед самым закрытием чата ---
+            cancelReplyOrEdit();
+            
             if (currentMsgList && currentChatId) {
                 sessionStorage.setItem('scroll_' + currentChatId, currentMsgList.scrollTop);
             }
@@ -7523,7 +7522,7 @@
         }
 
         function startReplyUI(id, name, text) {
-            cancelReplyOrEdit(); // Сброс
+            cancelReplyOrEdit();
             replyMessageData = { id, name, text };
 
             const bar = document.getElementById('replyBar');
@@ -7537,10 +7536,14 @@
             icon.innerText = "↩️";
 
             document.getElementById('msgInput').focus();
+            if (currentMsgList) {
+                currentMsgList.style.paddingBottom = '75px';
+                setTimeout(() => smartScrollToBottom(currentMsgList, true, false), 50);
+            }
         }
 
         function startEditUI(id, text) {
-            cancelReplyOrEdit(); // Сброс
+            cancelReplyOrEdit();
             isEditingMode = true;
             editMessageId = id;
 
@@ -7551,7 +7554,7 @@
             const input = document.getElementById('msgInput');
 
             bar.classList.remove('hidden');
-            bar.classList.add('editing'); // Синий цвет
+            bar.classList.add('editing'); 
             title.innerText = "Редактирование";
             txt.innerText = text;
             icon.innerText = "✏️";
@@ -7559,11 +7562,14 @@
             input.value = text;
             input.focus();
 
-          
             setTimeout(() => {
                 autoResize(input);
                 checkInputState();
             }, 10);
+            if (currentMsgList) {
+                currentMsgList.style.paddingBottom = '75px';
+                setTimeout(() => smartScrollToBottom(currentMsgList, true, false), 50);
+            }
         }
 
         function cancelReplyOrEdit() {
@@ -7575,9 +7581,15 @@
             if (bar) bar.classList.add('hidden');
 
             const inp = document.getElementById('msgInput');
-            inp.value = '';
-            inp.style.height = '40px'; // <-- ДОБАВИТЬ ЭТУ СТРОЧКУ (Сброс высоты)
-            checkInputState(); // <-- ДОБАВИТЬ ЭТУ СТРОЧКУ (Вернуть микрофон)
+            if (inp) {
+                inp.value = '';
+                inp.style.height = '40px';
+                checkInputState();
+            }
+
+            if (currentMsgList) {
+                currentMsgList.style.paddingBottom = '20px';
+            }
         }
 
 
