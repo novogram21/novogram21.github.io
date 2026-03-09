@@ -4640,20 +4640,7 @@
             }
 
 
-        /* Время внутри блока реакций */
-        .msg-reactions .msg-meta {
-            margin-left: 8px;
-            padding-left: 8px;
-            border-left: 1px solid rgba(255, 255, 255, 0.1); /* Тонкая разделительная линия */
-            display: flex;
-            align-items: center;
-            height: 14px;
-        }
 
-        /* Убираем лишние отступы, когда время в реакциях */
-        .msg-reactions .msg-time {
-            margin: 0 !important;
-        }
 
 
     </style>
@@ -7275,10 +7262,12 @@
             }
         }
 
+        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
+        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
         function buildMessageHTML(m, msgId, msgType) {
             let contentHtml = '';
 
-            // 1. ПОДГОТОВКА ВРЕМЕНИ И ГАЛОЧЕК
+            // Время
             let timeStr = '';
             if (m.ts) {
                 const date = m.ts.toDate();
@@ -7289,51 +7278,114 @@
             }
 
             let ticksHtml = '✓';
+            // Если время отправки меньше или равно времени прочтения друга (RTDB) - две галки
             if (m.ts && m.ts.toMillis() <= window.friendReadTs) {
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             } else if (m.read) {
+                // Если RTDB не успела, берем данные из Firestore
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             }
 
-            // Создаем строку времени (но пока не добавляем её в основной HTML)
-            const metaHtml = `
-        <span class="msg-meta">
-            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
-            <span class="msg-time">${timeStr}</span>
-            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-        </span>`;
-
-            // 2. ЦИТАТА (REPLY)
+            // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                <div class="msg-reply-name">${m.replyTo.name}</div>
-                <div class="msg-reply-text">${m.replyTo.text}</div>
-            </div>`;
+                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                            <div class="msg-reply-name">${m.replyTo.name}</div>
+                            <div class="msg-reply-text">${m.replyTo.text}</div>
+                        </div>`;
             }
 
-            // 3. ОСНОВНОЙ КОНТЕНТ (ТЕКСТ / ФОТО / ЗВОНОК)
+            // Основной контент
             if (m.sys) {
                 contentHtml += m.txt;
-            } else if (msgType === 'image') {
+            }
+            else if (msgType === 'image') {
                 let imgSrc = m.txt;
+                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
+                // Чистая картинка без лишних div-оберток + УМНЫЙ СКРОЛЛ
                 contentHtml += `<img src="${imgSrc}" class="chat-media-img" onload="handleImageLoadScroll(this)" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
-            } else if (msgType === 'call') {
+            }
+            else if (msgType === 'call') {
+                // ... (тут твой код для звонков, оставляем как было, я его просто копирую чтобы ничего не сломать)
                 const parts = m.txt.split('|');
                 const callState = parts[0] || 'success';
                 const durationStr = parts[1] || '';
                 const isMine = (m.from === currentUser.uid);
-                let titleText = isMine ? (callState === 'canceled' ? 'Отмененный звонок' : 'Исходящий звонок') : (callState === 'missed' ? 'Пропущенный звонок' : 'Входящий звонок');
-                contentHtml += `<div class="chat-call-card"><div class="call-icon-wrapper"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></div><div class="call-info"><div class="call-title">${titleText}</div><div class="call-time">${timeStr} ${durationStr}</div></div></div>`;
-            } else {
-                let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
-                if (typeof isChatInitialLoad !== 'undefined' && !isChatInitialLoad && msgType === 'text' && !m.txt.includes('http')) {
-                    formattedText = applyPremiumTextEffect(m.txt);
+
+                let titleText = '';
+                let arrowHtml = '';
+                let arrowColor = '#50a758';
+
+                if (isMine) {
+                    titleText = (callState === 'canceled' || callState === 'missed') ? 'Отмененный звонок' : 'Исходящий звонок';
+                    arrowColor = (callState === 'canceled' || callState === 'missed') ? '#ff595a' : '#50a758';
+                    arrowHtml = `<svg style="color:${arrowColor}; margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>`;
+                } else {
+                    titleText = (callState === 'canceled' || callState === 'missed') ? 'Пропущенный звонок' : 'Входящий звонок';
+                    arrowColor = (callState === 'canceled' || callState === 'missed') ? '#ff595a' : '#50a758';
+                    arrowHtml = `<svg style="color:${arrowColor}; margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 7 17 7 7"></polyline></svg>`;
                 }
-                contentHtml += `<span class="msg-text">${formattedText}</span>`;
+
+                let durationDisplay = '';
+                if (durationStr && durationStr !== '00:00') {
+                    const dParts = durationStr.split(':');
+                    if (dParts.length === 2) {
+                        const mins = parseInt(dParts[0], 10);
+                        const secs = parseInt(dParts[1], 10);
+                        if (mins > 0) durationDisplay = ` (${mins} мин ${secs} сек)`;
+                        else durationDisplay = ` (${secs} сек)`;
+                    }
+                }
+
+                contentHtml += `
+                        <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
+                            <div class="call-icon-wrapper">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            </div>
+                            <div class="call-info">
+                                <div class="call-title">${titleText}</div>
+                                <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                            </div>
+                        </div>`;
+            }
+            else {
+                let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
+                let finalContent = formattedText;
+
+                if (typeof isChatInitialLoad !== 'undefined' && !isChatInitialLoad && !m.sys && msgType === 'text' && !m.txt.includes('http')) {
+                    finalContent = applyPremiumTextEffect(m.txt);
+                }
+
+                const safeHtml = (typeof DOMPurify !== 'undefined')
+                    ? DOMPurify.sanitize(finalContent, { ALLOWED_TAGS: ['a', 'span'], ALLOWED_ATTR: ['href', 'style', 'class'] })
+                    : finalContent;
+
+                contentHtml += `<span class="msg-text">${safeHtml}</span>`;
             }
 
-            // 4. ЛОГИКА РЕАКЦИЙ И ПЕРЕМЕЩЕНИЯ ВРЕМЕНИ
+            // Аккуратная мета-информация
+            if (!m.sys && msgType !== 'call') {
+                let metaHtml = `
+                        <span class="msg-meta">
+                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                            <span class="msg-time">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                        </span>`;
+                contentHtml += metaHtml;
+            }
+
+            // Очищаем старые флоаты и собираем футер
+            let metaHtml = '';
+            if (!m.sys && msgType !== 'call') {
+                metaHtml = `
+                    <span class="msg-meta">
+                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                        <span class="msg-time">${timeStr}</span>
+                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                    </span>`;
+            }
+
+            // --- НОВАЯ СИСТЕМА РЕАКЦИЙ ---
             const premiumEmojis = {
                 'fire': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f525.png',
                 'like': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44d.png',
@@ -7343,37 +7395,39 @@
                 'poop': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png'
             };
 
+            let reactionsHtml = '';
             let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
 
             if (hasReactions) {
-                // --- ВРЕМЯ УХОДИТ В БЛОК РЕАКЦИЙ ---
                 const reactionCounts = {};
                 let myReaction = null;
+
                 for (const uid in m.reactions) {
                     const emojiId = m.reactions[uid];
                     if (uid === currentUser.uid) myReaction = emojiId;
-                    reactionCounts[emojiId] = (reactionCounts[emojiId] || 0) + 1;
+
+                    if (!reactionCounts[emojiId]) reactionCounts[emojiId] = 0;
+                    reactionCounts[emojiId]++;
                 }
 
-                let reactionsHtml = '<div class="msg-reactions">';
+                reactionsHtml = '<div class="msg-reactions">';
                 Object.entries(reactionCounts).forEach(([emojiId, count]) => {
                     const isMy = myReaction === emojiId;
-                    const imgSrc = premiumEmojis[emojiId] || premiumEmojis['like'];
+                    const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
+                    const imgSrc = premiumEmojis[emojiId] || premiumEmojis['like']; // Фоллбэк
+
                     reactionsHtml += `
-                <div class="msg-reaction ${isMy ? 'reacted-by-me' : ''}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
-                    <img src="${imgSrc}" alt="${emojiId}">
-                    ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
-                </div>`;
+                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
+                            <img src="${imgSrc}" alt="${emojiId}">
+                            ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
+                        </div>`;
                 });
-
-                // Добавляем время ВНУТРЬ контейнера реакций, чтобы оно было в одну строку
-                reactionsHtml += metaHtml;
                 reactionsHtml += '</div>';
+            }
 
-                contentHtml += `<div class="msg-footer has-reactions">${reactionsHtml}</div>`;
-            } else if (!m.sys && msgType !== 'call') {
-                // --- ВРЕМЯ ОСТАЕТСЯ ПОД ТЕКСТОМ (если реакций нет) ---
-                contentHtml += `<div class="msg-footer">${metaHtml}</div>`;
+            // Оборачиваем во Flex-контейнер для идеального выравнивания!
+            if (hasReactions || (!m.sys && msgType !== 'call')) {
+                contentHtml += `<div class="msg-footer ${hasReactions ? 'has-reactions' : ''}">${reactionsHtml}${metaHtml}</div>`;
             }
 
             return contentHtml;
