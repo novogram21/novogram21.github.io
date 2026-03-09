@@ -4690,7 +4690,7 @@
             <div style="display: flex; justify-content: center; padding: 30px 0 20px;">
                 <div class="premium-avatar-wrap" style="cursor: pointer;" onclick="document.getElementById('editAvatarInput').click()">
                     <img id="editAvatarPreview" src="" style="display:none">
-                    <div id="editAvatarPlaceholder" class="placeholder">👤</div>
+                    <div id="editAvatarPlaceholder" class="placeholder"><svg viewBox="0 0 24 24" width="50%" height="50%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></div>
                     <div class="camera-overlay">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
                     </div>
@@ -4780,7 +4780,7 @@
             <div class="premium-profile-info">
                 <div class="premium-avatar-wrap" onclick="viewProfileAvatar()">
                     <img id="profileAvatarPreview" src="" style="display:none">
-                    <div id="profileAvatarPlaceholder" class="placeholder">👤</div>
+                    <div id="profileAvatarPlaceholder" class="placeholder"><svg viewBox="0 0 24 24" width="50%" height="50%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></div>
                 </div>
                 <input type="text" id="profileName" class="premium-name-input" placeholder="Имя" readonly onblur="if(this.value.trim() === '') this.value = 'User'">
                 <input type="text" id="profileSurname" class="premium-name-input" placeholder="" readonly style="font-size: 16px; font-weight: 400; color: #8e8e93; display:none; margin-top: 4px;">
@@ -4897,7 +4897,7 @@
             <button id="searchBackBtn" onclick="closeSearch()" style="display: none; align-self: flex-start; background: transparent; border: none; color: #736AF0; cursor: pointer; flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; text-align: center; padding: 0; margin-left: -5px; transition: transform 0.2s;" onmousedown="this.style.transform='scale(0.85)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.85)'" ontouchend="this.style.transform='scale(1)'">
                 <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <button id="profileBtn" onclick="openProfileSheet()"><span id="myAvatarSmall">👤</span></button>
+            <button id="profileBtn" onclick="openProfileSheet()"><span id="myAvatarSmall"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></span></button>
 
             <div style="flex: 1; position: relative;">
                 <input type="text" id="searchInput" placeholder="Поиск..." onfocus="openSearchUI()" oninput="handleSearchInput(this)">
@@ -4936,7 +4936,7 @@
                     <button class="back-btn" onclick="event.stopPropagation(); closeChat();">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     </button>
-                    <div class="chat-header-avatar" id="chatHeaderAvatar">👤</div>
+                    <div class="chat-header-avatar" id="chatHeaderAvatar"><svg viewBox="0 0 24 24" width="60%" height="60%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></div>
                     <div class="chat-header-info">
                         <div class="chat-title" id="chatTitle">User</div>
                         <div class="chat-status" id="chatStatus">загрузка...</div>
@@ -6262,7 +6262,7 @@
                         const div = document.createElement('div');
                         div.className = 'user-item'; // Используем тот же стиль, что и для чатов
                         // Аватарка (заглушка или можно подгрузить реальную)
-                        const avatar = '<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;">👤</div>';
+                        const avatar = '<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>';
                         div.innerHTML = `
                                                                                 ${avatar}
                                                                                 <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
@@ -6575,7 +6575,7 @@
             // Аватарка
             const avatarHtml = (friendData && friendData.avatar)
                 ? `<img src="${friendData.avatar}" class="user-item-avatar">`
-                : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">👤</div>`;
+                : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
 
             return `
                                                                                 ${avatarHtml}
@@ -6711,7 +6711,7 @@
 
                         const avatarHtml = fAvatar
                             ? `<img src="${fAvatar}" class="user-item-avatar">`
-                            : `<div class="user-item-avatar" style="background:#444;display:flex;align-items:center;justify-content:center;font-size:24px;color:#888">${isBot ? '🤖' : '👤'}</div>`;
+                            : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93">${isBot ? '🤖' : '<svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}</div>`;
 
                         div.innerHTML = `
                                                 ${avatarHtml}
@@ -7423,7 +7423,7 @@
             if (fAvatar) {
                 avatarEl.src = fAvatar;
             } else {
-                avatarEl.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23444"/><text x="50%" y="50%" fill="white" font-size="18" text-anchor="middle" dy=".3em">👤</text></svg>';
+                avatarEl.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="%2321232b"/><svg x="10" y="10" width="20" height="20" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="%238e8e93"/></svg></svg>';
             }
 
             const notif = document.getElementById('inAppNotification');
@@ -9522,8 +9522,8 @@
                     if (userData && userData.avatar) {
                         headerAvatar.innerHTML = `<img src="${userData.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
                     } else {
-                        // Заглушка, если нет фото
-                        headerAvatar.innerHTML = '👤';
+                        
+                        headerAvatar.innerHTML = '<svg viewBox="0 0 24 24" width="60%" height="60%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
                     }
 
                     // =======================================================
@@ -13507,7 +13507,7 @@
             <div class="premium-profile-info" style="padding-bottom: 15px;">
                 <div class="premium-avatar-wrap" id="friendProfileAvatarWrap" onclick="openImageViewer(this.querySelector('img').src)">
                     <img id="friendProfileAvatarPreview" src="" style="display:none">
-                    <div id="friendProfileAvatarPlaceholder" class="placeholder">👤</div>
+                    <div id="friendProfileAvatarPlaceholder" class="placeholder"><svg viewBox="0 0 24 24" width="50%" height="50%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></div>
                 </div>
                 <div id="friendProfileName" class="premium-name-input" style="margin-bottom: 5px;">Загрузка...</div>
                 <div id="friendProfileStatus" class="premium-status" style="color: #8e8e93; font-weight: normal;">загрузка...</div>
@@ -13573,7 +13573,7 @@
             <div class="premium-profile-info" style="padding-bottom: 5px;">
                 <div class="premium-avatar-wrap" style="pointer-events: none; width: 100px; height: 100px; background: none; box-shadow: none; border-radius: 50%; padding: 0;">
                     <img id="contactEditAvatar" src="" style="display:none; border: none;">
-                    <div id="contactEditPlaceholder" class="placeholder" style="border: none;">👤</div>
+                    <div id="contactEditPlaceholder" class="placeholder" style="border: none;"><svg viewBox="0 0 24 24" width="50%" height="50%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></div>
                 </div>
                 <div id="contactOriginalName" style="color: white; font-size: 20px; font-weight: bold; margin-top: 10px; letter-spacing: -0.3px;">Загрузка...</div>
             </div>
