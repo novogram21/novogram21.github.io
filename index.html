@@ -5836,7 +5836,7 @@
                     // ТЕПЕРЬ, КОГДА ОКНО СПРЯТАНО, ЗАПУСКАЕМ ТЯЖЕЛЫЕ ФУНКЦИИ И СБРОС СЕТИ
                     managePresence(u.uid);
                     listenToAllStatuses();
-                    listenAllUnreadRTDB();
+                    
                     loadTurnServers();
                     loadData(); // <-- Сброс сети произойдет здесь, но UI уже разблокирован
                     listenForIncomingCalls();
@@ -6968,11 +6968,12 @@
             }
 
             let ticksHtml = '✓';
-            // Если время сообщения меньше или равно времени прочтения друга - рисуем две галки
+            // Если время отправки меньше или равно времени прочтения друга (RTDB) - две галки
             if (m.ts && m.ts.toMillis() <= window.friendReadTs) {
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             } else if (m.read) {
-                ticksHtml = '<span style="margin-right: -4px;">✓</span>✓'; // Запасной вариант из Firestore
+                // Если RTDB не успела, берем данные из Firestore
+                ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             }
 
             // Цитата (Reply)
@@ -10701,20 +10702,16 @@
             }
         });
 
-        // --- ЛОГИКА ПРОЧТЕНИЯ ПРИ ВОЗВРАЩЕНИИ НА ВКЛАДКУ ---
-        // --- ПРЕМИУМ: Умное прочтение сообщений по скроллу ---
         // ==========================================
         // ПРЕМИУМ ДВИЖОК ПРОЧТЕНИЙ (RTDB + OBSERVER)
         // ==========================================
         window.friendReadTs = 0;
         window.myReadTs = 0;
 
-        // 1. Оптимизированный сканер экрана (работает без лагов)
         window.chatObserver = new IntersectionObserver((entries) => {
             if (!currentChatId || !currentUser || document.visibilityState !== 'visible') return;
 
             let maxSeenTs = 0;
-            let newlyReadCount = 0;
 
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -10725,38 +10722,31 @@
 
                     window.chatObserver.unobserve(el);
                     el.classList.remove('is-unread');
-                    newlyReadCount++;
+
+                    // 1. Мгновенно обновляем Firestore для КАЖДОГО увиденного сообщения!
+                    // Это автоматически снимет бейдж в боковом меню
+                    const msgId = el.id.replace('msg-', '');
+                    if (msgId) {
+                        db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId)
+                            .update({ read: true }).catch(() => { });
+                    }
                 }
             });
 
-            if (maxSeenTs > 0 && maxSeenTs > window.myReadTs) {
+            // 2. Отправляем в быструю базу RTDB таймстемп, чтобы у друга за миллисекунду загорелись ✓✓
+            if (maxSeenTs > window.myReadTs) {
                 window.myReadTs = maxSeenTs;
-
-                // Мгновенная отправка в быструю базу RTDB
                 rtdb.ref(`chat_reads/${currentChatId}/${currentUser.uid}`).set(maxSeenTs);
-
-                // Плавно списываем счетчик непрочитанных на иконке
-                rtdb.ref(`unread/${currentUser.uid}/${currentChatId}`).transaction((current) => {
-                    return Math.max(0, (current || 0) - newlyReadCount);
-                });
-
-                // Фоново обновляем Firestore (чтобы история осталась верной при перезагрузке)
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const msgId = entry.target.id.replace('msg-', '');
-                        db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId).update({ read: true }).catch(() => { });
-                    }
-                });
             }
         }, {
-            root: null, // Весь экран
-            threshold: 0.5 // Сообщение считается прочитанным, если оно показалось на 50%
+            root: null,
+            threshold: 0.5 // Сообщение "прочитано", если показалось на экране хотя бы на 50%
         });
 
-        // Функция-заглушка для системных событий (фокус окна и т.д.)
         function markCurrentChatRead() {
             if (!currentChatId || document.visibilityState !== 'visible') return;
             if (currentMsgList) {
+                // Ищем все непрочитанные на экране и "пинаем" сканер
                 const unreadEls = currentMsgList.querySelectorAll('.is-unread');
                 unreadEls.forEach(el => {
                     window.chatObserver.unobserve(el);
@@ -10765,16 +10755,14 @@
             }
         }
 
-        // 2. Слушатель чужих галочек в реальном времени
+        // Слушатель чужих галочек в реальном времени
         function listenFriendReadStatus(chatId, friendId) {
             if (window.friendReadUnsub) window.friendReadUnsub();
 
-            // Получаем то, что мы уже прочитали
             rtdb.ref(`chat_reads/${chatId}/${currentUser.uid}`).once('value', snap => {
                 window.myReadTs = snap.val() || 0;
             });
 
-            // Мгновенно ловим прочтения друга
             const ref = rtdb.ref(`chat_reads/${chatId}/${friendId}`);
             const listener = ref.on('value', snap => {
                 window.friendReadTs = snap.val() || 0;
@@ -10784,7 +10772,7 @@
             window.friendReadUnsub = () => ref.off('value', listener);
         }
 
-        // 3. Анимация двойной галочки
+        // Анимация двойной галочки у тебя на экране
         function updateTicksUI() {
             if (!currentMsgList) return;
             const myMsgs = currentMsgList.querySelectorAll('.msg-me');
@@ -10801,26 +10789,7 @@
             });
         }
 
-        function listenAllUnreadRTDB() {
-            rtdb.ref(`unread/${currentUser.uid}`).on('value', (snap) => {
-                const data = snap.val() || {};
-                unreadCounts = data; // Синхронизируем с твоей переменной
-
-                Object.keys(data).forEach(chatId => {
-                    const badgeEl = document.getElementById('badge-' + chatId);
-                    if (badgeEl) {
-                        const count = data[chatId];
-                        if (count > 0) {
-                            badgeEl.innerText = count;
-                            badgeEl.classList.remove('hidden');
-                        } else {
-                            badgeEl.classList.add('hidden');
-                        }
-                    }
-                });
-                updateTotalFriendsBadge(); // Твоя функция общего счетчика на папке
-            });
-        }
+        
 
         // Запускаем проверку, когда пользователь фокусируется на окне
         window.addEventListener('focus', markCurrentChatRead);
