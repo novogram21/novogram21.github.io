@@ -6909,13 +6909,25 @@
                     // Если список сейчас скрыт (значит это ПЕРВАЯ загрузка при открытии)
                     // Если список сейчас скрыт (значит это ПЕРВАЯ загрузка при открытии)
                     if (list.classList.contains('is-loading')) {
-                        list.scrollTop = list.scrollHeight;
 
-                        // В WebView надежнее использовать setTimeout вместо requestAnimationFrame
+                        // --- ПРЕМИУМ: Достаем сохраненную позицию из кэша ---
+                        const savedScroll = sessionStorage.getItem('scroll_' + currentChatId);
+
+                        if (savedScroll !== null) {
+                            list.scrollTop = parseInt(savedScroll, 10);
+                        } else {
+                            list.scrollTop = list.scrollHeight; // Если зашли впервые - кидаем в самый низ
+                        }
+
+                        // Уменьшили задержку до 50мс, чтобы чат открывался молниеносно
                         setTimeout(() => {
-                            list.scrollTop = list.scrollHeight;
-                            list.classList.remove('is-loading'); // Чат появляется
-                        }, 150); // Даем движку 150 миллисекунд на рендеринг элементов
+                            if (savedScroll !== null) {
+                                list.scrollTop = parseInt(savedScroll, 10);
+                            } else {
+                                list.scrollTop = list.scrollHeight;
+                            }
+                            list.classList.remove('is-loading'); // Чат появляется без дерганий
+                        }, 50);
                     } else if (isScrolledToBottom) {
                         // --- НОВОЕ: Плавный автоскролл, если мы уже были внизу и пришло новое сообщение ---
                         setTimeout(() => {
@@ -7094,6 +7106,11 @@
         function performCloseUI() {
             closeAllSheets(); // <--- НОВОЕ: Принудительно закрываем все меню, блюр и шторки при выходе!
             document.getElementById('scrollToBottomBtn')?.classList.remove('visible');
+
+            // --- ПРЕМИУМ: Запоминаем скролл прямо перед самым закрытием чата ---
+            if (currentMsgList && currentChatId) {
+                sessionStorage.setItem('scroll_' + currentChatId, currentMsgList.scrollTop);
+            }
 
             if (window.msgUnsub) {
                 window.msgUnsub();
@@ -11730,6 +11747,11 @@
 
         function handleChatScroll(e) {
             const list = e.target;
+
+            // --- ПРЕМИУМ: Мгновенно запоминаем позицию скролла в кэш ---
+            if (currentChatId) {
+                sessionStorage.setItem('scroll_' + currentChatId, list.scrollTop);
+            }
 
             // --- НОВОЕ: Логика кнопки "Вниз" ---
             const scrollBtn = document.getElementById('scrollToBottomBtn');
