@@ -12895,7 +12895,11 @@
                         if (isSwipeToClose) {
                             const deltaY = currentY - swipeCloseStartY;
                             swipeCloseCurrentY = deltaY;
-                            const opacity = Math.max(0, 0.9 - Math.abs(deltaY) / (window.innerHeight / 1.5));
+
+                            // ПРЕМИУМ ФИКС: первые 30px свайпа фон остается 100% черным
+                            const safeDeltaY = Math.max(0, Math.abs(deltaY) - 30);
+                            const opacity = Math.max(0, 1 - (safeDeltaY / (window.innerHeight / 2.5)));
+
                             document.getElementById('imageViewer').style.backgroundColor = `rgba(0, 0, 0, ${opacity})`;
                             const pullScale = Math.max(0.7, 1 - Math.abs(deltaY) / window.innerHeight);
                             viewerImg.style.transition = 'none';
@@ -13004,6 +13008,7 @@
                 }
 
                 // Логика закрытия (свайп вниз)
+                // Логика закрытия (свайп вниз)
                 if (isSwipeToClose && currentScale === 1 && e.touches.length === 0) {
                     isSwipeToClose = false;
                     if (Math.abs(swipeCloseCurrentY) > 100) {
@@ -13011,10 +13016,12 @@
                         closeImageViewer();
                     } else {
                         document.getElementById('imageViewer').style.transition = 'background-color 0.3s ease';
-                        document.getElementById('imageViewer').style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+                        // ФИКС: Возвращаем 100% черный цвет (а не 0.9)
+                        document.getElementById('imageViewer').style.backgroundColor = '#000000';
                         window.resetImageZoom();
                         setTimeout(() => {
                             document.getElementById('imageViewer').style.transition = '';
+                            document.getElementById('imageViewer').style.backgroundColor = ''; // Очищаем инлайн стиль
                         }, 300);
                     }
                     swipeCloseCurrentY = 0;
