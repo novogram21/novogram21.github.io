@@ -7558,6 +7558,12 @@
 
             input.value = text;
             input.focus();
+
+          
+            setTimeout(() => {
+                autoResize(input);
+                checkInputState();
+            }, 10);
         }
 
         function cancelReplyOrEdit() {
