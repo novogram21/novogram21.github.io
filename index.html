@@ -4461,58 +4461,7 @@
                 transform: scale(1);
             }
 
-        /* --- ПРЕМИАЛЬНАЯ ЗАГРУЗКА ДОКУМЕНТОВ --- */
-        .file-upload-icon-wrapper {
-            position: relative;
-            width: 44px;
-            height: 44px;
-            flex-shrink: 0;
-            background: rgba(115, 106, 240, 0.15); /* Цвет акцента с прозрачностью */
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
-        }
 
-            .file-upload-icon-wrapper:active {
-                transform: scale(0.9);
-                background: rgba(115, 106, 240, 0.25);
-            }
-
-        .file-upload-progress-svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg); /* Круг заполняется сверху */
-        }
-
-        .file-upload-circle-bg {
-            fill: none;
-            stroke: rgba(115, 106, 240, 0.2);
-            stroke-width: 2;
-        }
-
-        .file-upload-circle-value {
-            fill: none;
-            stroke: #736AF0;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-dasharray: 120; /* Математическая длина этого круга */
-            stroke-dashoffset: 120;
-            transition: stroke-dashoffset 0.15s linear;
-        }
-
-        .file-upload-cancel {
-            color: #736AF0;
-            width: 18px;
-            height: 18px;
-            position: relative;
-            z-index: 2;
-        }
 
 
 
@@ -7130,9 +7079,12 @@
             }
         }
 
+        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
+        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
         function buildMessageHTML(m, msgId, msgType) {
             let contentHtml = '';
 
+            // Время
             let timeStr = '';
             if (m.ts) {
                 const date = m.ts.toDate();
@@ -7143,12 +7095,15 @@
             }
 
             let ticksHtml = '✓';
+            // Если время отправки меньше или равно времени прочтения друга (RTDB) - две галки
             if (m.ts && m.ts.toMillis() <= window.friendReadTs) {
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             } else if (m.read) {
+                // Если RTDB не успела, берем данные из Firestore
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             }
 
+            // Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
                         <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
@@ -7157,15 +7112,18 @@
                         </div>`;
             }
 
+            // Основной контент
             if (m.sys) {
                 contentHtml += m.txt;
             }
             else if (msgType === 'image') {
                 let imgSrc = m.txt;
-                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/$${fileId}=w600`; } catch (e) { } }
+                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
+                // Чистая картинка без лишних div-оберток + УМНЫЙ СКРОЛЛ
                 contentHtml += `<img src="${imgSrc}" class="chat-media-img" onload="handleImageLoadScroll(this)" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
             }
             else if (msgType === 'call') {
+                // ... (тут твой код для звонков, оставляем как было, я его просто копирую чтобы ничего не сломать)
                 const parts = m.txt.split('|');
                 const callState = parts[0] || 'success';
                 const durationStr = parts[1] || '';
@@ -7207,19 +7165,6 @@
                             </div>
                         </div>`;
             }
-            // --- ДОБАВЛЯЕМ ОБРАБОТКУ ФАЙЛА ---
-            else if (msgType === 'file') {
-                contentHtml += `
-                    <a href="${m.txt}" target="_blank" class="chat-file-card" style="text-decoration: none; border-color: rgba(115, 106, 240, 0.3); background: rgba(115, 106, 240, 0.05); padding: 8px 12px 8px 8px; display: flex; align-items: center;">
-                        <div class="file-icon" style="background: rgba(115, 106, 240, 0.15); color: #736AF0; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                        </div>
-                        <div class="file-info" style="margin-left: 12px;">
-                            <div class="file-name" style="color: #ffffff; font-size: 15px;">Вложение</div>
-                            <div class="file-action" style="color: #736AF0; font-size: 12px; font-weight: 500; margin-top: 4px;">Скачать файл</div>
-                        </div>
-                    </a>`;
-            }
             else {
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
                 let finalContent = formattedText;
@@ -7235,6 +7180,7 @@
                 contentHtml += `<span class="msg-text">${safeHtml}</span>`;
             }
 
+            // Аккуратная мета-информация
             if (!m.sys && msgType !== 'call') {
                 let metaHtml = `
                         <span class="msg-meta">
@@ -9758,22 +9704,23 @@
 
 
 
+        // --- 1. Функция для показа "временного" сообщения (превью) ---
+        // --- 1. Функция для показа "временного" сообщения (превью) ---
         function showTempMessage(file) {
             const list = currentMsgList;
             const tempId = 'temp-' + Date.now();
             const div = document.createElement('div');
             div.id = tempId;
+            // Добавляем transition для плавного удаления при отмене
             div.style.transition = 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
             let contentHtml = '';
+
+            // Вычисляем мегабайты заранее
             const totalMb = (file.size / (1024 * 1024)).toFixed(1);
 
-            // А. ЕСЛИ ГРУЗИМ ФОТОГРАФИЮ
-            if (file.type.startsWith('image/')) {
-                div.className = 'msg msg-me msg-image-only';
-                const url = URL.createObjectURL(file);
-
-                const progressHtml = `
+            // UI прогресс-бара (используется и для фото, и для файлов)
+            const progressHtml = `
                     <div class="upload-progress-container">
                         <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
                             <svg class="upload-progress-svg" viewBox="0 0 50 50">
@@ -9786,54 +9733,43 @@
                     </div>
                 `;
 
+            // Если это картинка
+            if (file.type.startsWith('image/')) {
+                div.className = 'msg msg-me msg-image-only';
+                const url = URL.createObjectURL(file);
+
                 contentHtml = `
-                    <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
-                    ${progressHtml}
-                `;
+                        <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
+                        ${progressHtml}
+                    `;
             }
-            // Б. ЕСЛИ ГРУЗИМ ФАЙЛ (ПРЕМИУМ ДИЗАЙН)
+            // Если это документ
             else {
                 div.className = 'msg msg-me';
-
-                // Умная обрезка длинного имени (оставляем начало и формат)
-                let shortName = file.name;
-                if (shortName.length > 25) {
-                    const extIndex = shortName.lastIndexOf('.');
-                    if (extIndex !== -1 && shortName.length - extIndex < 7) {
-                        const ext = shortName.substring(extIndex);
-                        const namePart = shortName.substring(0, extIndex);
-                        shortName = namePart.substring(0, 18) + '...' + ext;
-                    } else {
-                        shortName = shortName.substring(0, 22) + '...';
-                    }
-                }
-
                 contentHtml = `
-                    <div class="chat-file-card" style="background: rgba(115, 106, 240, 0.05); border: 1px solid rgba(115, 106, 240, 0.2); padding: 8px 12px 8px 8px; min-width: 200px;">
-                        <div class="file-upload-icon-wrapper" onclick="cancelUpload('${tempId}')" title="Отменить загрузку">
-                            <svg class="file-upload-progress-svg" viewBox="0 0 44 44">
-                                <circle class="file-upload-circle-bg" cx="22" cy="22" r="19"></circle>
-                                <circle class="file-upload-circle-value" id="progress-val-${tempId}" cx="22" cy="22" r="19"></circle>
-                            </svg>
-                            <svg class="file-upload-cancel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </div>
-                        <div class="file-info" style="margin-left: 4px; opacity: 1;">
-                            <div class="file-name" style="color: #ffffff; font-size: 15px;">${shortName}</div>
-                            <div class="file-action" id="progress-txt-${tempId}" style="color: #736AF0; font-size: 12px; font-weight: 500; margin-top: 4px;">0.0 / ${totalMb} МБ</div>
-                        </div>
-                    </div>`;
+                        <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
+                            <div class="file-icon" style="opacity: 0.2;">📄</div>
+                            <div class="file-info" style="opacity: 0.2;">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-action">Загрузка...</div>
+                            </div>
+                            ${progressHtml}
+                        </div>`;
             }
 
             div.innerHTML = contentHtml;
             list.appendChild(div);
 
             setTimeout(() => {
-                smartScrollToBottom(list, true, false);
+                smartScrollToBottom(list, true, false); // Принудительно и плавно!
             }, 50);
 
             return tempId;
         }
-        
+
+        // --- 2. Основная функция загрузки ---
+        // Глобальный объект для хранения активных загрузок (чтобы их можно было убить крестиком)
+        // Глобальный объект для хранения активных загрузок (чтобы работал крестик)
         window.activeUploads = {};
 
         // ФУНКЦИЯ ОТМЕНЫ ЗАГРУЗКИ ПОЛЬЗОВАТЕЛЕМ
@@ -9859,6 +9795,7 @@
             showToast("Отправка отменена");
         };
 
+        // ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ (С УМНЫМ ПРОГРЕССОМ И ОБХОДОМ CORS)
         async function uploadFile(input) {
             const file = input.files[0];
             if (!file) return;
@@ -9869,12 +9806,9 @@
                 return;
             }
 
-            const isImage = file.type.startsWith('image/');
             const tempMsgId = showTempMessage(file);
             const totalMb = (file.size / (1024 * 1024)).toFixed(1);
-
-            // ФИКС: Для фото длина круга 135, для файла 120 (радиус меньше)
-            const circumference = isImage ? 135 : 120;
+            const circumference = 135; // Длина круга
 
             const msgInput = document.getElementById('msgInput');
             const originalPlaceholder = msgInput.placeholder;
@@ -9882,6 +9816,7 @@
             msgInput.disabled = true;
 
             try {
+                // 1. Конвертируем в Base64
                 const toBase64 = f => new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(f);
@@ -9891,10 +9826,17 @@
 
                 const base64Data = await toBase64(file);
 
+
+                // --- 2. УМНЫЙ АДАПТИВНЫЙ ПРОГРЕСС (ОТКАЛИБРОВАННЫЙ) ---
                 let percentComplete = 0;
                 let isUploading = true;
+
                 let networkSpeedMbps = (navigator.connection && navigator.connection.downlink) ? navigator.connection.downlink : 3;
+
+                // ЖЕСТКАЯ КАЛИБРОВКА: Делим на 4, так как отдавать файл всегда медленнее, чем качать
                 let estimatedUploadSpeedMb = (networkSpeedMbps / 8) / 4;
+
+                // Вычисляем время + добавляем 2.5 секунды (ровно столько Гугл думает над файлом)
                 let estimatedSeconds = Math.max(3.0, Math.min((totalMb / estimatedUploadSpeedMb) + 2.5, 45));
                 let progressStep = (1 / (estimatedSeconds * 10));
 
@@ -9903,16 +9845,22 @@
 
                     if (percentComplete < 0.95) {
                         let currentStep = progressStep;
+
+                        // Плавное торможение начинается раньше, чтобы не было "зависания"
                         if (percentComplete > 0.70) currentStep = progressStep * 0.5;
                         if (percentComplete > 0.85) currentStep = progressStep * 0.15;
+
                         percentComplete += currentStep;
                         if (percentComplete > 0.95) percentComplete = 0.95;
                     }
 
                     const loadedMb = (file.size * percentComplete / (1024 * 1024)).toFixed(1);
+
+                    // Обновляем текст МБ
                     const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
                     if (txtEl) txtEl.innerText = `${loadedMb} / ${totalMb} МБ`;
 
+                    // Двигаем белый кружок
                     const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
                     if (circleEl) {
                         const offset = circumference - (percentComplete * circumference);
@@ -9920,12 +9868,14 @@
                     }
                 }, 100);
 
+                // 3. ОТПРАВКА ЧЕРЕЗ FETCH (Идеальный обход CORS)
                 const controller = new AbortController();
                 window.activeUploads[tempMsgId] = controller;
 
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     redirect: "follow",
+                    // ВАЖНО: Используем строго text/plain БЕЗ charset, чтобы браузер не слал OPTIONS-запрос!
                     headers: { "Content-Type": "text/plain" },
                     body: JSON.stringify({
                         action: "upload",
@@ -9934,18 +9884,20 @@
                         mimeType: file.type,
                         base64: base64Data
                     }),
-                    signal: controller.signal
+                    signal: controller.signal // Привязываем крестик отмены
                 })
                     .then(res => res.json())
                     .then(data => {
                         isUploading = false;
                         delete window.activeUploads[tempMsgId];
 
+                        // Сервер ответил! Заливаем круг на 100%
                         const txtEl = document.getElementById(`progress-txt-${tempMsgId}`);
                         if (txtEl) txtEl.innerText = `${totalMb} / ${totalMb} МБ`;
                         const circleEl = document.getElementById(`progress-val-${tempMsgId}`);
                         if (circleEl) circleEl.style.strokeDashoffset = 0;
 
+                        // Микро-пауза, чтобы глаз успел заметить 100% загрузку (очень приятный UX)
                         setTimeout(() => {
                             const tempEl = document.getElementById(tempMsgId);
                             if (tempEl) tempEl.remove();
@@ -9962,8 +9914,9 @@
                     .catch(err => {
                         isUploading = false;
                         delete window.activeUploads[tempMsgId];
+
                         if (err.name === 'AbortError') {
-                            console.log('Отменено пользователем');
+                            console.log('Отменено пользователем'); // Юзер нажал крестик
                         } else {
                             showToast("Интернет отключился или сбой сети");
                             const tempEl = document.getElementById(tempMsgId);
@@ -9986,12 +9939,7 @@
                 const tempEl = document.getElementById(tempMsgId);
                 if (tempEl) tempEl.remove();
                 showToast("Системная ошибка");
-                if (msgInput) {
-                    msgInput.placeholder = originalPlaceholder;
-                    msgInput.disabled = false;
-                    msgInput.focus();
-                }
-                input.value = '';
+                resetInput();
             }
         }
 
