@@ -865,7 +865,7 @@
             position: relative;
             z-index: 1;
             min-height: 0;
-            height: 0; 
+            height: 0;
             transition: opacity 0.15s ease-out, padding-bottom 0.25s cubic-bezier(0.2, 0.85, 0.3, 1);
         }
 
@@ -4051,7 +4051,7 @@
 
         /* --- НОВОЕ: Оригинальный текст маленькими буквами --- */
         .msg-text {
-            white-space: pre-wrap; 
+            white-space: pre-wrap;
             word-break: break-word;
         }
 
@@ -4743,6 +4743,17 @@
                     transform: scale(1.25);
                     background: rgba(255,255,255,0.05);
                 }
+
+        .local-video-container.pip-hidden {
+            opacity: 0 !important;
+            transform: scale(0.3) !important;
+            pointer-events: none !important;
+            box-shadow: none !important;
+        }
+
+
+
+
 
 
 
@@ -5811,13 +5822,13 @@
             const actionIcon = (chatExists || isBot) ? '💬' : '➕';
 
             div.innerHTML = `
-                                    ${avatarHtml}
-                                    <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                                        <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                                        <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                                    </div>
-                                    <div class="search-action" style="color:#007bff; font-size:20px;">${actionIcon}</div>
-                                `;
+                                        ${avatarHtml}
+                                        <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                                            <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                                            <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                                        </div>
+                                        <div class="search-action" style="color:#007bff; font-size:20px;">${actionIcon}</div>
+                                    `;
 
             div.onclick = async () => {
                 if (chatExists) {
@@ -6276,7 +6287,7 @@
                     }
 
                     loadTurnServers();
-                    loadData(); 
+                    loadData();
                     listenForIncomingCalls();
                     loadTgId();
                     setTimeout(() => {
@@ -6599,16 +6610,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>';
                         div.innerHTML = `
-                                                                                ${avatar}
-                                                                                <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                </div>
-                                                                                <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                </div>
-                                                                                `;
+                                                                                    ${avatar}
+                                                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                    ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                    <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                    </div>
+                                                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                    <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                    <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                    </div>
+                                                                                    `;
                         list.appendChild(div);
                     });
                 });
@@ -6913,19 +6924,19 @@
                 : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
 
             return `
-                                                                                ${avatarHtml}
-                                                                                <div class="user-name">${fName}</div>
-                                                                                <div class="last-msg-row">
-                                                                                <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                </div>
-                                                                                <div class="meta-column">
-                                                                                <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                <div class="meta-bottom-row">
-                                                                                <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                                                </div>
-                                                                                </div>
-                                                                                `;
+                                                                                    ${avatarHtml}
+                                                                                    <div class="user-name">${fName}</div>
+                                                                                    <div class="last-msg-row">
+                                                                                    <span class="last-msg" id="last-${chatId}">...</span>
+                                                                                    </div>
+                                                                                    <div class="meta-column">
+                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                    <div class="meta-bottom-row">
+                                                                                    <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                    </div>
+                                                                                    </div>
+                                                                                    `;
         }
 
         function loadData() {
@@ -7049,19 +7060,19 @@
                             : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93">${isBot ? '🤖' : '<svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}</div>`;
 
                         div.innerHTML = `
-                                                ${avatarHtml}
-                                                <div class="user-name">${fName}</div>
-                                                <div class="last-msg-row">
-                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                </div>
-                                                <div class="meta-column">
-                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                    <div class="meta-bottom-row">
-                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                    ${avatarHtml}
+                                                    <div class="user-name">${fName}</div>
+                                                    <div class="last-msg-row">
+                                                        <span class="last-msg" id="last-${chatId}">...</span>
                                                     </div>
-                                                </div>
-                                            `;
+                                                    <div class="meta-column">
+                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                        <div class="meta-bottom-row">
+                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                        </div>
+                                                    </div>
+                                                `;
 
                         if (isNew) {
                             targetList.appendChild(div); // Добавляем строго в нужную папку!
@@ -7442,20 +7453,20 @@
             let metaHtml = '';
             if (!m.sys && msgType !== 'call') {
                 metaHtml = `
-                    <span class="msg-meta">
-                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
-                        <span class="msg-time">${timeStr}</span>
-                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                    </span>`;
+                        <span class="msg-meta">
+                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                            <span class="msg-time">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                        </span>`;
             }
 
             // 5. Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                        <div class="msg-reply-name">${m.replyTo.name}</div>
-                        <div class="msg-reply-text">${m.replyTo.text}</div>
-                    </div>`;
+                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                            <div class="msg-reply-name">${m.replyTo.name}</div>
+                            <div class="msg-reply-text">${m.replyTo.text}</div>
+                        </div>`;
             }
 
             // 6. Основной контент (Текст, Картинка или Звонок)
@@ -7502,15 +7513,15 @@
                 }
 
                 contentHtml += `
-                    <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
-                        <div class="call-icon-wrapper">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                        </div>
-                        <div class="call-info">
-                            <div class="call-title">${titleText}</div>
-                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                        </div>
-                    </div>`;
+                        <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
+                            <div class="call-icon-wrapper">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            </div>
+                            <div class="call-info">
+                                <div class="call-title">${titleText}</div>
+                                <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                            </div>
+                        </div>`;
             } else {
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
                 let finalContent = formattedText;
@@ -7565,10 +7576,10 @@
                         : `<span style="font-size: 16px; margin: 0 2px;">${emojiId}</span>`;
 
                     reactionsHtml += `
-                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
-                            ${reactionContent}
-                            ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
-                        </div>`;
+                            <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
+                                ${reactionContent}
+                                ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
+                            </div>`;
                 });
                 reactionsHtml += '</div>';
 
@@ -7599,7 +7610,7 @@
                         // 1. Ищем конкретный пузырек реакции в DOM
                         const msgEl = document.getElementById('msg-' + msgId);
                         if (msgEl) {
-                            // Ищем среди всех реакций ту, которая "наша" (reacted-by-me) 
+                            // Ищем среди всех реакций ту, которая "наша" (reacted-by-me)
                             // и содержит нужный emojiId (в alt картинки или по логике)
                             const reactions = msgEl.querySelectorAll('.msg-reaction.reacted-by-me');
                             reactions.forEach(el => {
@@ -7632,10 +7643,10 @@
         let closeChatTimeout = null;
 
         function performCloseUI() {
-            closeAllSheets(); 
+            closeAllSheets();
             document.getElementById('scrollToBottomBtn')?.classList.remove('visible');
             cancelReplyOrEdit();
-            
+
             if (currentMsgList && currentChatId) {
                 sessionStorage.setItem('scroll_' + currentChatId, currentMsgList.scrollTop);
             }
@@ -7985,7 +7996,7 @@
         }
 
         function startEditUI(id, text) {
-            cancelReplyOrEdit(); 
+            cancelReplyOrEdit();
             isEditingMode = true;
             editMessageId = id;
 
@@ -7996,7 +8007,7 @@
             const input = document.getElementById('msgInput');
 
             bar.classList.remove('hidden');
-            bar.classList.add('editing'); 
+            bar.classList.add('editing');
             title.innerText = "Редактирование";
             txt.innerText = text;
 
@@ -8038,7 +8049,7 @@
 
 
 
-        
+
         function closeAllSheets(fromPopState = false) {
             // 1. Откатываем историю
             if (fromPopState !== true && typeof sheetHistoryStack !== 'undefined' && sheetHistoryStack > 0) {
@@ -8126,17 +8137,25 @@
             if (currentCallId && currentFriendId) {
                 rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentFriendId}`).on('value', snap => {
                     if (snap.val()) {
-                        console.log("🔄 Собеседник включил/изменил видео! Перезапускаем плеер...");
-                        setTimeout(() => {
-                            const remoteVid = document.getElementById('remoteVideo');
-                            if (remoteVid && remoteVid.srcObject) {
-                                // Жесткий пинок плеера (Трюк для iPhone и Chrome)
-                                const stream = remoteVid.srcObject;
-                                remoteVid.srcObject = null;
-                                remoteVid.srcObject = stream;
-                                remoteVid.play().catch(e => console.log("Ошибка автоплея:", e));
-                            }
-                        }, 400); // 400мс задержки, чтобы кадры успели долететь по сети
+                        console.log("🔄 Собеседник включил/изменил видео! Плавный переход...");
+                        const remoteVid = document.getElementById('remoteVideo');
+                        if (remoteVid) {
+                            // Плавно приглушаем яркость старого застывшего кадра
+                            remoteVid.style.transition = 'opacity 0.3s ease';
+                            remoteVid.style.opacity = '0.2';
+
+                            setTimeout(() => {
+                                if (remoteVid.srcObject) {
+                                    // Жесткий пинок плеера
+                                    const stream = remoteVid.srcObject;
+                                    remoteVid.srcObject = null;
+                                    remoteVid.srcObject = stream;
+                                    remoteVid.play().catch(e => console.log("Ошибка автоплея:", e));
+                                }
+                                // Плавно возвращаем яркость (там уже будет новый кадр или заглушка)
+                                remoteVid.style.opacity = '1';
+                            }, 400);
+                        }
                     }
                 });
             }
@@ -8367,9 +8386,11 @@
 
                 if (!requestVideo) {
                     updateCamBtnUI(false);
+                    document.getElementById('localPip').classList.add('pip-hidden'); // Прячем
                 } else {
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
+                    document.getElementById('localPip').classList.remove('pip-hidden'); // Показываем
                 }
 
                 setTimeout(forceEarpiece, 500);
@@ -8745,26 +8766,12 @@
             if (!isCameraOn) {
                 // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                    });
-                    const newTrack = stream.getVideoTracks()[0];
-
-                    if (currentTrack) {
-                        currentTrack.stop();
-                        localStream.removeTrack(currentTrack);
-                    }
-
-                    localStream.addTrack(newTrack);
-                    document.getElementById('localVideo').srcObject = localStream;
-
-                    await videoSender.replaceTrack(newTrack); // Подменяем черный кадр на лицо
-
-                    if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
+                    // ... (твой код)
                     if (window.mauiInterop) window.mauiInterop.postMessage("disable_proximity");
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
+                    document.getElementById('localPip').classList.remove('pip-hidden'); // <-- ДОБАВИТЬ ЭТО
                 } catch (e) {
                     console.error("Ошибка камеры:", e);
                     showToast("Не удалось запустить камеру");
@@ -8776,16 +8783,15 @@
                     localStream.removeTrack(currentTrack);
                 }
 
-                // Возвращаем черный квадрат
                 const dummyTrack = window.createDummyVideoTrack();
                 localStream.addTrack(dummyTrack);
                 document.getElementById('localVideo').srcObject = localStream;
-
                 await videoSender.replaceTrack(dummyTrack);
 
                 if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
 
                 updateCamBtnUI(false);
+                document.getElementById('localPip').classList.add('pip-hidden'); // <-- ДОБАВИТЬ ЭТО
             }
         }
 
@@ -8834,7 +8840,7 @@
 
                     const btn = document.getElementById('btnScr');
                     if (btn) btn.classList.add('btn-screen-on');
-
+                    document.getElementById('localPip').classList.remove('pip-hidden');
                     screenTrack.onended = () => stopScreen(videoSender);
                 }
             } catch (e) {
@@ -8859,7 +8865,7 @@
             const btn = document.getElementById('btnScr');
             if (btn) btn.classList.remove('btn-screen-on');
             updateCamBtnUI(false);
-
+            document.getElementById('localPip').classList.add('pip-hidden');
             if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
         }
         function listenForIncomingCalls() {
@@ -10022,7 +10028,7 @@
                     if (userData && userData.avatar) {
                         headerAvatar.innerHTML = `<img src="${userData.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
                     } else {
-                        
+
                         headerAvatar.innerHTML = '<svg viewBox="0 0 24 24" width="60%" height="60%" fill="#8e8e93"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
                     }
 
@@ -10221,17 +10227,17 @@
 
             // UI прогресс-бара (используется и для фото, и для файлов)
             const progressHtml = `
-                    <div class="upload-progress-container">
-                        <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
-                            <svg class="upload-progress-svg" viewBox="0 0 50 50">
-                                <circle class="upload-progress-circle-bg" cx="25" cy="25" r="21.5"></circle>
-                                <circle class="upload-progress-circle-value" id="progress-val-${tempId}" cx="25" cy="25" r="21.5"></circle>
-                            </svg>
-                            <svg class="upload-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <div class="upload-progress-container">
+                            <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
+                                <svg class="upload-progress-svg" viewBox="0 0 50 50">
+                                    <circle class="upload-progress-circle-bg" cx="25" cy="25" r="21.5"></circle>
+                                    <circle class="upload-progress-circle-value" id="progress-val-${tempId}" cx="25" cy="25" r="21.5"></circle>
+                                </svg>
+                                <svg class="upload-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </div>
+                            <div class="upload-progress-text" id="progress-txt-${tempId}">0.0 / ${totalMb} МБ</div>
                         </div>
-                        <div class="upload-progress-text" id="progress-txt-${tempId}">0.0 / ${totalMb} МБ</div>
-                    </div>
-                `;
+                    `;
 
             // Если это картинка
             if (file.type.startsWith('image/')) {
@@ -10239,22 +10245,22 @@
                 const url = URL.createObjectURL(file);
 
                 contentHtml = `
-                        <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
-                        ${progressHtml}
-                    `;
+                            <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
+                            ${progressHtml}
+                        `;
             }
             // Если это документ
             else {
                 div.className = 'msg msg-me';
                 contentHtml = `
-                        <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
-                            <div class="file-icon" style="opacity: 0.2;">📄</div>
-                            <div class="file-info" style="opacity: 0.2;">
-                                <div class="file-name">${file.name}</div>
-                                <div class="file-action">Загрузка...</div>
-                            </div>
-                            ${progressHtml}
-                        </div>`;
+                            <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
+                                <div class="file-icon" style="opacity: 0.2;">📄</div>
+                                <div class="file-info" style="opacity: 0.2;">
+                                    <div class="file-name">${file.name}</div>
+                                    <div class="file-action">Загрузка...</div>
+                                </div>
+                                ${progressHtml}
+                            </div>`;
             }
 
             div.innerHTML = contentHtml;
@@ -11715,14 +11721,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                                                                            <div class="search-msg-content">
-                                                                                                <div class="search-msg-header">
-                                                                                                    <span class="search-msg-name">${res.name}</span>
-                                                                                                    <span class="search-msg-time">${res.time}</span>
+                                                                                                <div class="search-msg-content">
+                                                                                                    <div class="search-msg-header">
+                                                                                                        <span class="search-msg-name">${res.name}</span>
+                                                                                                        <span class="search-msg-time">${res.time}</span>
+                                                                                                    </div>
+                                                                                                    <div class="search-msg-text">${res.text}</div>
                                                                                                 </div>
-                                                                                                <div class="search-msg-text">${res.text}</div>
-                                                                                            </div>
-                                                                                        `;
+                                                                                            `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -13047,26 +13053,26 @@
                 container.innerHTML = '';
                 if (snap.empty) {
                     container.innerHTML = `
-                                            <div style="text-align:center; margin-top: 60px;">
-                                                <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
-                                                <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
-                                                <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer; margin-top: 15px;">Создать бота</button>
-                                            </div>`;
+                                                <div style="text-align:center; margin-top: 60px;">
+                                                    <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
+                                                    <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
+                                                    <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer; margin-top: 15px;">Создать бота</button>
+                                                </div>`;
                     return;
                 }
                 snap.forEach(doc => {
                     const bot = doc.data();
                     container.innerHTML += `
-                                            <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
-                                                <div class="premium-item" onclick="openBotEditor('${doc.id}', '${bot.botToken}')" style="border:none;">
-                                                    <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
-                                                    <div class="premium-item-content">
-                                                        <div class="premium-item-value">${bot.name}</div>
-                                                        <div class="premium-item-label">@${bot.username}</div>
+                                                <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
+                                                    <div class="premium-item" onclick="openBotEditor('${doc.id}', '${bot.botToken}')" style="border:none;">
+                                                        <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
+                                                        <div class="premium-item-content">
+                                                            <div class="premium-item-value">${bot.name}</div>
+                                                            <div class="premium-item-label">@${bot.username}</div>
+                                                        </div>
+                                                        <div style="color: #736AF0; font-size:14px; font-weight:bold;">Токен</div>
                                                     </div>
-                                                    <div style="color: #736AF0; font-size:14px; font-weight:bold;">Токен</div>
-                                                </div>
-                                            </div>`;
+                                                </div>`;
                 });
             } catch (e) { }
         }
@@ -14021,18 +14027,48 @@
             }
         };
         // Генерирует пустой черный кадр для поддержки видео-канала
+        // Генерирует анимированную заглушку для поддержки видео-канала
         window.createDummyVideoTrack = function () {
             const canvas = document.createElement('canvas');
             canvas.width = 640;
             canvas.height = 480;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            // 1 FPS, чтобы вообще не тратить интернет, пока камера выключена
-            return canvas.captureStream(1).getVideoTracks()[0];
+
+            function drawPlaceholder() {
+                // Премиальный темный фон
+                ctx.fillStyle = '#1c1c1e';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // Кружок аватара
+                ctx.fillStyle = '#2b2d31';
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, canvas.height / 2, 80, 0, Math.PI * 2);
+                ctx.fill();
+                // Иконка
+                ctx.fillStyle = '#555555';
+                ctx.font = '60px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('📷', canvas.width / 2, canvas.height / 2);
+            }
+
+            drawPlaceholder();
+            // Захватываем поток
+            const stream = canvas.captureStream(15);
+            const track = stream.getVideoTracks()[0];
+
+            // МАГИЯ: Заставляем канвас принудительно перерисовываться первые 2 секунды.
+            // Это "пробивает" сетевой буфер WebRTC и стирает зависший кадр у собеседника!
+            let count = 0;
+            const interval = setInterval(() => {
+                drawPlaceholder();
+                count++;
+                if (count > 20) clearInterval(interval); // Через 2 секунды засыпаем для экономии батареи
+            }, 100);
+
+            return track;
         };
 
-        
+
 
 
     </script>
