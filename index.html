@@ -4744,12 +4744,7 @@
                     background: rgba(255,255,255,0.05);
                 }
 
-        .local-video-container.pip-hidden {
-            opacity: 0 !important;
-            transform: scale(0.3) !important;
-            pointer-events: none !important;
-            box-shadow: none !important;
-        }
+
 
 
 
@@ -8137,25 +8132,17 @@
             if (currentCallId && currentFriendId) {
                 rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentFriendId}`).on('value', snap => {
                     if (snap.val()) {
-                        console.log("🔄 Собеседник включил/изменил видео! Плавный переход...");
-                        const remoteVid = document.getElementById('remoteVideo');
-                        if (remoteVid) {
-                            // Плавно приглушаем яркость старого застывшего кадра
-                            remoteVid.style.transition = 'opacity 0.3s ease';
-                            remoteVid.style.opacity = '0.2';
-
-                            setTimeout(() => {
-                                if (remoteVid.srcObject) {
-                                    // Жесткий пинок плеера
-                                    const stream = remoteVid.srcObject;
-                                    remoteVid.srcObject = null;
-                                    remoteVid.srcObject = stream;
-                                    remoteVid.play().catch(e => console.log("Ошибка автоплея:", e));
-                                }
-                                // Плавно возвращаем яркость (там уже будет новый кадр или заглушка)
-                                remoteVid.style.opacity = '1';
-                            }, 400);
-                        }
+                        console.log("🔄 Собеседник включил/изменил видео! Перезапускаем плеер...");
+                        setTimeout(() => {
+                            const remoteVid = document.getElementById('remoteVideo');
+                            if (remoteVid && remoteVid.srcObject) {
+                                // Жесткий пинок плеера (Трюк для iPhone и Chrome)
+                                const stream = remoteVid.srcObject;
+                                remoteVid.srcObject = null;
+                                remoteVid.srcObject = stream;
+                                remoteVid.play().catch(e => console.log("Ошибка автоплея:", e));
+                            }
+                        }, 400); // 400мс задержки, чтобы кадры успели долететь по сети
                     }
                 });
             }
@@ -8386,11 +8373,9 @@
 
                 if (!requestVideo) {
                     updateCamBtnUI(false);
-                    document.getElementById('localPip').classList.add('pip-hidden'); // Прячем
                 } else {
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
-                    document.getElementById('localPip').classList.remove('pip-hidden'); // Показываем
                 }
 
                 setTimeout(forceEarpiece, 500);
@@ -8766,12 +8751,26 @@
             if (!isCameraOn) {
                 // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
-                    // ... (твой код)
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
+                    const newTrack = stream.getVideoTracks()[0];
+
+                    if (currentTrack) {
+                        currentTrack.stop();
+                        localStream.removeTrack(currentTrack);
+                    }
+
+                    localStream.addTrack(newTrack);
+                    document.getElementById('localVideo').srcObject = localStream;
+
+                    await videoSender.replaceTrack(newTrack); // Подменяем черный кадр на лицо
+
+                    if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
                     if (window.mauiInterop) window.mauiInterop.postMessage("disable_proximity");
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
-                    document.getElementById('localPip').classList.remove('pip-hidden'); // <-- ДОБАВИТЬ ЭТО
                 } catch (e) {
                     console.error("Ошибка камеры:", e);
                     showToast("Не удалось запустить камеру");
@@ -8783,15 +8782,16 @@
                     localStream.removeTrack(currentTrack);
                 }
 
+                // Возвращаем черный квадрат
                 const dummyTrack = window.createDummyVideoTrack();
                 localStream.addTrack(dummyTrack);
                 document.getElementById('localVideo').srcObject = localStream;
+
                 await videoSender.replaceTrack(dummyTrack);
 
                 if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
 
                 updateCamBtnUI(false);
-                document.getElementById('localPip').classList.add('pip-hidden'); // <-- ДОБАВИТЬ ЭТО
             }
         }
 
@@ -8840,7 +8840,7 @@
 
                     const btn = document.getElementById('btnScr');
                     if (btn) btn.classList.add('btn-screen-on');
-                    document.getElementById('localPip').classList.remove('pip-hidden');
+
                     screenTrack.onended = () => stopScreen(videoSender);
                 }
             } catch (e) {
@@ -8865,7 +8865,7 @@
             const btn = document.getElementById('btnScr');
             if (btn) btn.classList.remove('btn-screen-on');
             updateCamBtnUI(false);
-            document.getElementById('localPip').classList.add('pip-hidden');
+
             if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
         }
         function listenForIncomingCalls() {
@@ -14027,45 +14027,15 @@
             }
         };
         // Генерирует пустой черный кадр для поддержки видео-канала
-        // Генерирует анимированную заглушку для поддержки видео-канала
         window.createDummyVideoTrack = function () {
             const canvas = document.createElement('canvas');
             canvas.width = 640;
             canvas.height = 480;
             const ctx = canvas.getContext('2d');
-
-            function drawPlaceholder() {
-                // Премиальный темный фон
-                ctx.fillStyle = '#1c1c1e';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                // Кружок аватара
-                ctx.fillStyle = '#2b2d31';
-                ctx.beginPath();
-                ctx.arc(canvas.width / 2, canvas.height / 2, 80, 0, Math.PI * 2);
-                ctx.fill();
-                // Иконка
-                ctx.fillStyle = '#555555';
-                ctx.font = '60px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('📷', canvas.width / 2, canvas.height / 2);
-            }
-
-            drawPlaceholder();
-            // Захватываем поток
-            const stream = canvas.captureStream(15);
-            const track = stream.getVideoTracks()[0];
-
-            // МАГИЯ: Заставляем канвас принудительно перерисовываться первые 2 секунды.
-            // Это "пробивает" сетевой буфер WebRTC и стирает зависший кадр у собеседника!
-            let count = 0;
-            const interval = setInterval(() => {
-                drawPlaceholder();
-                count++;
-                if (count > 20) clearInterval(interval); // Через 2 секунды засыпаем для экономии батареи
-            }, 100);
-
-            return track;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // 1 FPS, чтобы вообще не тратить интернет, пока камера выключена
+            return canvas.captureStream(1).getVideoTracks()[0];
         };
 
 
