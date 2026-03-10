@@ -9509,12 +9509,13 @@
 
         // --- ЕДИНЫЙ ОБРАБОТЧИК ESC ---
         // --- ЕДИНЫЙ ОБРАБОТЧИК КЛАВИАТУРЫ (ПК) ---
+        // --- ЕДИНЫЙ ОБРАБОТЧИК КЛАВИАТУРЫ (ПК) ---
         document.addEventListener('keydown', function (e) {
             const viewer = document.getElementById('imageViewer');
             const searchRes = document.getElementById('searchResults');
             const searchInp = document.getElementById('searchInput');
 
-            // --- НОВОЕ: УПРАВЛЕНИЕ ГАЛЕРЕЕЙ СТРЕЛОЧКАМИ ---
+            // --- УПРАВЛЕНИЕ ГАЛЕРЕЕЙ СТРЕЛОЧКАМИ ---
             if (viewer && viewer.classList.contains('active')) {
                 if (e.key === "ArrowLeft") {
                     e.preventDefault(); // Блокируем стандартный скролл страницы
@@ -9530,36 +9531,53 @@
 
             // --- ОБРАБОТКА КНОПКИ ESCAPE ---
             if (e.key === "Escape") {
-                // 1. САМЫЙ ВЫСОКИЙ ПРИОРИТЕТ: Закрыть просмотр картинки
+                e.preventDefault(); // БЛОКИРУЕМ системное поведение браузера (чтобы не закрывало сайт)
+
+                // 1. Закрыть просмотр картинки
                 if (viewer && viewer.classList.contains('active')) {
                     closeImageViewer();
                     return;
                 }
 
-                // 2. ЗАКРЫТЬ ШТОРКИ ПРОФИЛЯ/НАСТРОЕК (По очереди сверху вниз)
-                if (document.getElementById('editProfileSheet')?.classList.contains('open')) {
-                    closeEditProfile();
+                // 2. Закрыть любые всплывающие модальные окна (Удаление, Выход, Ссылки, Выбор языка)
+                const activeModal = document.querySelector('.modal-overlay[style*="display: flex"]');
+                if (activeModal) {
+                    activeModal.style.display = 'none';
+                    document.body.classList.remove('chat-blur-active');
                     return;
                 }
-                if (document.getElementById('generalSettingsSheet')?.classList.contains('open')) {
-                    closeGeneralSettings();
-                    return;
-                }
-                if (document.getElementById('profileSheet')?.classList.contains('open')) {
+
+                // 3. Закрыть контекстное меню или открытые шторки профиля/настроек
+                const menu = document.getElementById('contextMenu');
+                const hasOpenSheets = document.querySelectorAll('.action-sheet.open').length > 0;
+                if ((menu && menu.classList.contains('active')) || hasOpenSheets) {
                     closeAllSheets();
                     return;
                 }
 
-                // 3. ЗАКРЫТЬ ПОИСК
-                if ((searchRes && searchRes.classList.contains('active')) || (searchInp && searchInp.value.trim() !== '') || document.activeElement === searchInp) {
-                    e.preventDefault();
-                    closeSearch();
+                // 4. Закрыть поиск (глобальный или внутри чата)
+                const chatSearch = document.getElementById('chatSearchBar');
+                if ((searchRes && searchRes.classList.contains('active')) ||
+                    (searchInp && searchInp.value.trim() !== '') ||
+                    document.activeElement === searchInp ||
+                    (chatSearch && !chatSearch.classList.contains('hidden'))) {
+
+                    if (chatSearch && !chatSearch.classList.contains('hidden')) {
+                        toggleChatSearch(); // Закрываем поиск по чату
+                    } else {
+                        closeSearch(); // Закрываем глобальный поиск
+                    }
+                    if (document.activeElement) document.activeElement.blur();
                     return;
                 }
 
-                // 4. НИЗКИЙ ПРИОРИТЕТ: Закрыть чат
+                // 5. БЕЗОПАСНО ЗАКРЫТЬ ЧАТ (БЕЗ выкидывания с сайта)
                 if (currentChatId) {
-                    closeChat();
+                    // Мы НЕ используем closeChat() -> history.back() для ПК, 
+                    // чтобы браузер случайно не выбросил нас на предыдущий сайт!
+                    // Вместо этого просто прячем окна и зачищаем адресную строку.
+                    performCloseUI();
+                    history.replaceState({ page: 'home' }, null, window.location.pathname + window.location.search);
                     return;
                 }
             }
