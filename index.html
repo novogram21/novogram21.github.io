@@ -13722,6 +13722,7 @@
         }
 
 
+        // --- ЕДИНАЯ ЛОГИКА РЕАКЦИЙ (С АНИМАЦИЕЙ УДАЛЕНИЯ) ---
         window.toggleReaction = function (emojiId) {
             toggleReactionDirect(selectedMsgId, emojiId);
             closeAllSheets();
@@ -13735,9 +13736,12 @@
             let isRemoving = false;
             let targetReactionEl = null;
 
+            // Проверяем, стоит ли УЖЕ наша реакция с ТЕМ ЖЕ самым смайлом
             if (msgEl) {
+                // Ищем элемент нашей реакции
                 const myReactionEl = msgEl.querySelector('.msg-reaction.reacted-by-me');
                 if (myReactionEl) {
+                    // Теперь проверяем не текст, а атрибут alt у картинки (там хранится 'like', 'fire' и тд)
                     const img = myReactionEl.querySelector('img');
                     if (img && img.alt === emojiId) {
                         isRemoving = true;
@@ -13747,38 +13751,24 @@
             }
 
             if (isRemoving) {
-                const wrapper = msgEl ? msgEl.querySelector('.reactions-wrapper') : null;
-                const allReactions = msgEl ? msgEl.querySelectorAll('.msg-reaction') : [];
-
-                // Если мы отменяем ПОСЛЕДНЮЮ реакцию в сообщении, плавно скрываем всю панель
-                if (allReactions.length === 1 && wrapper) {
-                    wrapper.style.maxHeight = '0px';
-                    wrapper.style.marginTop = '0px';
-                    wrapper.style.opacity = '0';
-                } else if (targetReactionEl) {
-                    // Иначе просто красиво "лопаем" один конкретный смайлик
+                // 1. Включаем анимацию "схлопывания" пузырька
+                if (targetReactionEl) {
                     targetReactionEl.classList.add('removing');
                 }
 
+                // 2. Ждем 230мс (пока проиграется красивая CSS анимация) и удаляем из базы
                 setTimeout(() => {
                     msgRef.update({
                         [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
                     }).catch(console.error);
-                }, 250);
+                }, 230);
 
             } else {
-                // ДОБАВЛЕНИЕ НОВОЙ РЕАКЦИИ
-                const wrapper = msgEl ? msgEl.querySelector('.reactions-wrapper') : null;
-
-                // Если панель была спрятана, плавно выдвигаем её заранее
-                if (wrapper && wrapper.style.maxHeight === '0px') {
-                    wrapper.style.maxHeight = '100px';
-                    wrapper.style.marginTop = '6px';
-                    wrapper.style.opacity = '1';
-                }
-
+                // Если реакции нет или она другая — просто перезаписываем
                 msgRef.set({
-                    reactions: { [currentUser.uid]: emojiId }
+                    reactions: {
+                        [currentUser.uid]: emojiId
+                    }
                 }, { merge: true }).catch(console.error);
             }
         };
