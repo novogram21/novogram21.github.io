@@ -7387,16 +7387,6 @@
                 contentHtml += `<span class="msg-text">${safeHtml}</span>`;
             }
 
-            // Аккуратная мета-информация
-            if (!m.sys && msgType !== 'call') {
-                let metaHtml = `
-                        <span class="msg-meta">
-                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
-                            <span class="msg-time">${timeStr}</span>
-                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                        </span>`;
-                contentHtml += metaHtml;
-            }
 
             // Очищаем старые флоаты и собираем футер
             let metaHtml = '';
