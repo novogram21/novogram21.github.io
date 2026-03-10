@@ -5940,7 +5940,7 @@
             e.preventDefault();
             e.stopPropagation();
 
-            // ВАЖНО: Блокируем случайное закрытие меню при анимации
+            // Защита от случайного закрытия при скролле
             window.ignoreScrollClose = true;
             setTimeout(() => { window.ignoreScrollClose = false; }, 400);
 
@@ -5950,22 +5950,43 @@
             if (panel.classList.contains('open')) {
                 panel.classList.remove('open');
                 btn.classList.remove('active');
-                panel.style.overflowY = 'hidden'; // Прячем скролл при закрытии
+                panel.style.overflowY = 'hidden';
             } else {
                 panel.classList.add('open');
                 btn.classList.add('active');
 
-                // Рендерим смайлы, если их еще нет
+                // Рендерим 3D-смайлы с GitHub при первом открытии
                 if (panel.innerHTML.trim() === '') {
-                    const extraEmojis = [
-                        '😂', '😭', '🥺', '🤣', '😡', '🤯', '😱', '🥶', '🤔', '😎',
-                        '🎉', '💯', '💔', '🔥', '👍', '👎', '👀', '🤡', '👽', '👻',
-                        '🤮', '🤬', '🥳', '😴', '😇', '🤫', '🤝', '🙏', '💅', '🍷'
+
+                    // Элитарный 3D-набор (прямые ссылки на репозиторий Microsoft Fluent)
+                    const eliteEmojis = [
+                        { id: 'joy', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Face%20with%20tears%20of%20joy/3D/face_with_tears_of_joy_3d.png' },
+                        { id: 'pleading', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Pleading%20face/3D/pleading_face_3d.png' },
+                        { id: 'sunglasses', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Smiling%20face%20with%20sunglasses/3D/smiling_face_with_sunglasses_3d.png' },
+                        { id: 'exploding', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Exploding%20head/3D/exploding_head_3d.png' },
+                        { id: 'angry', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Pouting%20face/3D/pouting_face_3d.png' },
+                        { id: 'party', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Partying%20face/3D/partying_face_3d.png' },
+                        { id: 'melting', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Melting%20face/3D/melting_face_3d.png' },
+                        { id: 'saluting', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Saluting%20face/3D/saluting_face_3d.png' },
+                        { id: 'money', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money-mouth%20face/3D/money-mouth_face_3d.png' },
+                        { id: 'clown', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Clown%20face/3D/clown_face_3d.png' },
+                        { id: 'alien', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Alien/3D/alien_3d.png' },
+                        { id: 'ghost', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Ghost/3D/ghost_3d.png' },
+                        { id: 'rocket', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Rocket/3D/rocket_3d.png' },
+                        { id: 'gem', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Gem%20stone/3D/gem_stone_3d.png' },
+                        { id: 'crown', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Crown/3D/crown_3d.png' },
+                        { id: 'fire', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Fire/3D/fire_3d.png' },
+                        { id: '100', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Hundred%20points/3D/hundred_points_3d.png' },
+                        { id: 'wine', url: 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Wine%20glass/3D/wine_glass_3d.png' }
                     ];
-                    panel.innerHTML = extraEmojis.map(em => `<span onclick="toggleReaction('${em}')">${em}</span>`).join('');
+
+                    panel.innerHTML = eliteEmojis.map(em => `
+                        <span onclick="toggleReaction('${em.id}')" title="${em.id}">
+                            <img src="${em.url}" alt="${em.id}" style="width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); pointer-events: none;">
+                        </span>
+                    `).join('');
                 }
 
-                // Включаем скролл внутри панели только когда она полностью выехала
                 setTimeout(() => {
                     if (panel.classList.contains('open')) panel.style.overflowY = 'auto';
                 }, 300);
@@ -7528,13 +7549,33 @@
 
             // 7. Сборка реакций (Добавляем футер, ТОЛЬКО если есть реакции)
             if (hasReactions) {
+                // 4. ЛОГИКА РЕАКЦИЙ И ПЕРЕМЕЩЕНИЯ ВРЕМЕНИ
                 const premiumEmojis = {
+                    // Твои базовые
                     'fire': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f525.png',
                     'like': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44d.png',
                     'heart': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/2764.png',
                     'love': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f970.png',
                     'clap': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44f.png',
-                    'poop': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png'
+                    'poop': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png',
+                    // Новые элитарные из панели
+                    'joy': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Face%20with%20tears%20of%20joy/3D/face_with_tears_of_joy_3d.png',
+                    'pleading': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Pleading%20face/3D/pleading_face_3d.png',
+                    'sunglasses': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Smiling%20face%20with%20sunglasses/3D/smiling_face_with_sunglasses_3d.png',
+                    'exploding': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Exploding%20head/3D/exploding_head_3d.png',
+                    'angry': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Pouting%20face/3D/pouting_face_3d.png',
+                    'party': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Partying%20face/3D/partying_face_3d.png',
+                    'melting': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Melting%20face/3D/melting_face_3d.png',
+                    'saluting': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Saluting%20face/3D/saluting_face_3d.png',
+                    'money': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Money-mouth%20face/3D/money-mouth_face_3d.png',
+                    'clown': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Clown%20face/3D/clown_face_3d.png',
+                    'alien': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Alien/3D/alien_3d.png',
+                    'ghost': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Ghost/3D/ghost_3d.png',
+                    'rocket': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Rocket/3D/rocket_3d.png',
+                    'gem': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Gem%20stone/3D/gem_stone_3d.png',
+                    'crown': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Crown/3D/crown_3d.png',
+                    '100': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Hundred%20points/3D/hundred_points_3d.png',
+                    'wine': 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Wine%20glass/3D/wine_glass_3d.png'
                 };
 
                 const reactionCounts = {};
