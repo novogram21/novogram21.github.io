@@ -21,6 +21,10 @@
             outline: none !important;
         }
 
+        :root {
+            --app-height: 100dvh;
+        }
+
         html {
             /* Тот самый цвет, чтобы системная зона слилась с приложением */
             background-color: #121316 !important;
@@ -36,20 +40,15 @@
             background: #121212;
             color: #eee;
             margin: 0;
-            display: flex;
-            /* --- ПРАВИЛЬНАЯ ФИКСАЦИЯ ДЛЯ iOS PWA --- */
-            position: relative;
+            /* --- ФИКС ПРЫГАЮЩЕГО ЭКРАНА --- */
+            position: fixed; /* ВАЖНО: Блокирует системный скролл */
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            height: 100dvh;
-            padding-bottom: env(safe-area-inset-bottom);
-            box-sizing: border-box; /* чтобы padding не ломал height */
             width: 100%;
-            /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
-            /* Подстраховка для Safari */
-            min-height: -webkit-fill-available;
+            height: var(--app-height) !important;
+            min-height: var(--app-height) !important;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box;
             overflow: hidden;
             overscroll-behavior-y: none;
         }
@@ -702,14 +701,16 @@
         }
 
         .chat-header {
-            /* Добавляем env(safe-area-inset-top) чтобы шапка опускалась ниже системных часов */
             padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
             background: #17181c;
             border-bottom: 1px solid #101010;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: calc(56px + env(safe-area-inset-top)); /* Увеличиваем высоту на размер челки */
+            min-height: calc(56px + env(safe-area-inset-top));
+            /* Добавляем это, чтобы шапка не сплющивалась при выезде клавиатуры */
+            flex-shrink: 0;
+            z-index: 100;
         }
 
         .chat-header-left {
@@ -1758,9 +1759,8 @@
                 position: fixed;
                 top: 0;
                 left: 0;
-                height: 100dvh !important;
+                height: var(--app-height) !important;
                 z-index: 100;
-                /* Смягчили фон для мобильной версии */
                 background-color: #121316 !important;
                 transform: translateX(100vw);
                 visibility: hidden;
@@ -9595,23 +9595,48 @@
             }
         });
 
-        // 2. Самый надежный современный метод: отслеживаем изменение видимой области (VisualViewport API)
-        // Срабатывает в ту же миллисекунду, когда клавиатура меняет размер экрана
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                // Скроллим только если мы в чате и поле ввода активно
-                if (currentMsgList && document.activeElement === msgInput) {
-                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+        // --- ЖЕЛЕЗОБЕТОННЫЙ ФИКС КЛАВИАТУРЫ И ШАПКИ ---
+        function updateAppHeight() {
+            if (window.visualViewport) {
+                // 1. Жестко задаем высоту приложения равную текущей видимой области (минус клавиатура)
+                document.documentElement.style.setProperty('--app-height', `${window.visualViewport.height}px`);
+
+                // 2. Принудительно отменяем системный скролл браузера, из-за которого улетает шапка
+                if (window.scrollY > 0) {
+                    window.scrollTo(0, 0);
                 }
-            });
+
+                // 3. Поднимаем список сообщений, чтобы было видно последнее
+                if (currentMsgList && document.activeElement === document.getElementById('msgInput')) {
+                    // Небольшая задержка нужна для iOS, чтобы анимация клавиатуры успела закончиться
+                    setTimeout(() => {
+                        currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                    }, 50);
+                }
+            }
+        }
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', updateAppHeight);
+            // Событие scroll необходимо для iOS, так как Safari скроллит сам viewport при фокусе
+            window.visualViewport.addEventListener('scroll', updateAppHeight);
+            updateAppHeight(); // Вызываем сразу для инициализации
         } else {
-            // Запасной вариант для старых браузеров
+            // Фолбэк для старых браузеров
             window.addEventListener('resize', () => {
-                if (currentMsgList && document.activeElement === msgInput) {
+                document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+                if (currentMsgList && document.activeElement === document.getElementById('msgInput')) {
                     currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
                 }
             });
         }
+
+        // Жесткий запрет на скролл документа (срабатывает, если браузер всё же попытается прокрутить страницу)
+        document.addEventListener('scroll', () => {
+            if (document.activeElement === document.getElementById('msgInput')) {
+                window.scrollTo(0, 0);
+            }
+        }, { passive: false });
 
 
 
