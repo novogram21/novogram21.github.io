@@ -22,13 +22,13 @@
         }
 
         html, body {
-            position: fixed !important; /* Жестко прибиваем к экрану */
+            position: fixed !important;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
             width: 100%;
-            height: 100dvh; /* Используем динамические единицы высоты */
+            height: 100%; /* ВАЖНО: Убираем 100dvh, ставим 100% */
             overflow: hidden;
             overscroll-behavior-y: none;
             background-color: #121316 !important;
@@ -1740,60 +1740,61 @@
                     pointer-events: none;
                 }
 
-            .chat-area {
-                display: flex !important;
-                width: 100vw !important;
-                position: fixed;
-                top: 0;
-                left: 0;
-                height: 100dvh !important;
-                z-index: 100;
-                /* Смягчили фон для мобильной версии */
-                background-color: #121316 !important;
-                transform: translateX(100vw);
-                visibility: hidden;
-                transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.35s;
-                will-change: transform;
-                backface-visibility: hidden;
-            }
-
-                /* Копируем ваши красивые эмодзи-обои прямо на непрозрачный фон чата */
-                .chat-area::before {
-                    content: "";
-                    position: absolute;
+            @media (max-width: 850px), (max-height: 500px) {
+                .chat-area {
+                    display: flex !important;
+                    width: 100vw !important;
+                    position: fixed;
                     top: 0;
                     left: 0;
-                    width: 100%;
-                    height: 100%;
-                    opacity: 0.7;
-                    pointer-events: none;
-                    z-index: -1;
-                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
-                    background-size: 400px 400px;
+                    height: 100% !important; /* ВАЖНО: Тоже меняем 100dvh на 100% */
+                    z-index: 100;
+                    background-color: #121316 !important;
+                    transform: translateX(100vw);
+                    visibility: hidden;
+                    transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.35s;
+                    will-change: transform;
+                    backface-visibility: hidden;
                 }
-
-                /* Легкое затемнение, чтобы текст читался лучше */
-                .chat-area::after {
-                    content: "";
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: radial-gradient(circle at 50% 50%, rgba(18, 19, 22, 0.4) 0%, rgba(18, 19, 22, 0.85) 100%);
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-                .chat-area.active {
-                    transform: translateX(0) !important;
-                    visibility: visible;
-                }
-
-            .back-btn {
-                display: block;
             }
-        }
+
+                    /* Копируем ваши красивые эмодзи-обои прямо на непрозрачный фон чата */
+                    .chat-area::before {
+                        content: "";
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        opacity: 0.7;
+                        pointer-events: none;
+                        z-index: -1;
+                        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Cstyle%3E text %7B font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; %7D %3C/style%3E%3C!-- ИКОНКИ --%3E%3Ctext x='40' y='60' font-size='36' fill='%234a9eff' fill-opacity='0.4' transform='rotate(12 40 60)'%3E🎮%3C/text%3E%3Ctext x='380' y='120' font-size='40' fill='%237c3aed' fill-opacity='0.35' transform='rotate(-15 380 120)'%3E🚀%3C/text%3E%3Ctext x='220' y='400' font-size='38' fill='%2306b6d4' fill-opacity='0.4' transform='rotate(8 220 400)'%3E🎧%3C/text%3E%3Ctext x='180' y='90' font-size='28' fill='%23ec4899' fill-opacity='0.35' transform='rotate(-10 180 90)'%3E💡%3C/text%3E%3Ctext x='90' y='250' font-size='30' fill='%2310b981' fill-opacity='0.3' transform='rotate(20 90 250)'%3E🍕%3C/text%3E%3Ctext x='340' y='320' font-size='26' fill='%23f59e0b' fill-opacity='0.35' transform='rotate(-8 340 320)'%3E⚽%3C/text%3E%3Ctext x='420' y='450' font-size='32' fill='%236366f1' fill-opacity='0.4' transform='rotate(15 420 450)'%3E📷%3C/text%3E%3Ctext x='300' y='180' font-size='20' fill='%238b5cf6' fill-opacity='0.25' transform='rotate(-20 300 180)'%3E🎸%3C/text%3E%3Ctext x='150' y='350' font-size='22' fill='%2314b8a6' fill-opacity='0.3' transform='rotate(25 150 350)'%3E💻%3C/text%3E%3Ctext x='450' y='260' font-size='18' fill='%23ef4444' fill-opacity='0.3' transform='rotate(-12 450 260)'%3E🏆%3C/text%3E%3Ctext x='60' y='430' font-size='24' fill='%233b82f6' fill-opacity='0.35' transform='rotate(18 60 430)'%3E🎲%3C/text%3E%3Ctext x='280' y='50' font-size='20' fill='%23a855f7' fill-opacity='0.3' transform='rotate(-5 280 50)'%3E👻%3C/text%3E%3C/svg%3E");
+                        background-size: 400px 400px;
+                    }
+
+                    /* Легкое затемнение, чтобы текст читался лучше */
+                    .chat-area::after {
+                        content: "";
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: radial-gradient(circle at 50% 50%, rgba(18, 19, 22, 0.4) 0%, rgba(18, 19, 22, 0.85) 100%);
+                        pointer-events: none;
+                        z-index: -1;
+                    }
+
+                    .chat-area.active {
+                        transform: translateX(0) !important;
+                        visibility: visible;
+                    }
+
+                .back-btn {
+                    display: block;
+                }
+            }
 
         /* Анимация плавного появления чата на ПК */
         @keyframes chatContentSlide {
@@ -9587,45 +9588,79 @@
             }
         });
 
-        // 2. Самый надежный современный метод: отслеживаем изменение видимой области (VisualViewport API)
-        // Срабатывает в ту же миллисекунду, когда клавиатура меняет размер экрана
-        // 2. Самый надежный современный метод: отслеживаем изменение видимой области (VisualViewport API)
-        if (window.visualViewport) {
-            const viewportHandler = () => {
-                // 1. Принудительно меняем высоту body под размер свободного экрана над клавиатурой
-                document.body.style.height = window.visualViewport.height + 'px';
+        // ==========================================
+        // ПРЕМИУМ ФИКС КЛАВИАТУРЫ И ВЫСОТЫ ЭКРАНА (iOS / Android)
+        // ==========================================
+        const msgInputObj = document.getElementById('msgInput');
+        const chatAreaObj = document.getElementById('mainChatArea');
+        const sidebarObj = document.getElementById('mainSidebar');
 
-                // 2. Жестко отменяем системный скролл iOS (возвращаем шапку на место)
-                if (window.scrollY > 0 || window.scrollX > 0) {
+        function updateViewportHeight() {
+            if (window.visualViewport) {
+                // 1. Берем реальную видимую высоту (экран минус клавиатура)
+                let vh = window.visualViewport.height;
+
+                // 2. Применяем эту высоту к body и всем основным слоям
+                document.body.style.height = vh + 'px';
+                if (chatAreaObj) chatAreaObj.style.height = vh + 'px';
+                if (sidebarObj) sidebarObj.style.height = vh + 'px';
+
+                // 3. Жестко убиваем системный скролл, чтобы шапка не улетала вверх
+                window.scrollTo(0, 0);
+
+                // 4. Плавно подтягиваем сообщения к новому размеру
+                if (currentMsgList && document.activeElement === msgInputObj) {
+                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                }
+            }
+        }
+
+        if (window.visualViewport) {
+            // resize срабатывает кадр-в-кадр при выезде клавиатуры
+            window.visualViewport.addEventListener('resize', updateViewportHeight);
+
+            // Если iOS попытается проскроллить страницу - бьем по рукам
+            window.visualViewport.addEventListener('scroll', () => {
+                if (document.activeElement === msgInputObj) {
                     window.scrollTo(0, 0);
                 }
-
-                // 3. Подкручиваем чат к последнему сообщению
-                if (currentMsgList && document.activeElement === msgInput) {
-                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
-                }
-            };
-
-            window.visualViewport.addEventListener('resize', viewportHandler);
-            // На iOS viewport может не только менять размер, но и скроллиться сам по себе!
-            window.visualViewport.addEventListener('scroll', viewportHandler);
+            });
         } else {
-            // Запасной вариант для старых браузеров
+            // Фолбэк для старых браузеров
             window.addEventListener('resize', () => {
                 document.body.style.height = window.innerHeight + 'px';
-                if (currentMsgList && document.activeElement === msgInput) {
-                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
-                }
+                if (chatAreaObj) chatAreaObj.style.height = window.innerHeight + 'px';
             });
         }
 
-        // Страховка: глобальный запрет скролла всего окна (для iOS)
+        if (msgInputObj) {
+            msgInputObj.addEventListener('focus', () => {
+                // Пресекаем попытку браузера сдвинуть экран в самую первую миллисекунду
+                window.scrollTo(0, 0);
+
+                // Синхронизируем высоту
+                updateViewportHeight();
+
+                if (currentMsgList) {
+                    setTimeout(() => {
+                        window.scrollTo(0, 0); // Контрольный выстрел
+                        currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                    }, 150);
+                }
+            });
+
+            // Когда убираем клавиатуру - возвращаем скролл на место
+            msgInputObj.addEventListener('blur', () => {
+                window.scrollTo(0, 0);
+            });
+        }
+
+        // Страховка: глобальный запрет скролла всего окна
         window.addEventListener('scroll', () => {
             if (window.scrollY > 0 || window.scrollX > 0) {
                 window.scrollTo(0, 0);
             }
         });
-
 
 
 
@@ -14068,7 +14103,17 @@
             // 1 FPS, чтобы вообще не тратить интернет, пока камера выключена
             return canvas.captureStream(1).getVideoTracks()[0];
         };
-
+        // Жесткая блокировка системного "резинового" скролла везде, кроме списков
+        document.addEventListener('touchmove', function (e) {
+            // Разрешаем скролл только внутри этих элементов
+            if (!e.target.closest('.messages') &&
+                !e.target.closest('.list-container') &&
+                !e.target.closest('.edit-content-scroll') &&
+                !e.target.closest('.chat-search-dropdown') &&
+                !e.target.closest('.lang-list-container')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
 
 
