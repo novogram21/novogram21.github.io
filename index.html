@@ -5350,9 +5350,14 @@
     </div>
     <!-- CALL UI -->
     <div id="callScreen" class="call-screen">
-        <button onclick="minimizeCall()" style="position: absolute; top: calc(env(safe-area-inset-top) + 15px); left: 15px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 44px; height: 44px; color: white; z-index: 4010; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s;">
+        <button onclick="minimizeCall()" style="position: absolute; top: calc(env(safe-area-inset-top) + 15px); left: 15px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 44px; height: 44px; color: white; z-index: 4010; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
+
+        <button onclick="toggleFullScreen()" style="position: absolute; top: calc(env(safe-area-inset-top) + 15px); right: 15px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 44px; height: 44px; color: white; z-index: 4010; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </button>
+
         <div class="video-grid">
             <video id="remoteVideo" autoplay playsinline></video>
             <div class="local-video-container" id="localPip">
@@ -13717,7 +13722,39 @@
             });
         });
 
+        // Системный полноэкранный режим
+        window.toggleFullScreen = function () {
+            const elem = document.getElementById('remoteVideo');
+            if (!elem) return;
 
+            // Проверяем, не в полном ли мы экране сейчас
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                // Если не в полном -> Разворачиваем
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen().catch(err => console.log("Ошибка полного экрана:", err));
+                } else if (elem.webkitEnterFullscreen) {
+                    // ЭТОТ МЕТОД СПЕЦИАЛЬНО ДЛЯ IPHONE (откроет в родном плеере iOS)
+                    elem.webkitEnterFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            } else {
+                // Выходим из полного экрана (на iPhone крестик встроен в их плеер, но для ПК нужно)
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        };
+
+        // Делаем премиально: двойной клик/тап по чужому видео тоже включает полный экран
+        document.addEventListener('DOMContentLoaded', () => {
+            const remoteVid = document.getElementById('remoteVideo');
+            if (remoteVid) {
+                remoteVid.addEventListener('dblclick', toggleFullScreen);
+            }
+        });
 
 
 
