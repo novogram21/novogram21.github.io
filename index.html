@@ -14058,7 +14058,17 @@
             return canvas.captureStream(1).getVideoTracks()[0];
         };
 
+        // Жесткий запрет на скролл документа
+        document.addEventListener('scroll', () => {
+            if (document.activeElement === document.getElementById('msgInput')) {
+                window.scrollTo(0, 0); // Мгновенно возвращаем камеру наверх
+            }
+        }, { passive: false });
 
+        // Очищаем скролл при каждом вводе буквы
+        document.getElementById('msgInput').addEventListener('input', () => {
+            window.scrollTo(0, 0);
+        });
 
 
     </script>
@@ -14245,6 +14255,5 @@
             </div>
         </div>
     </div>
-
 </body>
 </html>
