@@ -13734,40 +13734,56 @@
         }
 
 
-        function toggleReaction(emoji) {
-            toggleReactionDirect(selectedMsgId, emoji);
+        // --- ЕДИНАЯ ЛОГИКА РЕАКЦИЙ (С АНИМАЦИЕЙ УДАЛЕНИЯ) ---
+        window.toggleReaction = function (emojiId) {
+            toggleReactionDirect(selectedMsgId, emojiId);
             closeAllSheets();
-        }
+        };
 
-        function toggleReactionDirect(msgId, emoji) {
+        window.toggleReactionDirect = function (msgId, emojiId) {
             if (!msgId || !currentChatId || !currentUser) return;
 
             const msgRef = db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId);
             const msgEl = document.getElementById('msg-' + msgId);
             let isRemoving = false;
+            let targetReactionEl = null;
 
-            // Проверяем, не кликнули ли мы по уже стоящей НАШЕЙ реакции (чтобы убрать её)
+            // Проверяем, стоит ли УЖЕ наша реакция с ТЕМ ЖЕ самым смайлом
             if (msgEl) {
+                // Ищем элемент нашей реакции
                 const myReactionEl = msgEl.querySelector('.msg-reaction.reacted-by-me');
-                if (myReactionEl && myReactionEl.innerText.includes(emoji)) {
-                    isRemoving = true;
+                if (myReactionEl) {
+                    // Теперь проверяем не текст, а атрибут alt у картинки (там хранится 'like', 'fire' и тд)
+                    const img = myReactionEl.querySelector('img');
+                    if (img && img.alt === emojiId) {
+                        isRemoving = true;
+                        targetReactionEl = myReactionEl;
+                    }
                 }
             }
 
             if (isRemoving) {
-                // Удаляем нашу реакцию из базы
-                msgRef.update({
-                    [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
-                }).catch(() => { });
+                // 1. Включаем анимацию "схлопывания" пузырька
+                if (targetReactionEl) {
+                    targetReactionEl.classList.add('removing');
+                }
+
+                // 2. Ждем 230мс (пока проиграется красивая CSS анимация) и удаляем из базы
+                setTimeout(() => {
+                    msgRef.update({
+                        [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
+                    }).catch(console.error);
+                }, 230);
+
             } else {
-                // Ставим новую реакцию (перезаписывая старую, если она была)
+                // Если реакции нет или она другая — просто перезаписываем
                 msgRef.set({
                     reactions: {
-                        [currentUser.uid]: emoji
+                        [currentUser.uid]: emojiId
                     }
-                }, { merge: true }).catch(() => { });
+                }, { merge: true }).catch(console.error);
             }
-        }
+        };
 
 
         
