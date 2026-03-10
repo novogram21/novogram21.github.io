@@ -23,27 +23,37 @@
 
 
 
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            /* ТОЛЬКО 100%, никаких dvh */
-            height: 100% !important;
-            /* ФИКСИРУЕМ НАМЕРТВО */
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            overflow: hidden !important; /* Убиваем любой скролл снаружи */
-            overscroll-behavior-y: none;
+        html {
+            /* Тот самый цвет, чтобы системная зона слилась с приложением */
             background-color: #121316 !important;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+        }
+
+        /* --- ЗАПРЕТ КОПИРОВАНИЯ И ВЫДЕЛЕНИЯ --- */
+        body {
+            -webkit-user-select: none; /* Safari */
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* IE10+/Edge */
+            user-select: none; /* Standard */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #121212;
             color: #eee;
-            box-sizing: border-box;
-            touch-action: none; /* Запрет системных жестов браузера */
+            margin: 0;
+            display: flex;
+            /* --- ПРАВИЛЬНАЯ ФИКСАЦИЯ ДЛЯ iOS PWA --- */
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 100dvh;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box; /* чтобы padding не ломал height */
+            width: 100%;
+            /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
+            /* Подстраховка для Safari */
+            min-height: -webkit-fill-available;
+            overflow: hidden;
+            overscroll-behavior-y: none;
         }
 
             /* Фикс чёрной полосы под Home Indicator на iPhone в PWA */
@@ -14047,68 +14057,6 @@
             // 1 FPS, чтобы вообще не тратить интернет, пока камера выключена
             return canvas.captureStream(1).getVideoTracks()[0];
         };
-
-        // Жесткий запрет на скролл документа
-        document.addEventListener('scroll', () => {
-            if (document.activeElement === document.getElementById('msgInput')) {
-                window.scrollTo(0, 0); // Мгновенно возвращаем камеру наверх
-            }
-        }, { passive: false });
-
-        // Очищаем скролл при каждом вводе буквы
-        document.getElementById('msgInput').addEventListener('input', () => {
-            window.scrollTo(0, 0);
-        });
-
-        // 1. Агрессивно отменяем системный скролл WebView (чтобы шапка не улетала вверх)
-        window.addEventListener('scroll', function () {
-            if (window.scrollY > 0) {
-                window.scrollTo(0, 0);
-            }
-        }, { passive: false });
-
-        // 2. Умное изменение размера экрана над клавиатурой
-        if (window.visualViewport) {
-            const adjustLayout = () => {
-                // Жестко задаем высоту body равную видимому экрану (без учета клавиатуры)
-                document.body.style.height = window.visualViewport.height + 'px';
-
-                // Если мы в чате, скроллим сообщения вниз, чтобы поле ввода не перекрыло текст
-                if (typeof currentMsgList !== 'undefined' && currentMsgList) {
-                    setTimeout(() => {
-                        currentMsgList.scrollTop = currentMsgList.scrollHeight + 5000;
-                    }, 50); // Микрозадержка для плавности
-                }
-            };
-
-            window.visualViewport.addEventListener('resize', adjustLayout);
-            adjustLayout(); // Вызываем сразу при загрузке
-        }
-        // 1. Агрессивно отбиваем попытки WebView проскроллить страницу при печати
-        window.addEventListener('scroll', function () {
-            if (window.scrollY > 0 || window.scrollX > 0) {
-                window.scrollTo(0, 0);
-            }
-        }, { passive: false });
-
-        // 2. Умный ресайз через VisualViewport (идеально для Android и iOS)
-        if (window.visualViewport) {
-            const adjustLayoutForKeyboard = () => {
-                // Жестко задаем высоту body равной видимому экрану (без клавиатуры)
-                document.body.style.height = window.visualViewport.height + 'px';
-
-                // Прокручиваем чат в самый низ, чтобы поле ввода не перекрыло текст
-                if (typeof currentMsgList !== 'undefined' && currentMsgList) {
-                    setTimeout(() => {
-                        currentMsgList.scrollTop = currentMsgList.scrollHeight + 5000;
-                    }, 50);
-                }
-            };
-
-            window.visualViewport.addEventListener('resize', adjustLayoutForKeyboard);
-            // Вызываем один раз при загрузке
-            adjustLayoutForKeyboard();
-        }
 
 
 
