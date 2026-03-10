@@ -8341,42 +8341,65 @@
                 });
             }
         }
-        async function getMedia(requestVideo = false) {
-            try {
-                const constraints = { audio: true, video: false };
-                if (requestVideo) {
-                    constraints.video = {
-                        facingMode: { ideal: currentFacingMode },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    };
-                }
+        async function toggleCamera() {
+            if (!pc) return;
 
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (!videoSender) return;
 
-                // 🔥 ГЕНИАЛЬНЫЙ ТРЮК: Если видео не просили, генерируем пустой черный кадр
-                if (!requestVideo) {
-                    localStream.addTrack(window.createDummyVideoTrack());
-                }
+            const currentTrack = localStream.getVideoTracks()[0];
+            const btnCam = document.getElementById('btnCam');
+            const isCameraOn = !btnCam.classList.contains('muted-state');
 
-                document.getElementById('localVideo').srcObject = localStream;
-                document.getElementById('localVideo').muted = true;
+            if (!isCameraOn) {
+                // --- ВКЛЮЧАЕМ КАМЕРУ ---
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
+                    const newTrack = stream.getVideoTracks()[0];
 
-                // Добавляем ВСЕ треки в PeerConnection
-                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+                    if (currentTrack) {
+                        currentTrack.stop();
+                        localStream.removeTrack(currentTrack);
+                    }
 
-                if (!requestVideo) {
-                    updateCamBtnUI(false);
-                } else {
+                    localStream.addTrack(newTrack);
+                    document.getElementById('localVideo').srcObject = localStream;
+
+                    await videoSender.replaceTrack(newTrack);
+
+                    if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
+                    if (window.mauiInterop) window.mauiInterop.postMessage("disable_proximity");
+
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
+
+                    // 🔥 ПОКАЗЫВАЕМ ОКОШКО
+                    updateLocalPipVisibility();
+                } catch (e) {
+                    console.error("Ошибка камеры:", e);
+                    showToast("Не удалось запустить камеру");
+                }
+            } else {
+                // --- ВЫКЛЮЧАЕМ КАМЕРУ ---
+                if (currentTrack) {
+                    currentTrack.stop();
+                    localStream.removeTrack(currentTrack);
                 }
 
-                setTimeout(forceEarpiece, 500);
+                const dummyTrack = window.createDummyVideoTrack();
+                localStream.addTrack(dummyTrack);
+                document.getElementById('localVideo').srcObject = localStream;
 
-            } catch (e) {
-                console.error("🚨 Ошибка медиа:", e);
-                throw e;
+                await videoSender.replaceTrack(dummyTrack);
+
+                if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
+
+                updateCamBtnUI(false);
+
+                // 🔥 ПРЯЧЕМ ОКОШКО
+                updateLocalPipVisibility();
             }
         }
 
@@ -8835,6 +8858,9 @@
                     const btn = document.getElementById('btnScr');
                     if (btn) btn.classList.add('btn-screen-on');
 
+                    // 🔥 ПОКАЗЫВАЕМ ОКОШКО
+                    updateLocalPipVisibility();
+
                     screenTrack.onended = () => stopScreen(videoSender);
                 }
             } catch (e) {
@@ -8861,6 +8887,9 @@
             updateCamBtnUI(false);
 
             if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
+
+            // 🔥 ПРЯЧЕМ ОКОШКО
+            updateLocalPipVisibility();
         }
         function listenForIncomingCalls() {
             if (!currentUser) return;
@@ -14031,7 +14060,30 @@
             // 1 FPS, чтобы вообще не тратить интернет, пока камера выключена
             return canvas.captureStream(1).getVideoTracks()[0];
         };
+        // --- УМНАЯ АНИМАЦИЯ МИНИ-ОКОШКА (PiP) ---
+        window.updateLocalPipVisibility = function () {
+            const pip = document.getElementById('localPip');
+            if (!pip) return;
 
+            const btnCam = document.getElementById('btnCam');
+            const btnScr = document.getElementById('btnScr');
+
+            // Проверяем, горит ли кнопка камеры или экрана
+            const isCamOn = btnCam && !btnCam.classList.contains('muted-state');
+            const isScrOn = btnScr && btnScr.classList.contains('btn-screen-on');
+
+            if (isCamOn || isScrOn) {
+                // Если хоть что-то включено — плавно показываем
+                pip.style.opacity = '1';
+                pip.style.transform = 'scale(1)';
+                pip.style.pointerEvents = 'auto';
+            } else {
+                // Если всё выключено — окошко красиво сжимается и растворяется
+                pip.style.opacity = '0';
+                pip.style.transform = 'scale(0.5)';
+                pip.style.pointerEvents = 'none';
+            }
+        };
         
 
 
