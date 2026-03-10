@@ -7299,7 +7299,7 @@
         function buildMessageHTML(m, msgId, msgType) {
             let contentHtml = '';
 
-            // 1. Время и галочки
+            // 1. Формируем строку времени
             let timeStr = '';
             if (m.ts) {
                 const date = m.ts.toDate();
@@ -7309,6 +7309,7 @@
                 timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
             }
 
+            // 2. Формируем галочки прочтения
             let ticksHtml = '✓';
             if (m.ts && m.ts.toMillis() <= window.friendReadTs) {
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
@@ -7316,6 +7317,10 @@
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             }
 
+            // 3. Заранее проверяем наличие реакций
+            let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
+
+            // 4. Собираем HTML блока со временем (один раз!)
             let metaHtml = '';
             if (!m.sys && msgType !== 'call') {
                 metaHtml = `
@@ -7326,7 +7331,7 @@
                     </span>`;
             }
 
-            // 2. Цитата
+            // 5. Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
                     <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
@@ -7335,7 +7340,7 @@
                     </div>`;
             }
 
-            // 3. Основной контент (ВРЕМЯ ЦЕПЛЯЕТСЯ ПРЯМО СЮДА)
+            // 6. Основной контент (Текст, Картинка или Звонок)
             if (m.sys) {
                 contentHtml += m.txt;
             } else if (msgType === 'image') {
@@ -7343,18 +7348,29 @@
                 if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/$${fileId}=w600`; } catch (e) { } }
 
                 contentHtml += `<img src="${imgSrc}" class="chat-media-img" onload="handleImageLoadScroll(this)" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
-                contentHtml += metaHtml; // Время на картинке
+
+                // Если НЕТ реакций, цепляем время прямо на картинку
+                if (!hasReactions) contentHtml += metaHtml;
+
             } else if (msgType === 'call') {
                 const parts = m.txt.split('|');
                 const callState = parts[0] || 'success';
                 const durationStr = parts[1] || '';
                 const isMine = (m.from === currentUser.uid);
 
-                let titleText = isMine ? ((callState === 'canceled' || callState === 'missed') ? 'Отмененный звонок' : 'Исходящий звонок') : ((callState === 'canceled' || callState === 'missed') ? 'Пропущенный звонок' : 'Входящий звонок');
-                let arrowColor = (callState === 'canceled' || callState === 'missed') ? '#ff595a' : '#50a758';
-                let arrowHtml = isMine
-                    ? `<svg style="color:${arrowColor}; margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>`
-                    : `<svg style="color:${arrowColor}; margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 7 17 7 7"></polyline></svg>`;
+                let titleText = '';
+                let arrowHtml = '';
+                let arrowColor = '#50a758';
+
+                if (isMine) {
+                    titleText = (callState === 'canceled' || callState === 'missed') ? 'Отмененный звонок' : 'Исходящий звонок';
+                    arrowColor = (callState === 'canceled' || callState === 'missed') ? '#ff595a' : '#50a758';
+                    arrowHtml = `<svg style="color:${arrowColor}; margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>`;
+                } else {
+                    titleText = (callState === 'canceled' || callState === 'missed') ? 'Пропущенный звонок' : 'Входящий звонок';
+                    arrowColor = (callState === 'canceled' || callState === 'missed') ? '#ff595a' : '#50a758';
+                    arrowHtml = `<svg style="color:${arrowColor}; margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 7 17 7 7"></polyline></svg>`;
+                }
 
                 let durationDisplay = '';
                 if (durationStr && durationStr !== '00:00') {
@@ -7362,7 +7378,8 @@
                     if (dParts.length === 2) {
                         const mins = parseInt(dParts[0], 10);
                         const secs = parseInt(dParts[1], 10);
-                        durationDisplay = mins > 0 ? ` (${mins} мин ${secs} сек)` : ` (${secs} сек)`;
+                        if (mins > 0) durationDisplay = ` (${mins} мин ${secs} сек)`;
+                        else durationDisplay = ` (${secs} сек)`;
                     }
                 }
 
@@ -7379,21 +7396,24 @@
             } else {
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
                 let finalContent = formattedText;
+
                 if (typeof isChatInitialLoad !== 'undefined' && !isChatInitialLoad && !m.sys && msgType === 'text' && !m.txt.includes('http')) {
                     finalContent = applyPremiumTextEffect(m.txt);
                 }
+
                 const safeHtml = (typeof DOMPurify !== 'undefined')
                     ? DOMPurify.sanitize(finalContent, { ALLOWED_TAGS: ['a', 'span'], ALLOWED_ATTR: ['href', 'style', 'class'] })
                     : finalContent;
 
-                // Время ВНУТРИ текста. Идеальное обтекание.
-                contentHtml += `<span class="msg-text">${safeHtml}${metaHtml}</span>`;
+                contentHtml += `<span class="msg-text">${safeHtml}</span>`;
+
+                // ЕСЛИ НЕТ РЕАКЦИЙ — добавляем время прямо к тексту!
+                if (!hasReactions) {
+                    contentHtml += metaHtml;
+                }
             }
 
-            // 4. Сборка реакций
-            let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
-            let reactionsHtml = '';
-
+            // 7. Сборка реакций (Добавляем футер, ТОЛЬКО если есть реакции)
             if (hasReactions) {
                 const premiumEmojis = {
                     'fire': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f525.png',
@@ -7403,21 +7423,24 @@
                     'clap': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44f.png',
                     'poop': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png'
                 };
+
                 const reactionCounts = {};
                 let myReaction = null;
 
                 for (const uid in m.reactions) {
                     const emojiId = m.reactions[uid];
                     if (uid === currentUser.uid) myReaction = emojiId;
+
                     if (!reactionCounts[emojiId]) reactionCounts[emojiId] = 0;
                     reactionCounts[emojiId]++;
                 }
 
-                reactionsHtml = '<div class="msg-reactions" style="display: flex; flex-wrap: wrap; gap: 4px;">';
+                let reactionsHtml = '<div class="msg-reactions">';
                 Object.entries(reactionCounts).forEach(([emojiId, count]) => {
                     const isMy = myReaction === emojiId;
                     const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
                     const imgSrc = premiumEmojis[emojiId] || premiumEmojis['like'];
+
                     reactionsHtml += `
                         <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
                             <img src="${imgSrc}" alt="${emojiId}">
@@ -7425,21 +7448,10 @@
                         </div>`;
                 });
                 reactionsHtml += '</div>';
-            }
 
-            // Обертка для CSS анимаций (clear: both гарантирует, что блок упадет строго под текст)
-            contentHtml += `
-                <div class="reactions-wrapper" style="
-                    max-height: ${hasReactions ? '100px' : '0px'};
-                    margin-top: ${hasReactions ? '6px' : '0px'};
-                    opacity: ${hasReactions ? '1' : '0'};
-                    overflow: hidden;
-                    clear: both;
-                    transition: max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), margin-top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
-                ">
-                    ${reactionsHtml}
-                </div>
-            `;
+                // Если есть реакции, время переезжает внутрь футера вместе с ними
+                contentHtml += `<div class="msg-footer has-reactions">${reactionsHtml}${metaHtml}</div>`;
+            }
 
             return contentHtml;
         }
@@ -13722,7 +13734,6 @@
         }
 
 
-        // --- ЕДИНАЯ ЛОГИКА РЕАКЦИЙ (С АНИМАЦИЕЙ УДАЛЕНИЯ) ---
         window.toggleReaction = function (emojiId) {
             toggleReactionDirect(selectedMsgId, emojiId);
             closeAllSheets();
@@ -13736,12 +13747,9 @@
             let isRemoving = false;
             let targetReactionEl = null;
 
-            // Проверяем, стоит ли УЖЕ наша реакция с ТЕМ ЖЕ самым смайлом
             if (msgEl) {
-                // Ищем элемент нашей реакции
                 const myReactionEl = msgEl.querySelector('.msg-reaction.reacted-by-me');
                 if (myReactionEl) {
-                    // Теперь проверяем не текст, а атрибут alt у картинки (там хранится 'like', 'fire' и тд)
                     const img = myReactionEl.querySelector('img');
                     if (img && img.alt === emojiId) {
                         isRemoving = true;
@@ -13751,24 +13759,38 @@
             }
 
             if (isRemoving) {
-                // 1. Включаем анимацию "схлопывания" пузырька
-                if (targetReactionEl) {
+                const wrapper = msgEl ? msgEl.querySelector('.reactions-wrapper') : null;
+                const allReactions = msgEl ? msgEl.querySelectorAll('.msg-reaction') : [];
+
+                // Если мы отменяем ПОСЛЕДНЮЮ реакцию в сообщении, плавно скрываем всю панель
+                if (allReactions.length === 1 && wrapper) {
+                    wrapper.style.maxHeight = '0px';
+                    wrapper.style.marginTop = '0px';
+                    wrapper.style.opacity = '0';
+                } else if (targetReactionEl) {
+                    // Иначе просто красиво "лопаем" один конкретный смайлик
                     targetReactionEl.classList.add('removing');
                 }
 
-                // 2. Ждем 230мс (пока проиграется красивая CSS анимация) и удаляем из базы
                 setTimeout(() => {
                     msgRef.update({
                         [`reactions.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
                     }).catch(console.error);
-                }, 230);
+                }, 250);
 
             } else {
-                // Если реакции нет или она другая — просто перезаписываем
+                // ДОБАВЛЕНИЕ НОВОЙ РЕАКЦИИ
+                const wrapper = msgEl ? msgEl.querySelector('.reactions-wrapper') : null;
+
+                // Если панель была спрятана, плавно выдвигаем её заранее
+                if (wrapper && wrapper.style.maxHeight === '0px') {
+                    wrapper.style.maxHeight = '100px';
+                    wrapper.style.marginTop = '6px';
+                    wrapper.style.opacity = '1';
+                }
+
                 msgRef.set({
-                    reactions: {
-                        [currentUser.uid]: emojiId
-                    }
+                    reactions: { [currentUser.uid]: emojiId }
                 }, { merge: true }).catch(console.error);
             }
         };
