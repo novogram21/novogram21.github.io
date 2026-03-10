@@ -8737,10 +8737,12 @@
             if (!videoSender) return;
 
             const currentTrack = localStream.getVideoTracks()[0];
-            // Проверяем, настоящая это камера или наш черный квадрат (canvas)
-            const isDummy = currentTrack && currentTrack.label.includes('canvas');
 
-            if (isDummy || !currentTrack) {
+            // 🔥 ЖЕЛЕЗОБЕТОННЫЙ ФИКС: Проверяем, горит ли сама кнопка камеры!
+            const btnCam = document.getElementById('btnCam');
+            const isCameraOn = !btnCam.classList.contains('muted-state');
+
+            if (!isCameraOn) {
                 // --- ВКЛЮЧАЕМ КАМЕРУ ---
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
@@ -8763,11 +8765,16 @@
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
-                } catch (e) { console.error("Ошибка камеры:", e); }
+                } catch (e) {
+                    console.error("Ошибка камеры:", e);
+                    showToast("Не удалось запустить камеру");
+                }
             } else {
                 // --- ВЫКЛЮЧАЕМ КАМЕРУ ---
-                currentTrack.stop();
-                localStream.removeTrack(currentTrack);
+                if (currentTrack) {
+                    currentTrack.stop();
+                    localStream.removeTrack(currentTrack);
+                }
 
                 // Возвращаем черный квадрат
                 const dummyTrack = window.createDummyVideoTrack();
@@ -8777,6 +8784,7 @@
                 await videoSender.replaceTrack(dummyTrack);
 
                 if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
+
                 updateCamBtnUI(false);
             }
         }
