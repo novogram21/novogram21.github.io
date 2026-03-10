@@ -4565,12 +4565,22 @@
                 width: 100%;
             }
 
-        /* Сбрасываем старые отступы у времени */
-        .msg-meta {
-            float: none !important;
-            margin-top: 0 !important;
+            .msg-footer .msg-meta {
+                float: none !important;
+                margin-top: 0 !important;
+                position: relative !important;
+                top: 0 !important;
+            }
+
+        /* Убираем черный фон у времени на фото, если под ним реакции */
+        .msg-image-only .msg-footer .msg-meta {
             position: relative !important;
-            top: 0 !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            background: transparent !important;
+            padding: 0 !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
 
         .msg-reactions {
@@ -7286,12 +7296,10 @@
             }
         }
 
-        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
-        // --- 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ HTML (чтобы не дублировать код) ---
         function buildMessageHTML(m, msgId, msgType) {
             let contentHtml = '';
 
-            // Время
+            // 1. Формируем строку времени
             let timeStr = '';
             if (m.ts) {
                 const date = m.ts.toDate();
@@ -7301,36 +7309,50 @@
                 timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
             }
 
+            // 2. Формируем галочки прочтения
             let ticksHtml = '✓';
-            // Если время отправки меньше или равно времени прочтения друга (RTDB) - две галки
             if (m.ts && m.ts.toMillis() <= window.friendReadTs) {
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             } else if (m.read) {
-                // Если RTDB не успела, берем данные из Firestore
                 ticksHtml = '<span style="margin-right: -4px;">✓</span>✓';
             }
 
-            // Цитата (Reply)
-            if (m.replyTo) {
-                contentHtml += `
-                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                            <div class="msg-reply-name">${m.replyTo.name}</div>
-                            <div class="msg-reply-text">${m.replyTo.text}</div>
-                        </div>`;
+            // 3. Заранее проверяем наличие реакций
+            let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
+
+            // 4. Собираем HTML блока со временем (один раз!)
+            let metaHtml = '';
+            if (!m.sys && msgType !== 'call') {
+                metaHtml = `
+                    <span class="msg-meta">
+                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                        <span class="msg-time">${timeStr}</span>
+                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                    </span>`;
             }
 
-            // Основной контент
+            // 5. Цитата (Reply)
+            if (m.replyTo) {
+                contentHtml += `
+                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                        <div class="msg-reply-name">${m.replyTo.name}</div>
+                        <div class="msg-reply-text">${m.replyTo.text}</div>
+                    </div>`;
+            }
+
+            // 6. Основной контент (Текст, Картинка или Звонок)
             if (m.sys) {
                 contentHtml += m.txt;
-            }
-            else if (msgType === 'image') {
+            } else if (msgType === 'image') {
                 let imgSrc = m.txt;
-                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/${fileId}=w600`; } catch (e) { } }
-                // Чистая картинка без лишних div-оберток + УМНЫЙ СКРОЛЛ
+                if (m.txt.includes('id=')) { try { const fileId = m.txt.split('id=')[1]; imgSrc = `https://lh3.googleusercontent.com/d/$${fileId}=w600`; } catch (e) { } }
+
                 contentHtml += `<img src="${imgSrc}" class="chat-media-img" onload="handleImageLoadScroll(this)" onclick="openImageViewer('${imgSrc}', '${msgId}', ${m.from === currentUser.uid})" onerror="this.src='https://placehold.co/200x200?text=Ошибка';">`;
-            }
-            else if (msgType === 'call') {
-                // ... (тут твой код для звонков, оставляем как было, я его просто копирую чтобы ничего не сломать)
+
+                // Если НЕТ реакций, цепляем время прямо на картинку
+                if (!hasReactions) contentHtml += metaHtml;
+
+            } else if (msgType === 'call') {
                 const parts = m.txt.split('|');
                 const callState = parts[0] || 'success';
                 const durationStr = parts[1] || '';
@@ -7362,17 +7384,16 @@
                 }
 
                 contentHtml += `
-                        <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
-                            <div class="call-icon-wrapper">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                            </div>
-                            <div class="call-info">
-                                <div class="call-title">${titleText}</div>
-                                <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                            </div>
-                        </div>`;
-            }
-            else {
+                    <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
+                        <div class="call-icon-wrapper">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        </div>
+                        <div class="call-info">
+                            <div class="call-title">${titleText}</div>
+                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                        </div>
+                    </div>`;
+            } else {
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
                 let finalContent = formattedText;
 
@@ -7385,34 +7406,24 @@
                     : finalContent;
 
                 contentHtml += `<span class="msg-text">${safeHtml}</span>`;
+
+                // ЕСЛИ НЕТ РЕАКЦИЙ — добавляем время прямо к тексту!
+                if (!hasReactions) {
+                    contentHtml += metaHtml;
+                }
             }
 
-
-            // Очищаем старые флоаты и собираем футер
-            let metaHtml = '';
-            if (!m.sys && msgType !== 'call') {
-                metaHtml = `
-                    <span class="msg-meta">
-                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
-                        <span class="msg-time">${timeStr}</span>
-                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                    </span>`;
-            }
-
-            // --- НОВАЯ СИСТЕМА РЕАКЦИЙ ---
-            const premiumEmojis = {
-                'fire': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f525.png',
-                'like': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44d.png',
-                'heart': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/2764.png',
-                'love': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f970.png',
-                'clap': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44f.png',
-                'poop': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png'
-            };
-
-            let reactionsHtml = '';
-            let hasReactions = m.reactions && Object.keys(m.reactions).length > 0;
-
+            // 7. Сборка реакций (Добавляем футер, ТОЛЬКО если есть реакции)
             if (hasReactions) {
+                const premiumEmojis = {
+                    'fire': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f525.png',
+                    'like': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44d.png',
+                    'heart': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/2764.png',
+                    'love': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f970.png',
+                    'clap': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44f.png',
+                    'poop': 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png'
+                };
+
                 const reactionCounts = {};
                 let myReaction = null;
 
@@ -7424,11 +7435,11 @@
                     reactionCounts[emojiId]++;
                 }
 
-                reactionsHtml = '<div class="msg-reactions">';
+                let reactionsHtml = '<div class="msg-reactions">';
                 Object.entries(reactionCounts).forEach(([emojiId, count]) => {
                     const isMy = myReaction === emojiId;
                     const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
-                    const imgSrc = premiumEmojis[emojiId] || premiumEmojis['like']; // Фоллбэк
+                    const imgSrc = premiumEmojis[emojiId] || premiumEmojis['like'];
 
                     reactionsHtml += `
                         <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
@@ -7437,11 +7448,9 @@
                         </div>`;
                 });
                 reactionsHtml += '</div>';
-            }
 
-            // Оборачиваем во Flex-контейнер для идеального выравнивания!
-            if (hasReactions || (!m.sys && msgType !== 'call')) {
-                contentHtml += `<div class="msg-footer ${hasReactions ? 'has-reactions' : ''}">${reactionsHtml}${metaHtml}</div>`;
+                // Если есть реакции, время переезжает внутрь футера вместе с ними
+                contentHtml += `<div class="msg-footer has-reactions">${reactionsHtml}${metaHtml}</div>`;
             }
 
             return contentHtml;
