@@ -4692,7 +4692,6 @@
                     stroke: #736AF0;
                 }
 
-        /* --- ВЫПАДАЮЩАЯ ПАНЕЛЬ ЭМОДЗИ --- */
         .extended-reactions-panel {
             background: #252525;
             border-radius: 14px;
@@ -4700,17 +4699,18 @@
             display: grid;
             grid-template-columns: repeat(6, 1fr);
             gap: 8px;
-            overflow-y: auto;
-            /* Плавное выезжание */
+            /* Защита от багов скролла */
+            overflow: hidden;
             max-height: 0;
             padding: 0 10px;
+            margin-top: 0;
             opacity: 0;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: max-height 0.3s ease, opacity 0.2s ease, margin-top 0.3s ease, padding 0.3s ease;
             pointer-events: none;
         }
 
             .extended-reactions-panel.open {
-                max-height: 160px; /* Высота открытой панели */
+                max-height: 180px;
                 padding: 10px;
                 margin-top: 6px;
                 opacity: 1;
@@ -5937,27 +5937,38 @@
         }
 
         window.toggleExtendedReactions = function (e) {
+            e.preventDefault();
             e.stopPropagation();
+
+            // ВАЖНО: Блокируем случайное закрытие меню при анимации
+            window.ignoreScrollClose = true;
+            setTimeout(() => { window.ignoreScrollClose = false; }, 400);
+
             const panel = document.getElementById('extendedReactions');
             const btn = e.currentTarget;
 
             if (panel.classList.contains('open')) {
                 panel.classList.remove('open');
                 btn.classList.remove('active');
+                panel.style.overflowY = 'hidden'; // Прячем скролл при закрытии
             } else {
                 panel.classList.add('open');
                 btn.classList.add('active');
 
-                // Рендерим дополнительные смайлы только один раз при первом открытии
+                // Рендерим смайлы, если их еще нет
                 if (panel.innerHTML.trim() === '') {
-                    // Список премиальных нативных эмодзи
                     const extraEmojis = [
                         '😂', '😭', '🥺', '🤣', '😡', '🤯', '😱', '🥶', '🤔', '😎',
                         '🎉', '💯', '💔', '🔥', '👍', '👎', '👀', '🤡', '👽', '👻',
-                        '🤮', '🤬', '🥳', '😴', '😇', '🤫', '🤝', '🙏', '💅', '💅'
+                        '🤮', '🤬', '🥳', '😴', '😇', '🤫', '🤝', '🙏', '💅', '🍷'
                     ];
                     panel.innerHTML = extraEmojis.map(em => `<span onclick="toggleReaction('${em}')">${em}</span>`).join('');
                 }
+
+                // Включаем скролл внутри панели только когда она полностью выехала
+                setTimeout(() => {
+                    if (panel.classList.contains('open')) panel.style.overflowY = 'auto';
+                }, 300);
             }
         };
 
@@ -10721,13 +10732,17 @@
 
 
 
-        document.addEventListener('scroll', () => {
+        document.addEventListener('scroll', (e) => {
             // НА МОБИЛКЕ ОТКЛЮЧАЕМ ЗАКРЫТИЕ ПО СКРОЛЛУ (чтобы меню не прыгало)
             if ((window.innerWidth <= 850 || window.innerHeight <= 500)) return;
 
             if (window.ignoreScrollClose) return;
 
             const menu = document.getElementById('contextMenu');
+
+            // ФИКС: Если пользователь скроллит саму панель со смайлами — не закрываем меню!
+            if (menu && menu.contains(e.target)) return;
+
             if (menu && menu.style.display === 'flex') {
                 closeAllSheets();
             }
