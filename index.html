@@ -4667,7 +4667,82 @@
             .reactions-bar span:hover {
                 transform: scale(1.35) translateY(-5px);
             }
+        /* --- КНОПКА СТРЕЛОЧКИ --- */
+        .expand-reactions-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            margin-left: 4px;
+            transition: background 0.2s, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
 
+            .expand-reactions-btn:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+            /* Поворот стрелочки при открытии */
+            .expand-reactions-btn.active {
+                transform: rotate(180deg) !important;
+                background: rgba(115, 106, 240, 0.15);
+            }
+
+                .expand-reactions-btn.active svg {
+                    stroke: #736AF0;
+                }
+
+        /* --- ВЫПАДАЮЩАЯ ПАНЕЛЬ ЭМОДЗИ --- */
+        .extended-reactions-panel {
+            background: #252525;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            overflow-y: auto;
+            /* Плавное выезжание */
+            max-height: 0;
+            padding: 0 10px;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            pointer-events: none;
+        }
+
+            .extended-reactions-panel.open {
+                max-height: 160px; /* Высота открытой панели */
+                padding: 10px;
+                margin-top: 6px;
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            /* Скроллбар для панели */
+            .extended-reactions-panel::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .extended-reactions-panel::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,0.1);
+                border-radius: 4px;
+            }
+
+            .extended-reactions-panel span {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                cursor: pointer;
+                transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                width: 34px;
+                height: 34px;
+                border-radius: 8px;
+            }
+
+                .extended-reactions-panel span:hover {
+                    transform: scale(1.25);
+                    background: rgba(255,255,255,0.05);
+                }
 
 
 
@@ -4832,6 +4907,13 @@
             <span onclick="toggleReaction('love')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f970.png" alt="🥰"></span>
             <span onclick="toggleReaction('clap')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44f.png" alt="👏"></span>
             <span onclick="toggleReaction('poop')"><img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4a9.png" alt="💩"></span>
+
+            <span class="expand-reactions-btn" onclick="toggleExtendedReactions(event)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+        </div>
+
+        <div id="extendedReactions" class="extended-reactions-panel">
         </div>
 
         <div class="context-list">
@@ -5853,6 +5935,31 @@
             if (days < 30) return `${days} ${days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'} назад`;
             return "был давно";
         }
+
+        window.toggleExtendedReactions = function (e) {
+            e.stopPropagation();
+            const panel = document.getElementById('extendedReactions');
+            const btn = e.currentTarget;
+
+            if (panel.classList.contains('open')) {
+                panel.classList.remove('open');
+                btn.classList.remove('active');
+            } else {
+                panel.classList.add('open');
+                btn.classList.add('active');
+
+                // Рендерим дополнительные смайлы только один раз при первом открытии
+                if (panel.innerHTML.trim() === '') {
+                    // Список премиальных нативных эмодзи
+                    const extraEmojis = [
+                        '😂', '😭', '🥺', '🤣', '😡', '🤯', '😱', '🥶', '🤔', '😎',
+                        '🎉', '💯', '💔', '🔥', '👍', '👎', '👀', '🤡', '👽', '👻',
+                        '🤮', '🤬', '🥳', '😴', '😇', '🤫', '🤝', '🙏', '💅', '💅'
+                    ];
+                    panel.innerHTML = extraEmojis.map(em => `<span onclick="toggleReaction('${em}')">${em}</span>`).join('');
+                }
+            }
+        };
 
 
         function managePresence(uid) {
@@ -7434,11 +7541,16 @@
                 Object.entries(reactionCounts).forEach(([emojiId, count]) => {
                     const isMy = myReaction === emojiId;
                     const classStr = isMy ? 'msg-reaction reacted-by-me' : 'msg-reaction';
-                    const imgSrc = premiumEmojis[emojiId] || premiumEmojis['like'];
+                    const imgSrc = premiumEmojis[emojiId];
+
+                    // Если эмодзи есть в нашем словаре картинок - рисуем img. Иначе - рисуем сам нативный символ
+                    const reactionContent = imgSrc
+                        ? `<img src="${imgSrc}" alt="${emojiId}">`
+                        : `<span style="font-size: 16px; margin: 0 2px;">${emojiId}</span>`;
 
                     reactionsHtml += `
                         <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
-                            <img src="${imgSrc}" alt="${emojiId}">
+                            ${reactionContent}
                             ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
                         </div>`;
                 });
@@ -7955,8 +8067,15 @@
                     overlay.style.background = 'rgba(0,0,0,0.5)';
                 }, 300);
             }
-
+            const extPanel = document.getElementById('extendedReactions');
+            if (extPanel) extPanel.classList.remove('open');
+            const extBtn = document.querySelector('.expand-reactions-btn');
+            if (extBtn) extBtn.classList.remove('active');
             selectedMsgId = null;
+
+
+
+
         }
 
 
