@@ -2070,7 +2070,43 @@
             display: none;
         }
 
+        /* --- МЕНЮ ВЛОЖЕНИЙ --- */
+        .attach-menu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 0 10px;
+        }
 
+        .attach-menu-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+            .attach-menu-item:active {
+                transform: scale(0.9);
+            }
+
+        .attach-icon-circle {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .attach-text {
+            font-size: 13px;
+            color: #fff;
+            font-weight: 500;
+        }
 
 
 
@@ -5339,8 +5375,7 @@
 
                     <textarea id="msgInput" placeholder="Сообщение" spellcheck="true" wrap="soft" oninput="autoResize(this); handleTyping(); checkInputState();" onkeydown="handleChatInput(event)"></textarea>
 
-                    <div class="tg-icon-btn-input">
-                        <input type="file" id="fileInput" onchange="uploadFile(this)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; padding: 0; margin: 0;">
+                    <div class="tg-icon-btn-input" onclick="openAttachmentMenu()">
                         <svg viewBox="0 0 24 24" style="transform: rotate(45deg); position: relative; z-index: 1; pointer-events: none;"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" /></svg>
                     </div>
                 </div>
@@ -5819,13 +5854,13 @@
             const actionIcon = (chatExists || isBot) ? '💬' : '➕';
 
             div.innerHTML = `
-                                        ${avatarHtml}
-                                        <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                                            <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                                            <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                                        </div>
-                                        <div class="search-action" style="color:#007bff; font-size:20px;">${actionIcon}</div>
-                                    `;
+                                            ${avatarHtml}
+                                            <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                                                <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                                                <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                                            </div>
+                                            <div class="search-action" style="color:#007bff; font-size:20px;">${actionIcon}</div>
+                                        `;
 
             div.onclick = async () => {
                 if (chatExists) {
@@ -6607,16 +6642,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>';
                         div.innerHTML = `
-                                                                                    ${avatar}
-                                                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                    ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                    <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                    </div>
-                                                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                    <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                    <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                    </div>
-                                                                                    `;
+                                                                                        ${avatar}
+                                                                                        <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                        ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                        <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                        </div>
+                                                                                        <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                        <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                        <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                        </div>
+                                                                                        `;
                         list.appendChild(div);
                     });
                 });
@@ -6921,19 +6956,19 @@
                 : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
 
             return `
-                                                                                    ${avatarHtml}
-                                                                                    <div class="user-name">${fName}</div>
-                                                                                    <div class="last-msg-row">
-                                                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                    </div>
-                                                                                    <div class="meta-column">
-                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                    <div class="meta-bottom-row">
-                                                                                    <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                                                    </div>
-                                                                                    </div>
-                                                                                    `;
+                                                                                        ${avatarHtml}
+                                                                                        <div class="user-name">${fName}</div>
+                                                                                        <div class="last-msg-row">
+                                                                                        <span class="last-msg" id="last-${chatId}">...</span>
+                                                                                        </div>
+                                                                                        <div class="meta-column">
+                                                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                        <div class="meta-bottom-row">
+                                                                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                        </div>
+                                                                                        </div>
+                                                                                        `;
         }
 
         function loadData() {
@@ -7057,19 +7092,19 @@
                             : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93">${isBot ? '🤖' : '<svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}</div>`;
 
                         div.innerHTML = `
-                                                    ${avatarHtml}
-                                                    <div class="user-name">${fName}</div>
-                                                    <div class="last-msg-row">
-                                                        <span class="last-msg" id="last-${chatId}">...</span>
-                                                    </div>
-                                                    <div class="meta-column">
-                                                        <span class="last-msg-date" id="date-${chatId}"></span>
-                                                        <div class="meta-bottom-row">
-                                                            <span id="status-${chatId}" class="list-ticks"></span>
-                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                        ${avatarHtml}
+                                                        <div class="user-name">${fName}</div>
+                                                        <div class="last-msg-row">
+                                                            <span class="last-msg" id="last-${chatId}">...</span>
                                                         </div>
-                                                    </div>
-                                                `;
+                                                        <div class="meta-column">
+                                                            <span class="last-msg-date" id="date-${chatId}"></span>
+                                                            <div class="meta-bottom-row">
+                                                                <span id="status-${chatId}" class="list-ticks"></span>
+                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                            </div>
+                                                        </div>
+                                                    `;
 
                         if (isNew) {
                             targetList.appendChild(div); // Добавляем строго в нужную папку!
@@ -7422,6 +7457,42 @@
             }
         }
 
+        // Открытие меню вложений
+        function openAttachmentMenu() {
+            // Прячем клавиатуру, если она открыта, чтобы меню выехало плавно
+            const msgInput = document.getElementById('msgInput');
+            if (msgInput) msgInput.blur();
+
+            document.getElementById('overlaySheet').style.display = 'block';
+            const sheet = document.getElementById('attachmentSheet');
+            setTimeout(() => sheet.classList.add('open'), 10);
+        }
+
+        // Логика выбора типа файла
+        function triggerFileInput(type) {
+            closeAllSheets(); // Закрываем меню
+
+            const input = document.getElementById('globalFileInput');
+            // Сбрасываем значение, чтобы можно было выбрать тот же файл повторно
+            input.value = '';
+
+            if (type === 'gallery') {
+                input.accept = "image/*, video/*";
+                input.removeAttribute('capture');
+            } else if (type === 'camera') {
+                input.accept = "image/*, video/*";
+                input.setAttribute('capture', 'environment'); // Пытаемся заставить Android открыть камеру напрямую
+            } else if (type === 'file') {
+                input.accept = "*/*";
+                input.removeAttribute('capture');
+            }
+
+            // Микро-задержка, чтобы анимация закрытия шторки успела начаться до зависания от системного окна
+            setTimeout(() => {
+                input.click();
+            }, 150);
+        }
+
         function buildMessageHTML(m, msgId, msgType) {
             let contentHtml = '';
 
@@ -7450,20 +7521,20 @@
             let metaHtml = '';
             if (!m.sys && msgType !== 'call') {
                 metaHtml = `
-                        <span class="msg-meta">
-                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
-                            <span class="msg-time">${timeStr}</span>
-                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                        </span>`;
+                            <span class="msg-meta">
+                                ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                                <span class="msg-time">${timeStr}</span>
+                                ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                            </span>`;
             }
 
             // 5. Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                            <div class="msg-reply-name">${m.replyTo.name}</div>
-                            <div class="msg-reply-text">${m.replyTo.text}</div>
-                        </div>`;
+                            <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                                <div class="msg-reply-name">${m.replyTo.name}</div>
+                                <div class="msg-reply-text">${m.replyTo.text}</div>
+                            </div>`;
             }
 
             // 6. Основной контент (Текст, Картинка или Звонок)
@@ -7510,15 +7581,15 @@
                 }
 
                 contentHtml += `
-                        <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
-                            <div class="call-icon-wrapper">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                            </div>
-                            <div class="call-info">
-                                <div class="call-title">${titleText}</div>
-                                <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                            </div>
-                        </div>`;
+                            <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
+                                <div class="call-icon-wrapper">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                </div>
+                                <div class="call-info">
+                                    <div class="call-title">${titleText}</div>
+                                    <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                                </div>
+                            </div>`;
             } else {
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
                 let finalContent = formattedText;
@@ -7573,10 +7644,10 @@
                         : `<span style="font-size: 16px; margin: 0 2px;">${emojiId}</span>`;
 
                     reactionsHtml += `
-                            <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
-                                ${reactionContent}
-                                ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
-                            </div>`;
+                                <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
+                                    ${reactionContent}
+                                    ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
+                                </div>`;
                 });
                 reactionsHtml += '</div>';
 
@@ -8058,7 +8129,8 @@
             // 2. Закрываем АБСОЛЮТНО ВСЕ возможные шторки
             const sheets = [
                 'editContactSheet', 'friendProfileSheet', 'editProfileSheet', 'profileSheet',
-                'generalSettingsSheet', 'botEditorSheet', 'botsListSheet', 'actionSheet', 'deleteSheet'
+                'generalSettingsSheet', 'botEditorSheet', 'botsListSheet', 'actionSheet', 'deleteSheet',
+                'attachmentSheet' 
             ];
             sheets.forEach(id => {
                 const el = document.getElementById(id);
@@ -9575,7 +9647,7 @@
 
                 // 5. БЕЗОПАСНО ЗАКРЫТЬ ЧАТ (БЕЗ выкидывания с сайта)
                 if (currentChatId) {
-                    // Мы НЕ используем closeChat() -> history.back() для ПК, 
+                    // Мы НЕ используем closeChat() -> history.back() для ПК,
                     // чтобы браузер случайно не выбросил нас на предыдущий сайт!
                     // Вместо этого просто прячем окна и зачищаем адресную строку.
                     performCloseUI();
@@ -10247,17 +10319,17 @@
 
             // UI прогресс-бара (используется и для фото, и для файлов)
             const progressHtml = `
-                        <div class="upload-progress-container">
-                            <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
-                                <svg class="upload-progress-svg" viewBox="0 0 50 50">
-                                    <circle class="upload-progress-circle-bg" cx="25" cy="25" r="21.5"></circle>
-                                    <circle class="upload-progress-circle-value" id="progress-val-${tempId}" cx="25" cy="25" r="21.5"></circle>
-                                </svg>
-                                <svg class="upload-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <div class="upload-progress-container">
+                                <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
+                                    <svg class="upload-progress-svg" viewBox="0 0 50 50">
+                                        <circle class="upload-progress-circle-bg" cx="25" cy="25" r="21.5"></circle>
+                                        <circle class="upload-progress-circle-value" id="progress-val-${tempId}" cx="25" cy="25" r="21.5"></circle>
+                                    </svg>
+                                    <svg class="upload-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </div>
+                                <div class="upload-progress-text" id="progress-txt-${tempId}">0.0 / ${totalMb} МБ</div>
                             </div>
-                            <div class="upload-progress-text" id="progress-txt-${tempId}">0.0 / ${totalMb} МБ</div>
-                        </div>
-                    `;
+                        `;
 
             // Если это картинка
             if (file.type.startsWith('image/')) {
@@ -10265,22 +10337,22 @@
                 const url = URL.createObjectURL(file);
 
                 contentHtml = `
-                            <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
-                            ${progressHtml}
-                        `;
+                                <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
+                                ${progressHtml}
+                            `;
             }
             // Если это документ
             else {
                 div.className = 'msg msg-me';
                 contentHtml = `
-                            <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
-                                <div class="file-icon" style="opacity: 0.2;">📄</div>
-                                <div class="file-info" style="opacity: 0.2;">
-                                    <div class="file-name">${file.name}</div>
-                                    <div class="file-action">Загрузка...</div>
-                                </div>
-                                ${progressHtml}
-                            </div>`;
+                                <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
+                                    <div class="file-icon" style="opacity: 0.2;">📄</div>
+                                    <div class="file-info" style="opacity: 0.2;">
+                                        <div class="file-name">${file.name}</div>
+                                        <div class="file-action">Загрузка...</div>
+                                    </div>
+                                    ${progressHtml}
+                                </div>`;
             }
 
             div.innerHTML = contentHtml;
@@ -11741,14 +11813,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                                                                                <div class="search-msg-content">
-                                                                                                    <div class="search-msg-header">
-                                                                                                        <span class="search-msg-name">${res.name}</span>
-                                                                                                        <span class="search-msg-time">${res.time}</span>
+                                                                                                    <div class="search-msg-content">
+                                                                                                        <div class="search-msg-header">
+                                                                                                            <span class="search-msg-name">${res.name}</span>
+                                                                                                            <span class="search-msg-time">${res.time}</span>
+                                                                                                        </div>
+                                                                                                        <div class="search-msg-text">${res.text}</div>
                                                                                                     </div>
-                                                                                                    <div class="search-msg-text">${res.text}</div>
-                                                                                                </div>
-                                                                                            `;
+                                                                                                `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -13073,26 +13145,26 @@
                 container.innerHTML = '';
                 if (snap.empty) {
                     container.innerHTML = `
-                                                <div style="text-align:center; margin-top: 60px;">
-                                                    <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
-                                                    <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
-                                                    <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer; margin-top: 15px;">Создать бота</button>
-                                                </div>`;
+                                                    <div style="text-align:center; margin-top: 60px;">
+                                                        <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
+                                                        <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
+                                                        <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer; margin-top: 15px;">Создать бота</button>
+                                                    </div>`;
                     return;
                 }
                 snap.forEach(doc => {
                     const bot = doc.data();
                     container.innerHTML += `
-                                                <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
-                                                    <div class="premium-item" onclick="openBotEditor('${doc.id}', '${bot.botToken}')" style="border:none;">
-                                                        <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
-                                                        <div class="premium-item-content">
-                                                            <div class="premium-item-value">${bot.name}</div>
-                                                            <div class="premium-item-label">@${bot.username}</div>
+                                                    <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
+                                                        <div class="premium-item" onclick="openBotEditor('${doc.id}', '${bot.botToken}')" style="border:none;">
+                                                            <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
+                                                            <div class="premium-item-content">
+                                                                <div class="premium-item-value">${bot.name}</div>
+                                                                <div class="premium-item-label">@${bot.username}</div>
+                                                            </div>
+                                                            <div style="color: #736AF0; font-size:14px; font-weight:bold;">Токен</div>
                                                         </div>
-                                                        <div style="color: #736AF0; font-size:14px; font-weight:bold;">Токен</div>
-                                                    </div>
-                                                </div>`;
+                                                    </div>`;
                 });
             } catch (e) { }
         }
@@ -14245,5 +14317,37 @@
             </div>
         </div>
     </div>
+
+    <input type="file" id="globalFileInput" onchange="uploadFile(this)" style="display: none;">
+
+    <div id="attachmentSheet" class="action-sheet" style="padding-bottom: calc(env(safe-area-inset-bottom) + 20px);">
+        <div style="width: 36px; height: 4px; background: #333; border-radius: 2px; margin: 0 auto 20px;"></div>
+
+        <div class="attach-menu-grid">
+            <div class="attach-menu-item" onclick="triggerFileInput('gallery')">
+                <div class="attach-icon-circle" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                </div>
+                <span class="attach-text">Галерея</span>
+            </div>
+
+            <div class="attach-menu-item" onclick="triggerFileInput('camera')">
+                <div class="attach-icon-circle" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+                <span class="attach-text">Камера</span>
+            </div>
+
+            <div class="attach-menu-item" onclick="triggerFileInput('file')">
+                <div class="attach-icon-circle" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                </div>
+                <span class="attach-text">Файл</span>
+            </div>
+        </div>
+    </div>
+
+
+
 </body>
 </html>
