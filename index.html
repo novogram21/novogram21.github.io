@@ -8820,14 +8820,39 @@
             if (!localStream) return;
 
             try {
+                // 1. ДОБАВЛЕНО: audio: true, чтобы браузер запросил системный звук
                 const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: { width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 }, frameRate: { ideal: 24, max: 30 } }
+                    video: { width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 }, frameRate: { ideal: 24, max: 30 } },
+                    audio: true
                 });
+
                 const screenTrack = stream.getVideoTracks()[0];
+                const screenAudioTrack = stream.getAudioTracks()[0]; // Берем звук экрана, если юзер его разрешил
+
                 const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
 
                 if (videoSender) {
                     await videoSender.replaceTrack(screenTrack);
+
+                    // 2. ДОБАВЛЕНО: Смешиваем звук системы и микрофона
+                    let mixedTrack = null;
+                    const originalAudioTrack = localStream.getAudioTracks()[0];
+
+                    // Если браузер дал звук экрана, сводим его с микрофоном
+                    if (screenAudioTrack && originalAudioTrack && audioSender) {
+                        initAudio();
+                        const dest = audioCtx.createMediaStreamDestination();
+
+                        const micSource = audioCtx.createMediaStreamSource(new MediaStream([originalAudioTrack]));
+                        const sysSource = audioCtx.createMediaStreamSource(new MediaStream([screenAudioTrack]));
+
+                        micSource.connect(dest);
+                        sysSource.connect(dest);
+
+                        mixedTrack = dest.stream.getAudioTracks()[0];
+                        await audioSender.replaceTrack(mixedTrack);
+                    }
 
                     const currentTrack = localStream.getVideoTracks()[0];
                     if (currentTrack) {
@@ -8842,7 +8867,18 @@
                     const btn = document.getElementById('btnScr');
                     if (btn) btn.classList.add('btn-screen-on');
 
-                    screenTrack.onended = () => stopScreen(videoSender);
+                    screenTrack.onended = () => {
+                        stopScreen(videoSender);
+
+                        // 3. ДОБАВЛЕНО: Возвращаем чистый микрофон после остановки демонстрации
+                        if (screenAudioTrack) {
+                            screenAudioTrack.stop();
+                            if (mixedTrack) mixedTrack.stop();
+                            if (audioSender && originalAudioTrack) {
+                                audioSender.replaceTrack(originalAudioTrack);
+                            }
+                        }
+                    };
                 }
             } catch (e) {
                 if (e.name !== 'NotAllowedError') showToast("Не удалось запустить демонстрацию");
