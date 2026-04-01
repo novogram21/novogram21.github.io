@@ -8511,12 +8511,9 @@
             wasCallConnected = false;
 
             // --- ЛОГИКА ЗВУКА И ДАТЧИКА (PREMIUM UX) ---
-            // Если видеозвонок — громкая связь, если обычный — ухо.
             isEarpiece = !isVideoCall;
             if (window.mauiInterop) {
-                // Шлем команды в Android (C#)
                 window.mauiInterop.postMessage(isVideoCall ? "audio_loud" : "audio_ear");
-
                 if (isVideoCall) {
                     window.mauiInterop.postMessage("disable_proximity"); // Выключаем датчик для видео
                 } else {
@@ -8544,25 +8541,29 @@
             try {
                 setupPeerConnection();
 
+                // Сначала создаем каркас сессии ДО генерации кандидатов!
+                await sessionRef.set({
+                    caller: currentUser.uid,
+                    callerName: usersCache[currentUser.uid]?.name || "Пользователь",
+                    status: 'dialing',
+                    ts: sessionTs,
+                    isVideoCall: isVideoCall
+                });
+
                 // Слушаем кандидатов от того, кто примет звонок
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                // ЗАХВАТ МЕДИА (флаг isVideoCall определит, включится ли камера сразу)
+                // ЗАХВАТ МЕДИА
                 await getMedia(isVideoCall);
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                // Создаем сессию звонка в базе
-                await sessionRef.set({
-                    offer: { type: offer.type, sdp: offer.sdp },
-                    caller: currentUser.uid,
-                    callerName: usersCache[currentUser.uid]?.name || "Пользователь",
-                    status: 'dialing',
-                    ts: sessionTs,
-                    isVideoCall: isVideoCall // Помечаем в базе, что это видеозвонок
+                // Добавляем offer через UPDATE, чтобы не стереть уже улетевших кандидатов
+                await sessionRef.update({
+                    offer: { type: offer.type, sdp: offer.sdp }
                 });
 
                 // Уведомляем собеседника о входящем
@@ -8577,6 +8578,8 @@
 
                 updateCallStatus("Звонок...");
 
+                let hasReceivedAnswer = false; // 🔥 ТОТ САМЫЙ ЗАМОК ОТ БАГОВ
+
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
@@ -8588,12 +8591,15 @@
                         endCall(false, true);
                     }
 
-                    if (pc && !pc.remoteDescription && data.answer) {
+                    // 🔥 СТРОГАЯ ПРОВЕРКА СОСТОЯНИЯ
+                    if (pc && data.answer && !hasReceivedAnswer && pc.signalingState === 'have-local-offer') {
+                        hasReceivedAnswer = true; // Защелкиваем замок! Второй раз код сюда не зайдет.
+
                         console.log("✅ Ответ получен, соединяем...");
-                        updateCallStatus("Обмен шифрованием...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                         await flushCandidateQueue();
                     }
+                    
                 });
 
             } catch (err) {
