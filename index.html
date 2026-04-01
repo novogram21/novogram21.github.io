@@ -8544,15 +8544,6 @@
             try {
                 setupPeerConnection();
 
-                // 🔥 ФИКС 1: Сначала создаем каркас сессии ДО генерации кандидатов!
-                await sessionRef.set({
-                    caller: currentUser.uid,
-                    callerName: usersCache[currentUser.uid]?.name || "Пользователь",
-                    status: 'dialing',
-                    ts: sessionTs,
-                    isVideoCall: isVideoCall // Помечаем в базе, что это видеозвонок
-                });
-
                 // Слушаем кандидатов от того, кто примет звонок
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
@@ -8562,12 +8553,16 @@
                 await getMedia(isVideoCall);
 
                 const offer = await pc.createOffer();
-                // Как только мы вызываем это, WebRTC начинает пушить ICE-кандидатов в базу
                 await pc.setLocalDescription(offer);
 
-                // 🔥 ФИКС 2: Добавляем offer через UPDATE, чтобы не стереть кандидатов, которые уже успели улететь в базу
-                await sessionRef.update({
-                    offer: { type: offer.type, sdp: offer.sdp }
+                // Создаем сессию звонка в базе
+                await sessionRef.set({
+                    offer: { type: offer.type, sdp: offer.sdp },
+                    caller: currentUser.uid,
+                    callerName: usersCache[currentUser.uid]?.name || "Пользователь",
+                    status: 'dialing',
+                    ts: sessionTs,
+                    isVideoCall: isVideoCall // Помечаем в базе, что это видеозвонок
                 });
 
                 // Уведомляем собеседника о входящем
@@ -8627,10 +8622,11 @@
             document.getElementById('incomingPopup').style.display = 'none';
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
-
+            forceEarpiece();
+            isEarpiece = true;
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("audio_ear");
-                window.mauiInterop.postMessage("enable_proximity");
+                window.mauiInterop.postMessage("enable_proximity"); // Включаем датчик
             }
 
             updateCallStatus("Соединение...");
@@ -8654,14 +8650,13 @@
                     setTimeout(() => endCall(false), 2000);
                     return;
                 }
-
                 const callerId = callData.caller;
-                currentFriendId = callerId;
+                currentFriendId = callerId; // Важно: скрипт должен знать, с кем мы говорим
                 const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
                 document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
-
                 setupPeerConnection();
 
+                // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
@@ -8671,15 +8666,18 @@
                         return;
                     }
 
+                    // Если пришел сигнал на обновление потока
                     if (data.renegotiate && !amICaller) {
                         console.log("🔄 Обновляем видео-поток по просьбе собеседника...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
 
+                        // --- ИСПРАВЛЕНИЕ: Держим канал открытым при пересогласовании ---
                         pc.getTransceivers().forEach(t => {
                             if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
                                 t.direction = 'sendrecv';
                             }
                         });
+                        // ----------------------------------------------------------------
 
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
@@ -8691,26 +8689,19 @@
                     addCandidateSafely(snap.val());
                 });
 
-                // 🔥 ФИКС 3: Проверяем, какой звонок к нам пришел (видео или аудио)
-                const isVideo = callData.isVideoCall === true;
-
-                // Переключаем UX в зависимости от типа звонка (громкая связь для видео)
-                isEarpiece = !isVideo;
-                if (window.mauiInterop) {
-                    window.mauiInterop.postMessage(isVideo ? "audio_loud" : "audio_ear");
-                    if (isVideo) window.mauiInterop.postMessage("disable_proximity");
-                }
-
-                await getMedia(isVideo);
+                await getMedia(false);
 
                 await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                 await flushCandidateQueue();
 
+                // --- ИСПРАВЛЕНИЕ (ГЛАВНОЕ): Принудительно открываем канал отправки видео ---
+                // Иначе браузер, видя выключенную камеру, заблокирует отправку видео (recvonly)
                 pc.getTransceivers().forEach(t => {
                     if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
                         t.direction = 'sendrecv';
                     }
                 });
+                // ---------------------------------------------------------------------------
 
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
@@ -8720,7 +8711,7 @@
                     status: 'connected'
                 });
 
-                updateCallStatus("Обмен шифрованием...");
+                updateCallStatus("Обмен шифрованием..."); // Тот, кто берет трубку, тоже видит этот статус
 
             } catch (e) {
                 console.error("Ошибка при ответе:", e);
