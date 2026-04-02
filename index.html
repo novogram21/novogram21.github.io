@@ -8144,7 +8144,10 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-
+            const configWithRelay = {
+                ...dynamicIceServers,
+                iceTransportPolicy: 'relay'
+            };
             console.log("🛠️ [WebRTC] Реальный конфиг серверов при старте:", JSON.stringify(dynamicIceServers));
             pc = new RTCPeerConnection(dynamicIceServers);
 
