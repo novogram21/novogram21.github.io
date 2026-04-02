@@ -8155,6 +8155,7 @@
 
             pc.oniceconnectionstatechange = () => {
                 console.log("📡 [ICE State]:", pc.iceConnectionState);
+
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
                         console.log("🚀 [WebRTC] P2P СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
@@ -8164,9 +8165,16 @@
                         stopAllTones(); startTimer(); startPing();
                     }
                 }
-                else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-                    console.warn("❌ [WebRTC] ICE соединение разорвано или failed.");
+                else if (pc.iceConnectionState === 'failed') {
+                    // Только FAILED является окончательной смертью соединения
+                    console.warn("❌ [WebRTC] ICE соединение failed (Все маршруты недоступны).");
                     endCall(false);
+                }
+                else if (pc.iceConnectionState === 'disconnected') {
+                    // Disconnected часто бывает временным (например, при переключении с Wi-Fi на LTE 
+                    // или при переходе с заблокированного UDP на резервный TCP TURN).
+                    // МЫ НЕ СБРАСЫВАЕМ ЗВОНОК ЗДЕСЬ! Ждем, пока он перейдет в connected или failed.
+                    console.warn("⚠️ [WebRTC] ICE временно disconnected. Ждем восстановления маршрута...");
                 }
             };
 
