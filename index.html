@@ -5500,6 +5500,14 @@
         const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc";
         const TURN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfoDAYY2otmNxEQ6tsrWLekLwthAPxnYDIW6HRUrA263qQgAYDDHPeQq7-Km_PcpI/exec";
 
+        // Фикс аудио-сессии для iOS (Capacitor/WebView)
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            if (navigator.audioSession) {
+                // Устанавливаем режим "play-and-record", который открывает доступ к разговорному динамику
+                navigator.audioSession.type = 'play-and-record';
+            }
+        }
+
         const APP_START_TIME = Date.now();
 
         function playNotificationSound(type) {
@@ -5928,6 +5936,15 @@
         }
         function stopAllTones() {
             if (toneTimer) { clearInterval(toneTimer); toneTimer = null; }
+
+            // 🔥 ЖЕСТКИЙ ФИКС ДЛЯ iOS: 
+            // Если оставить контекст активным, iOS будет думать, что играет музыка.
+            if (audioCtx) {
+                audioCtx.close().then(() => {
+                    audioCtx = null; // Полностью обнуляем, чтобы создать заново для нового звонка
+                    console.log("AudioContext закрыт для освобождения динамика");
+                });
+            }
         }
         function formatLastSeen(timestamp) {
             if (!timestamp) return "был давно";
@@ -8180,33 +8197,34 @@
 
             pc.ontrack = e => {
                 console.log("🎥 [WebRTC] Получен медиа-трек:", e.track.kind);
+
                 if (e.track.kind === 'audio') {
+                    // 1. Создаем или находим чистый аудио-элемент
                     let remoteAudio = document.getElementById('remoteAudio');
                     if (!remoteAudio) {
                         remoteAudio = document.createElement('audio');
                         remoteAudio.id = 'remoteAudio';
                         remoteAudio.autoplay = true;
-                        remoteAudio.playsInline = true;
-                        remoteAudio.style.display = 'none';
+                        // ВАЖНО для iOS: playsinline и отсутствие контроллов
+                        remoteAudio.setAttribute('playsinline', 'true');
                         document.body.appendChild(remoteAudio);
                     }
-                    if (!remoteAudio.srcObject) remoteAudio.srcObject = new MediaStream();
-                    remoteAudio.srcObject.addTrack(e.track);
+                    // Пускаем звук ТОЛЬКО сюда
+                    remoteAudio.srcObject = new MediaStream([e.track]);
                     remoteAudio.play().catch(err => console.log("Ошибка аудио:", err));
-                }
-                else if (e.track.kind === 'video') {
+
+                } else if (e.track.kind === 'video') {
                     const remoteVid = document.getElementById('remoteVideo');
+
+                    // 2. КРИТИЧЕСКИЙ ФИКС ДЛЯ iOS: 
+                    // Видео-элемент должен быть ВСЕГДА заглушен (muted), 
+                    // иначе iOS пустит звук через основной динамик как "кино".
+                    remoteVid.muted = true;
+                    remoteVid.setAttribute('playsinline', 'true');
+
                     if (!remoteVid.srcObject) remoteVid.srcObject = new MediaStream();
-                    if (!remoteVid.srcObject.getTracks().includes(e.track)) {
-                        remoteVid.srcObject.addTrack(e.track);
-                    }
-                    e.track.onunmute = () => {
-                        const stream = remoteVid.srcObject;
-                        remoteVid.srcObject = null;
-                        remoteVid.srcObject = stream;
-                        remoteVid.play().catch(err => console.log("Ошибка автозапуска:", err));
-                    };
-                    remoteVid.play().catch(err => console.log("Ошибка старта видео:", err));
+                    remoteVid.srcObject.addTrack(e.track);
+                    remoteVid.play().catch(err => console.log("Ошибка видео:", err));
                 }
             };
 
@@ -9709,7 +9727,7 @@
         const localVidEl = document.getElementById('localVideo');
         const pipEl = document.getElementById('localPip');              // новый id
         const gridEl = document.querySelector('.video-grid');
-        const controlsEl = document.querySelector('.controls');
+        const controlsEl = document.querySelector('.premium-call-controls');
         const resizeHandleEl = pipEl.querySelector('.pip-resize-handle');
         const PIP_STORAGE_KEY = 'pipState_v3';
         let pipRatio = 2 / 3;      // width/height, дефолт как у тебя 140x210
@@ -9910,26 +9928,21 @@
         }
         function updateCallControlsVisibility() {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv');
 
             const btnScr = document.getElementById('btnScr');
             const btnSpeaker = document.getElementById('btnSpeaker');
             const btnFlip = document.getElementById('btnFlip');
 
             if (!isMobile) {
-                // 1. НА КОМПЬЮТЕРЕ: Показываем "Экран", прячем "Динамик" и "Смену камеры"
+                // НА КОМПЬЮТЕРЕ: Показываем "Экран", прячем "Динамик" и "Смену камеры"
                 if (btnScr) btnScr.style.display = 'flex';
                 if (btnSpeaker) btnSpeaker.style.display = 'none';
                 if (btnFlip) btnFlip.style.display = 'none';
-            } else if (isMobile && isApp) {
-                // 2. В МОБИЛЬНОМ ПРИЛОЖЕНИИ (MAUI): Прячем "Экран", показываем "Динамик" и "Камеру"
+            } else {
+                // 🔥 ФИКС ДЛЯ iOS: Убрана жесткая проверка isApp. 
+                // Теперь на ЛЮБОМ телефоне кнопка динамика и камеры ВСЕГДА отображается.
                 if (btnScr) btnScr.style.display = 'none';
                 if (btnSpeaker) btnSpeaker.style.display = 'flex';
-                if (btnFlip) btnFlip.style.display = 'flex';
-            } else {
-                // 3. В МОБИЛЬНОМ БРАУЗЕРЕ (Safari/Chrome): Прячем "Экран" и "Динамик", оставляем только "Камеру"
-                if (btnScr) btnScr.style.display = 'none';
-                if (btnSpeaker) btnSpeaker.style.display = 'none';
                 if (btnFlip) btnFlip.style.display = 'flex';
             }
         }
@@ -12064,34 +12077,43 @@
                 btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
                 btn.classList.add('muted-state');
             }
+            // Принудительно выставляем режим голоса для iOS
+            if (navigator.audioSession) {
+                navigator.audioSession.type = 'play-and-record';
+                navigator.audioSession.setMode('voice-chat');
+            }
             if (window.mauiInterop) window.mauiInterop.postMessage("audio_ear");
-            else if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage("audio_ear");
         }
 
         // 2. Функция переключения
         function toggleSpeaker() {
             isEarpiece = !isEarpiece;
             const btn = document.getElementById('btnSpeaker');
+            const remoteAudio = document.getElementById('remoteAudio');
 
             const iconLoud = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
             const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
 
             if (isEarpiece) {
+                // РЕЖИМ: В УХО
                 btn.innerHTML = iconEar;
                 btn.classList.add('muted-state');
-
-                if (window.mauiInterop) {
-                    window.mauiInterop.postMessage("audio_ear");
-                    window.mauiInterop.postMessage("enable_proximity"); // Вернули к уху - включили датчик
+                // Магия для iOS: перевод сессии в режим разговора
+                if (navigator.audioSession) {
+                    navigator.audioSession.setMode('voice-chat');
                 }
             } else {
+                // РЕЖИМ: ГРОМКАЯ СВЯЗЬ
                 btn.innerHTML = iconLoud;
                 btn.classList.remove('muted-state');
-
-                if (window.mauiInterop) {
-                    window.mauiInterop.postMessage("audio_loud");
-                    window.mauiInterop.postMessage("disable_proximity"); // Громкая связь - выключили датчик
+                if (navigator.audioSession) {
+                    navigator.audioSession.setMode('video-chat');
                 }
+            }
+
+            // Если есть Android-часть, шлем ей сигнал тоже
+            if (window.mauiInterop) {
+                window.mauiInterop.postMessage(isEarpiece ? "audio_ear" : "audio_loud");
             }
         }
 
