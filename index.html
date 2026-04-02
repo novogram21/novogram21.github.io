@@ -8127,7 +8127,8 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-            console.log("🛠️ [WebRTC] Создаем RTCPeerConnection с конфигом:", dynamicIceServers);
+
+            console.log("🛠️ [WebRTC] Реальный конфиг серверов при старте:", JSON.stringify(dynamicIceServers));
             pc = new RTCPeerConnection(dynamicIceServers);
 
             pc.onsignalingstatechange = () => {
@@ -8407,11 +8408,31 @@
         // Запасной конфиг с ПРЯМЫМИ IP-АДРЕСАМИ (чтобы обойти ошибку DNS -105 на мобильном интернете)
         let dynamicIceServers = {
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                // turns: заставляет идти через зашифрованный TLS туннель
-                { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
-                { urls: "turn:global.relay.metered.ca:443", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" }
-            ]
+                // Пробиваем UDP через разные конторы (не только Google)
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun.yandex.ru:3478" },
+                { urls: "stun:stun.cloudflare.com:3478" },
+
+                // Обычный TURN (UDP/TCP смешанный)
+                {
+                    urls: "turn:global.relay.metered.ca:443",
+                    username: "ae2c0c3b821722b03a252928",
+                    credential: "TVZk6SgD8cbvbQlB"
+                },
+                // Форсируем TURN работать строго по TCP (обходим блок UDP)
+                {
+                    urls: "turn:global.relay.metered.ca:443?transport=tcp",
+                    username: "ae2c0c3b821722b03a252928",
+                    credential: "TVZk6SgD8cbvbQlB"
+                },
+                // Форсируем TURN притворяться обычным HTTPS-сайтом (TLS) - идеальная маскировка от DPI
+                {
+                    urls: "turns:global.relay.metered.ca:443?transport=tcp",
+                    username: "ae2c0c3b821722b03a252928",
+                    credential: "TVZk6SgD8cbvbQlB"
+                }
+            ],
+            iceCandidatePoolSize: 10
         };
 
         // Функция загрузки серверов с защитой от "Hard Reset"
