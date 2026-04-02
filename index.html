@@ -8402,10 +8402,10 @@
         // Запасной конфиг с ПРЯМЫМИ IP-АДРЕСАМИ (чтобы обойти ошибку DNS -105 на мобильном интернете)
         let dynamicIceServers = {
             iceServers: [
-                // Прямые IP-адреса серверов Google (им не нужен DNS-поиск)
-                { urls: 'stun:142.250.82.127:19302' },
-                { urls: 'stun:74.125.137.127:19302' },
-                { urls: "turn:global.relay.metered.ca:80", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" }
+                { urls: 'stun:stun.l.google.com:19302' },
+                // turns: заставляет идти через зашифрованный TLS туннель
+                { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" },
+                { urls: "turn:global.relay.metered.ca:443", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" }
             ]
         };
 
