@@ -8127,11 +8127,14 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-            console.log("🛠️ Создаем RTCPeerConnection...");
+            console.log("🛠️ [WebRTC] Создаем RTCPeerConnection с конфигом:", dynamicIceServers);
             pc = new RTCPeerConnection(dynamicIceServers);
 
+            pc.onsignalingstatechange = () => {
+                console.log("🚦 [WebRTC] Состояние сигнализации:", pc.signalingState);
+            };
 
-            // 🔥 НОВЫЙ БЛОК: Слушаем сигнал переключения видео от друга
+            // Слушаем сигнал переключения видео от друга (твой код)
             if (currentCallId && currentFriendId) {
                 rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentFriendId}`).on('value', snap => {
                     if (snap.val()) {
@@ -8139,13 +8142,12 @@
                         setTimeout(() => {
                             const remoteVid = document.getElementById('remoteVideo');
                             if (remoteVid && remoteVid.srcObject) {
-                                // Жесткий пинок плеера (Трюк для iPhone и Chrome)
                                 const stream = remoteVid.srcObject;
                                 remoteVid.srcObject = null;
                                 remoteVid.srcObject = stream;
                                 remoteVid.play().catch(e => console.log("Ошибка автоплея:", e));
                             }
-                        }, 400); // 400мс задержки, чтобы кадры успели долететь по сети
+                        }, 400);
                     }
                 });
             }
@@ -8154,6 +8156,7 @@
                 console.log("📡 [ICE State]:", pc.iceConnectionState);
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
+                        console.log("🚀 [WebRTC] P2P СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
                         isConnected = true; wasCallConnected = true;
                         document.getElementById('callStatusText').style.display = 'none';
                         document.getElementById('callTimer').style.display = 'block';
@@ -8161,12 +8164,13 @@
                     }
                 }
                 else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                    console.warn("❌ [WebRTC] ICE соединение разорвано или failed.");
                     endCall(false);
                 }
             };
 
             pc.ontrack = e => {
-                console.log("🎥 Получен поток:", e.track.kind);
+                console.log("🎥 [WebRTC] Получен медиа-трек:", e.track.kind);
                 if (e.track.kind === 'audio') {
                     let remoteAudio = document.getElementById('remoteAudio');
                     if (!remoteAudio) {
@@ -8184,27 +8188,27 @@
                 else if (e.track.kind === 'video') {
                     const remoteVid = document.getElementById('remoteVideo');
                     if (!remoteVid.srcObject) remoteVid.srcObject = new MediaStream();
-
                     if (!remoteVid.srcObject.getTracks().includes(e.track)) {
                         remoteVid.srcObject.addTrack(e.track);
                     }
-
                     e.track.onunmute = () => {
                         const stream = remoteVid.srcObject;
                         remoteVid.srcObject = null;
                         remoteVid.srcObject = stream;
                         remoteVid.play().catch(err => console.log("Ошибка автозапуска:", err));
                     };
-
                     remoteVid.play().catch(err => console.log("Ошибка старта видео:", err));
                 }
             };
 
             pc.onicecandidate = e => {
                 if (e.candidate && currentCallId) {
+                    console.log(`[ICE] 📤 Отправляем локального кандидата в Firebase...`);
                     const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
                     const path = amICaller ? 'offerCandidates' : 'answerCandidates';
                     sessionRef.child(path).push(e.candidate.toJSON());
+                } else if (!e.candidate) {
+                    console.log("[ICE] 🏁 Сбор локальных кандидатов завершен (null).");
                 }
             };
         }
@@ -8283,25 +8287,26 @@
         async function addCandidateSafely(candidate) {
             if (!pc) return;
             try {
+                console.log(`[ICE] 📥 Получен кандидат от собеседника:`, candidate.candidate);
                 if (pc.remoteDescription && pc.remoteDescription.type) {
                     await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                    console.log(`📥 [Кандидат ДОБАВЛЕН]: тип=${candidate.type}, IP=${candidate.address}`);
+                    console.log(`[ICE] ✅ Кандидат успешно добавлен в PC!`);
                 } else {
-                    console.log("⏳ [Кандидат В ОЧЕРЕДИ] Ждем RemoteDescription...");
+                    console.log("[ICE] ⏳ RemoteDescription еще не установлен, кидаем кандидата в очередь...");
                     candidateQueue.push(candidate);
                 }
             } catch (e) {
-                console.error("❌ Ошибка добавления ICE-кандидата:", e);
+                console.error("[ICE] ❌ Ошибка добавления кандидата:", e);
             }
         }
         async function flushCandidateQueue() {
             if (!pc) return;
-            console.log(`🔄 [Очередь] Добавляем ${candidateQueue.length} кандидатов из очереди...`);
+            console.log(`[ICE] 🔄 Добавляем ${candidateQueue.length} кандидатов из очереди...`);
             for (const cand of candidateQueue) {
                 try {
                     await pc.addIceCandidate(new RTCIceCandidate(cand));
-                    console.log(`📥 [Кандидат из очереди ДОБАВЛЕН]: тип=${cand.type}`);
-                } catch (e) { console.error("Ошибка кандидата из очереди", e); }
+                    console.log(`[ICE] ✅ Кандидат из очереди ДОБАВЛЕН`);
+                } catch (e) { console.error("[ICE] ❌ Ошибка кандидата из очереди:", e); }
             }
             candidateQueue = [];
         }
@@ -8508,32 +8513,25 @@
             if (currentCallId || pc) return;
             updateCallControlsVisibility();
 
+            console.log("📞 [CALLER] Начинаем исходящий звонок...");
             amICaller = true;
             isConnected = false;
             wasCallConnected = false;
 
-            // --- ЛОГИКА ЗВУКА И ДАТЧИКА (PREMIUM UX) ---
             isEarpiece = !isVideoCall;
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage(isVideoCall ? "audio_loud" : "audio_ear");
-                if (isVideoCall) {
-                    window.mauiInterop.postMessage("disable_proximity"); // Выключаем датчик для видео
-                } else {
-                    window.mauiInterop.postMessage("enable_proximity");  // Включаем датчик для аудио
-                }
+                window.mauiInterop.postMessage(isVideoCall ? "disable_proximity" : "enable_proximity");
             }
 
             const sessionTs = Date.now();
             currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTs;
-
             const callRef = rtdb.ref('incoming_calls/' + currentFriendId);
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
 
-            // Показываем экран звонка
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
 
-            // Устанавливаем имя собеседника
             const friendData = usersCache[currentFriendId] || {};
             document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
 
@@ -8543,7 +8541,7 @@
             try {
                 setupPeerConnection();
 
-                // Сначала создаем каркас сессии ДО генерации кандидатов!
+                console.log("📞 [CALLER] Создаем сессию в Firebase...");
                 await sessionRef.set({
                     caller: currentUser.uid,
                     callerName: usersCache[currentUser.uid]?.name || "Пользователь",
@@ -8552,23 +8550,23 @@
                     isVideoCall: isVideoCall
                 });
 
-                // Слушаем кандидатов от того, кто примет звонок
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                // ЗАХВАТ МЕДИА
+                console.log("📞 [CALLER] Запрашиваем камеру/микрофон...");
                 await getMedia(isVideoCall);
 
+                console.log("📞 [CALLER] Создаем Offer...");
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                // Добавляем offer через UPDATE, чтобы не стереть уже улетевших кандидатов
+                console.log("📞 [CALLER] Отправляем Offer в Firebase...");
                 await sessionRef.update({
                     offer: { type: offer.type, sdp: offer.sdp }
                 });
 
-                // Уведомляем собеседника о входящем
+                console.log("📞 [CALLER] Дергаем телефон друга...");
                 await callRef.set({
                     sessionId: currentCallId,
                     caller: currentUser.uid,
@@ -8579,34 +8577,36 @@
                 });
 
                 updateCallStatus("Звонок...");
-
-                let hasReceivedAnswer = false; // 🔥 ТОТ САМЫЙ ЗАМОК ОТ БАГОВ
+                let hasReceivedAnswer = false;
 
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
 
                     if (data.status === 'rejected') {
+                        console.log("📞 [CALLER] Звонок отклонен!");
                         updateCallStatus("Занято");
                         setTimeout(() => endCall(false, true), 1500);
                     } else if (data.status === 'ended') {
+                        console.log("📞 [CALLER] Звонок завершен собеседником.");
                         endCall(false, true);
                     }
 
-                    // 🔥 СТРОГАЯ ПРОВЕРКА СОСТОЯНИЯ
-                    if (pc && data.answer && !hasReceivedAnswer && pc.signalingState === 'have-local-offer') {
-                        hasReceivedAnswer = true; // Защелкиваем замок! Второй раз код сюда не зайдет.
-
-                        console.log("✅ Ответ получен, соединяем...");
-                        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                        await flushCandidateQueue();
+                    // ПРОВЕРЯЕМ ANSWER
+                    if (pc && data.answer && !hasReceivedAnswer) {
+                        console.log("📞 [CALLER] Увидел Answer в базе! Текущий signalingState:", pc.signalingState);
+                        if (pc.signalingState === 'have-local-offer') {
+                            hasReceivedAnswer = true;
+                            console.log("📞 [CALLER] ✅ Применяем RemoteDescription (Answer)...");
+                            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                            await flushCandidateQueue();
+                        }
                     }
-
                 });
 
             } catch (err) {
-                alert("Ошибка звонка: " + err.name + " | " + err.message);
-                console.error("Ошибка начала звонка:", err);
+                alert("Ошибка звонка: " + err.message);
+                console.error("❌ Ошибка начала звонка:", err);
                 endCall(true);
             }
         }
@@ -8627,15 +8627,18 @@
 
         async function answerCall() {
             if (isConnected || pc) return;
+            console.log("📥 [CALLEE] Отвечаем на входящий звонок...");
+
             document.getElementById('ringtone').pause();
             document.getElementById('incomingPopup').style.display = 'none';
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             forceEarpiece();
             isEarpiece = true;
+
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("audio_ear");
-                window.mauiInterop.postMessage("enable_proximity"); // Включаем датчик
+                window.mauiInterop.postMessage("enable_proximity");
             }
 
             updateCallStatus("Соединение...");
@@ -8651,43 +8654,40 @@
             rtdb.ref('incoming_calls/' + currentUser.uid).remove();
 
             try {
+                console.log("📥 [CALLEE] Читаем сессию из Firebase...");
                 const sessionSnap = await sessionRef.once('value');
                 const callData = sessionSnap.val();
 
                 if (!callData || !callData.offer) {
+                    console.warn("📥 [CALLEE] Ошибка: Offer не найден в базе!");
                     updateCallStatus("Звонок отменен");
                     setTimeout(() => endCall(false), 2000);
                     return;
                 }
+
                 const callerId = callData.caller;
-                currentFriendId = callerId; // Важно: скрипт должен знать, с кем мы говорим
+                currentFriendId = callerId;
                 const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
                 document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
+
                 setupPeerConnection();
 
-                // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
-
                     if (data.status === 'ended') {
+                        console.log("📥 [CALLEE] Собеседник повесил трубку.");
                         endCall(false, true);
                         return;
                     }
-
-                    // Если пришел сигнал на обновление потока
                     if (data.renegotiate && !amICaller) {
-                        console.log("🔄 Обновляем видео-поток по просьбе собеседника...");
+                        console.log("🔄 Обновляем видео-поток...");
                         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-
-                        // --- ИСПРАВЛЕНИЕ: Держим канал открытым при пересогласовании ---
                         pc.getTransceivers().forEach(t => {
                             if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
                                 t.direction = 'sendrecv';
                             }
                         });
-                        // ----------------------------------------------------------------
-
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
                         sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
@@ -8698,33 +8698,34 @@
                     addCandidateSafely(snap.val());
                 });
 
+                console.log("📥 [CALLEE] Запрашиваем свои медиа устройства...");
                 await getMedia(false);
 
+                console.log("📥 [CALLEE] Применяем RemoteDescription (Offer)...");
                 await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                 await flushCandidateQueue();
 
-                // --- ИСПРАВЛЕНИЕ (ГЛАВНОЕ): Принудительно открываем канал отправки видео ---
-                // Иначе браузер, видя выключенную камеру, заблокирует отправку видео (recvonly)
                 pc.getTransceivers().forEach(t => {
                     if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
                         t.direction = 'sendrecv';
                     }
                 });
-                // ---------------------------------------------------------------------------
 
+                console.log("📥 [CALLEE] Генерируем Answer...");
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
 
+                console.log("📥 [CALLEE] Отправляем Answer в Firebase...");
                 await sessionRef.update({
                     answer: { type: answer.type, sdp: answer.sdp },
                     status: 'connected'
                 });
 
-                updateCallStatus("Обмен шифрованием..."); // Тот, кто берет трубку, тоже видит этот статус
+                updateCallStatus("Обмен шифрованием...");
 
             } catch (e) {
-                alert("Ошибка ответа: " + e.name + " | " + e.message);
-                console.error("Ошибка при ответе:", e);
+                alert("Ошибка ответа: " + e.message);
+                console.error("❌ Ошибка при ответе:", e);
                 endCall(true);
             }
         }
