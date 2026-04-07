@@ -7068,6 +7068,9 @@
                             targetList.innerHTML = '';
                         }
 
+
+
+
                         let div = document.getElementById('u-' + fid);
                         const isNew = !div;
 
@@ -7076,34 +7079,47 @@
                             div.className = 'user-item';
                             div.id = 'u-' + fid;
                             div.onclick = () => openChat(fid, fName, fNick);
-                        }
+                            div.setAttribute('data-time', createdTime);
 
-                        div.setAttribute('data-time', createdTime);
+                            const avatarHtml = fAvatar
+                                ? `<img src="${fAvatar}" class="user-item-avatar">`
+                                : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93">${isBot ? '🤖' : '<svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}</div>`;
 
-                        const avatarHtml = fAvatar
-                            ? `<img src="${fAvatar}" class="user-item-avatar">`
-                            : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93">${isBot ? '🤖' : '<svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}</div>`;
+                            div.innerHTML = `
+                                ${avatarHtml}
+                                <div class="user-name">${fName}</div>
+                                <div class="last-msg-row">
+                                    <span class="last-msg" id="last-${chatId}">...</span>
+                                </div>
+                                <div class="meta-column">
+                                    <span class="last-msg-date" id="date-${chatId}"></span>
+                                    <div class="meta-bottom-row">
+                                        <span id="status-${chatId}" class="list-ticks"></span>
+                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                    </div>
+                                </div>
+                            `;
 
-                        div.innerHTML = `
-                                                                ${avatarHtml}
-                                                                <div class="user-name">${fName}</div>
-                                                                <div class="last-msg-row">
-                                                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                                                </div>
-                                                                <div class="meta-column">
-                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                    <div class="meta-bottom-row">
-                                                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                                    </div>
-                                                                </div>
-                                                            `;
-
-                        if (isNew) {
-                            targetList.appendChild(div); // Добавляем строго в нужную папку!
-                            startMessageListener(chatId, fid, createdTime);
+                            targetList.appendChild(div); // Добавляем строго в нужную папку
+                            startMessageListener(chatId, fid, createdTime); // Запускаем слушатель сообщений
                         } else {
-                            // Если карточка уже была, но оказалась не в той папке — переносим её
+                            // ПРЕМИУМ ФИКС: Если карточка уже есть, обновляем ТОЛЬКО имя и аватарку.
+                            // Мы БОЛЬШЕ НЕ ПЕРЕЗАПИСЫВАЕМ div.innerHTML целиком, чтобы не стереть последнее сообщение!
+                            const nameEl = div.querySelector('.user-name');
+                            if (nameEl && nameEl.innerText !== fName) nameEl.innerText = fName;
+
+                            const avatarEl = div.querySelector('.user-item-avatar');
+                            if (avatarEl) {
+                                if (fAvatar && !avatarEl.src) {
+                                    avatarEl.outerHTML = `<img src="${fAvatar}" class="user-item-avatar">`;
+                                } else if (fAvatar && avatarEl.src !== fAvatar) {
+                                    avatarEl.src = fAvatar;
+                                }
+                            }
+
+                            div.setAttribute('data-time', createdTime);
+
+                            // Переносим в нужную папку, если сменился статус (например, юзер стал ботом)
                             if (div.parentElement !== targetList) {
                                 targetList.appendChild(div);
                             }
@@ -8425,12 +8441,14 @@
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
-                // Добавляем все имеющиеся треки в звонок
-                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+                // ПРЕМИУМ ФИКС: Проверяем, жив ли еще звонок, прежде чем пихать туда медиа
+                if (pc) {
+                    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-                // Магия для iPhone: если пустого кадра нет, но нам нужен канал для камеры в будущем
-                if (!requestVideo && !dummyAdded) {
-                    pc.addTransceiver('video', { direction: 'sendrecv', streams: [localStream] });
+                    // Магия для iPhone: если пустого кадра нет, но нам нужен канал для камеры в будущем
+                    if (!requestVideo && !dummyAdded) {
+                        pc.addTransceiver('video', { direction: 'sendrecv', streams: [localStream] });
+                    }
                 }
 
                 if (!requestVideo) {
