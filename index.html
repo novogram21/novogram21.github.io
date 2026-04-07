@@ -9093,7 +9093,7 @@
                 profileStatusEl.style.color = '#8e8e93';
             } else {
                 // Логика для обычных пользователей
-                profileStatusEl.innerText = 'загрузка...';
+                profileStatusEl.innerText = 'Соединение...'; // <-- Изменили "загрузка..." на "Соединение..."
                 profileStatusEl.style.color = '#8e8e93';
 
                 rtdb.ref(`status/${currentFriendId}`).once('value', snap => {
@@ -10189,14 +10189,16 @@
                     // 1. Сбрасываем старый, если был
                     if (chatStatusUnsub) chatStatusUnsub();
 
-                    // 2. Ставим статус: если это бот, то пишем "бот", иначе время захода
+                    // 2. Ставим статус: если это бот, то пишем "бот", иначе "Соединение..."
                     const statusEl = document.getElementById('chatStatus');
                     if (statusEl) {
                         if (userData.isBot === true) {
                             statusEl.innerText = 'бот';
                             statusEl.style.color = '#8e8e93'; // Спокойный серый цвет
                         } else {
-                            statusEl.innerText = userData.lastSeen ? formatLastSeen(userData.lastSeen) : 'загрузка...';
+                            // ПРЕМИУМ: Сначала пишем "Соединение...", пока сеть не отдаст реальный онлайн
+                            statusEl.innerText = 'Соединение...';
+                            statusEl.style.color = '#8e8e93';
                         }
                     }
 
@@ -13187,20 +13189,30 @@
 
             const listener = statusRef.on('value', (snap) => {
                 const data = snap.val();
-                if (!data) return;
-
                 const uData = usersCache[friendId] || {};
+                const statusEl = document.getElementById('chatStatus');
+                const profileStatusEl = document.getElementById('friendProfileStatus');
+
                 if (uData.isBot === true) {
-                    const el = document.getElementById('chatStatus');
-                    if (el) {
-                        el.innerText = 'бот';
-                        el.style.color = '#8e8e93';
+                    if (statusEl) {
+                        statusEl.innerText = 'бот';
+                        statusEl.style.color = '#8e8e93';
                     }
                     return; // Выходим из функции, дальше не идем
                 }
 
-                const statusEl = document.getElementById('chatStatus');
-                const profileStatusEl = document.getElementById('friendProfileStatus');
+                // ФИКС: Если данных в RTDB еще нет, достаем старые из кэша (чтобы не висело "Соединение...")
+                if (!data) {
+                    if (statusEl && !statusEl.querySelector('.typing-text')) {
+                        statusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen) : 'был(а) недавно';
+                        statusEl.style.color = '#888';
+                    }
+                    if (profileStatusEl) {
+                        profileStatusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen, true) : 'был(а) недавно';
+                        profileStatusEl.style.color = '#888';
+                    }
+                    return;
+                }
 
                 if (data.state === 'online') {
                     // Пользователь онлайн
