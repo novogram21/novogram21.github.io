@@ -12099,15 +12099,14 @@
         function initAudioMode() {
             isEarpiece = true;
             const btn = document.getElementById('btnSpeaker');
-            const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
-
             if (btn) {
-                btn.innerHTML = iconEar;
+                // Устанавливаем иконку ушного динамика
+                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
                 btn.classList.add('muted-state');
             }
 
-            // Вызываем с небольшой задержкой, чтобы WebRTC успел инициализировать аудиосессию
-            setTimeout(applyAudioRoute, 500);
+            // Вызываем нативное переключение после небольшой задержки, чтобы WebRTC успел инициализироваться
+            setTimeout(applyAudioRoute, 1000);
         }
 
         // 1. Проверка среды при старте звонка
@@ -12130,7 +12129,6 @@
             applyAudioRoute();
         }
 
-        // 2. Функция переключения
         function toggleSpeaker() {
             isEarpiece = !isEarpiece;
             const btn = document.getElementById('btnSpeaker');
@@ -12151,18 +12149,29 @@
 
         
 
-        // Универсальная функция переключения через плагин
-        function applyAudioRoute() {
-            if (window.AudioToggle) {
-                if (isEarpiece) {
-                    window.AudioToggle.setAudioMode(window.AudioToggle.EARPIECE);
-                    console.log("🔊 Звук переключен в УШНОЙ динамик");
-                } else {
-                    window.AudioToggle.setAudioMode(window.AudioToggle.SPEAKER);
-                    console.log("🔊 Звук переключен на ГРОМКУЮ связь");
+        let AudioRouter = null;
+
+        // Безопасно инициализируем плагин, ТОЛЬКО если Capacitor существует
+        if (window.Capacitor && window.Capacitor.registerPlugin) {
+            AudioRouter = window.Capacitor.registerPlugin('AudioRouter');
+        }
+
+        let isEarpiece = true; // По умолчанию звонок идет в ухо
+
+        // Наша функция жесткого нативного переключения
+        async function applyAudioRoute() {
+            // Проверяем, что мы на iOS и плагин успешно инициализирован
+            if (window.Capacitor && window.Capacitor.getPlatform() === 'ios' && AudioRouter) {
+                try {
+                    // Передаем true, если хотим громкую связь, и false, если в ухо
+                    await AudioRouter.setSpeaker({ isSpeaker: !isEarpiece });
+                    console.log("🔊 Нативное переключение сработало!");
+                } catch (e) {
+                    console.error("🔊 Ошибка нативного переключения:", e);
                 }
             } else {
-                console.warn("⚠️ Плагин AudioToggle не установлен! Переключение звука невозможно.");
+                // Для браузера или Android можно оставить заглушку
+                console.log("🔊 Переключение звука (Web/Android)");
             }
         }
 
