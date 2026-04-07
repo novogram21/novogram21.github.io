@@ -9,7 +9,8 @@
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Novogram</title>
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <style>
@@ -700,14 +701,16 @@
         }
 
         .chat-header {
-            /* Добавляем env(safe-area-inset-top) чтобы шапка опускалась ниже системных часов */
             padding: calc(8px + env(safe-area-inset-top)) 15px 8px 15px;
             background: #17181c;
             border-bottom: 1px solid #101010;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: calc(56px + env(safe-area-inset-top)); /* Увеличиваем высоту на размер челки */
+            min-height: calc(56px + env(safe-area-inset-top));
+            /* --- ДОБАВЛЕНО --- */
+            position: relative;
+            z-index: 100; /* Шапка всегда должна быть выше плавающих элементов */
         }
 
         .chat-header-left {
@@ -3793,7 +3796,8 @@
         /* Плавающая дата при скролле */
         .floating-date {
             position: absolute;
-            top: 66px;
+            /* --- ИЗМЕНЕНО: Добавляем отступ на размер челки --- */
+            top: calc(66px + env(safe-area-inset-top));
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.45);
@@ -3802,11 +3806,12 @@
             padding: 4px 12px;
             border-radius: 12px;
             font-weight: 500;
+            /* --- ИЗМЕНЕНО: Ставим z-index меньше, чем у шапки (100) --- */
             z-index: 50;
             backdrop-filter: blur(4px);
             opacity: 0;
             transition: opacity 0.3s ease;
-            pointer-events: auto; /* ВАЖНО: изменено с none на auto, чтобы работал клик! */
+            pointer-events: auto;
             cursor: pointer;
         }
 
@@ -5335,7 +5340,7 @@
                     <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
                 </button>
 
-                <button id="sendBtn" class="main-action-btn btn-send hidden" onclick="sendMsg()">
+                <button id="sendBtn" class="main-action-btn btn-send hidden" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()" onclick="sendMsg()">
                     <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white; margin-left: 2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
                 </button>
 
@@ -7811,15 +7816,14 @@
                 cancelReplyOrEdit();
             }
 
-            // Просто отправляем в базу. Больше никаких .then() со скроллами!
+         
             db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
 
             if (!txt) {
                 inputEl.value = '';
                 inputEl.style.height = '40px';
                 checkInputState();
-                inputEl.focus();
-                // Убрали smartScrollToBottom отсюда
+                
             }
 
             // УВЕДОМЛЕНИЯ
@@ -12825,26 +12829,31 @@
                 console.log("📱 Включен режим мобильного приложения");
             }
 
-            // --- ПРЕМИУМ ФИКС КЛАВИАТУРЫ ДЛЯ iOS ---
-            // 1. Проверяем, что запущен Capacitor
+            
             if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-
-                // 2. Узнаем платформу ('ios', 'android' или 'web')
                 const platform = window.Capacitor.getPlatform();
 
-                // 3. Если это iOS и плагин клавиатуры успешно подключен
                 if (platform === 'ios' && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard) {
                     const Keyboard = window.Capacitor.Plugins.Keyboard;
 
-                    // Убиваем серую полоску с "Готово" и стрелочками
-                    Keyboard.setAccessoryBarVisible({ isVisible: false })
-                        .catch(err => console.log("Capacitor Keyboard: Ошибка скрытия Accessory Bar", err));
+                    Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(e => { });
+                    Keyboard.setScroll({ isDisabled: true }).catch(e => { });
 
-                    // Отключаем нативный сдвиг WebView (чтобы наш CSS "position: fixed" и JS работали идеально)
-                    Keyboard.setScroll({ isDisabled: true })
-                        .catch(err => console.log("Capacitor Keyboard: Ошибка отключения скролла", err));
+                    // МАГИЯ АНИМАЦИИ: Двигаем интерфейс синхронно с клавиатурой
+                    window.addEventListener('keyboardWillShow', (e) => {
+                        document.body.style.transition = 'height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+                        document.body.style.height = `calc(100% - ${e.keyboardHeight}px)`;
 
-                    console.log("🍏 iOS Keyboard: Аксессуар-бар скрыт, скролл заблокирован.");
+                        // Плавно докручиваем чат, чтобы сообщение не скрылось
+                        if (currentMsgList) {
+                            setTimeout(() => smartScrollToBottom(currentMsgList, true, false), 50);
+                        }
+                    });
+
+                    window.addEventListener('keyboardWillHide', () => {
+                        document.body.style.transition = 'height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+                        document.body.style.height = '100%';
+                    });
                 }
             }
         });
