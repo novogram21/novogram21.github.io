@@ -12149,7 +12149,22 @@
             applyAudioRoute();
         }
 
+        
 
+        // Универсальная функция переключения через плагин
+        function applyAudioRoute() {
+            if (window.AudioToggle) {
+                if (isEarpiece) {
+                    window.AudioToggle.setAudioMode(window.AudioToggle.EARPIECE);
+                    console.log("🔊 Звук переключен в УШНОЙ динамик");
+                } else {
+                    window.AudioToggle.setAudioMode(window.AudioToggle.SPEAKER);
+                    console.log("🔊 Звук переключен на ГРОМКУЮ связь");
+                }
+            } else {
+                console.warn("⚠️ Плагин AudioToggle не установлен! Переключение звука невозможно.");
+            }
+        }
 
         // 3. Вызови проверку кнопок в момент открытия экрана звонка
         // Добавь это внутрь функции startCall() и answerCall()
