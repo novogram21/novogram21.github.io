@@ -5336,7 +5336,7 @@
                     <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
                 </button>
 
-                <button id="sendBtn" class="main-action-btn btn-send hidden" onclick="sendMsg()">
+                <button id="sendBtn" class="main-action-btn btn-send hidden" onpointerdown="handleSendClick(event)">
                     <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white; margin-left: 2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
                 </button>
 
@@ -5864,7 +5864,19 @@
         }
 
 
+        function handleSendClick(e) {
+            const inp = document.getElementById('msgInput');
 
+            // Если клавиатура сейчас открыта (поле в фокусе)
+            if (document.activeElement === inp) {
+                // e.preventDefault() предотвращает переход фокуса на кнопку.
+                // Благодаря этому клавиатура на iOS не получает сигнал к закрытию.
+                e.preventDefault();
+            }
+
+            // Вызываем твою стандартную функцию отправки
+            sendMsg();
+        }
 
 
         // Новая функция отправки заявки по ID (а не email)
@@ -6651,33 +6663,31 @@
             let isListInitialLoad = true;
             db.collection('chats').doc(chatId).collection('msgs')
                 .orderBy('ts', 'desc').limit(1)
-
-
-
                 .onSnapshot(msgSnap => {
                     const lastEl = document.getElementById('last-' + chatId);
                     const dateEl = document.getElementById('date-' + chatId);
                     const statusEl = document.getElementById('status-' + chatId);
                     const userDiv = document.getElementById('u-' + fid);
 
-                    let timeToDisplay = createdTime;
+                    // ФИКС: Сначала берем уже имеющееся время из атрибута, чтобы чат не прыгал вниз
+                    let timeToDisplay = userDiv ? parseInt(userDiv.getAttribute('data-time') || createdTime) : createdTime;
+
                     if (!msgSnap.empty) {
                         const lastData = msgSnap.docs[0].data();
+
+                        // Если есть сообщение, берем его время (или текущее, если сервер еще не ответил)
+                        timeToDisplay = lastData.ts ? lastData.ts.toMillis() : Date.now();
 
                         // --- НОВАЯ ЛОГИКА ОБНОВЛЕНИЯ ТЕКСТА ---
                         const renderPreview = () => {
                             if (!lastEl) return;
                             const decrypted = decryptText(lastData.txt, chatId);
 
-                            // Если расшифровка не удалась (вернула тот же шифр)
                             if (decrypted === lastData.txt && !lastData.sys) {
-                                // Рисуем премиальные точки (индикатор защиты)
                                 lastEl.innerHTML = `<span style="opacity:0.5; letter-spacing:2px; color:#736AF0;">••••••••</span>`;
                             } else {
                                 let displayText = '';
                                 const type = lastData.type || 'text';
-
-                                // Изящные SVG иконки в стиле Telegram / iOS
                                 const iconImg = `<svg style="vertical-align:-3px; margin-right:4px;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#736AF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`;
                                 const iconFile = `<svg style="vertical-align:-3px; margin-right:4px;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#736AF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
                                 const iconCall = `<svg style="vertical-align:-3px; margin-right:4px;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
@@ -6696,34 +6706,23 @@
                                     }
                                 } else {
                                     displayText = decrypted || '';
-                                    // Защита от HTML-тегов, чтобы никто не сломал список чатов
                                     displayText = displayText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                                     if (displayText.length > 25) displayText = displayText.substring(0, 25) + '...';
                                 }
 
-                                // Красивое выделение слова "Вы:" белым цветом
                                 if (lastData.from === currentUser.uid) {
                                     displayText = '<span style="color:#ffffff; font-weight:500;">Вы:</span> ' + displayText;
                                 }
-
                                 lastEl.innerHTML = displayText;
                             }
                         };
-
-                        // Вызываем отрисовку сразу
                         renderPreview();
-
-                        // Слушаем событие: если ключ придет позже — текст обновится сам!
-                        // Слушаем событие: если ключ придет позже — текст обновится сам!
                         window.addEventListener('keyReady_' + chatId, renderPreview, { once: true });
-                        // --------------------------------------
 
-                        // ---> ДОБАВЛЕН БЛОК IN-APP УВЕДОМЛЕНИЙ <---
-                        // Если это НЕ первая загрузка списка и сообщение от ДРУГОГО пользователя
+                        // (Логика уведомлений OneSignal остается без изменений)
                         if (!isListInitialLoad && lastData.from !== currentUser.uid) {
                             let pureText = decryptText(lastData.txt, chatId);
                             const type = lastData.type || 'text';
-
                             if (type === 'image') pureText = '📷 Фотография';
                             if (type === 'file') pureText = '📄 Файл';
                             if (type === 'call') pureText = '📞 Звонок';
@@ -6732,25 +6731,14 @@
                             const fNameEl = document.querySelector(`#u-${fid} .user-name`);
                             const fName = fNameEl ? fNameEl.innerText : 'Собеседник';
 
-                            // 1. Показываем плашку внутри HTML
                             if (typeof showInAppNotification === 'function') {
                                 showInAppNotification(fid, fName, fAvatar, pureText);
                             }
 
-                            // 🔥 2. КОМАНДА ДЛЯ C#: ПОКАЗАТЬ ANDROID BUBBLE 🔥
                             if (window.mauiInterop) {
-                                // Экранируем символ `|`, если вдруг он есть в тексте сообщения, чтобы не сломать парсер
                                 const safeText = pureText.replace(/\|/g, " ");
                                 window.mauiInterop.postMessage(`show_bubble|${fid}|${fName}|${safeText}`);
                             }
-                        }
-                        // ---> КОНЕЦ БЛОКА УВЕДОМЛЕНИЙ <---
-                        if (lastData.ts) {
-                            timeToDisplay = lastData.ts.toMillis();
-                        } else {
-                            // ФИКС: Если Firebase еще не выдал серверное время,
-                            // берем время устройства, чтобы чат не проваливался вниз
-                            timeToDisplay = Date.now();
                         }
 
                         if (statusEl) {
@@ -6763,41 +6751,32 @@
                             }
                         }
                     } else {
-                        // Если сообщений нет (чат очищен или новый)
-                        if (lastEl) {
-                            lastEl.innerHTML = `<span style="font-style: italic; opacity: 0.5; letter-spacing: 0.2px;">диалог очищен</span>`;
-                        }
+                        // Если сообщений нет (чат очищен)
+                        if (lastEl) lastEl.innerHTML = `<span style="font-style: italic; opacity: 0.5; letter-spacing: 0.2px;">диалог очищен</span>`;
                         if (statusEl) statusEl.style.display = 'none';
-
-                        // ПРОВЕРКА: Если в атрибуте уже стоит "свежее" время (от очистки), не заменяем его на старое
-                        const currentTimeAttr = parseInt(userDiv.getAttribute('data-time') || 0);
-                        if (currentTimeAttr < createdTime) {
-                            userDiv.setAttribute('data-time', createdTime);
-                            if (dateEl) dateEl.innerText = formatTelegramDate(new Date(createdTime));
-                        }
+                        // В этом случае timeToDisplay остается тем, что было в атрибуте (не падает вниз)
                     }
-                    // Обновляем дату
+
+                    // Обновляем дату в UI
                     if (dateEl && timeToDisplay > 0) {
-                        // ЗАМЕНИТЕ СТАРЫЙ IF/ELSE НА ЭТУ СТРОЧКУ:
                         dateEl.innerText = formatTelegramDate(new Date(timeToDisplay));
                     }
-                    // Обновляем сортировку списка (для правильной папки)
+
+                    // СОРТИРОВКА
                     if (userDiv) {
                         userDiv.setAttribute('data-time', timeToDisplay);
                         if (userDiv.parentElement) {
                             sortChatItems(userDiv.parentElement.id);
                         }
                     }
-
                 });
-            // Слушаем непрочитанные (Badge)
+            // (Слушатель непрочитанных Badge остается без изменений)
             db.collection('chats').doc(chatId).collection('msgs')
                 .where('to', '==', currentUser.uid)
                 .where('read', '==', false)
                 .onSnapshot(unreadSnap => {
                     const badgeEl = document.getElementById('badge-' + chatId);
                     const count = unreadSnap.size;
-                    // Сохраняем в глобальный объект для общего счетчика (если он у вас есть)
                     if (typeof unreadCounts !== 'undefined') {
                         unreadCounts[chatId] = count;
                         updateTotalFriendsBadge();
@@ -7136,39 +7115,40 @@
         function sortChatItems(listId) {
             const list = document.getElementById(listId);
             if (!list) return;
-            const items = Array.from(list.querySelectorAll('.user-item'));
 
+            // 1. Получаем все элементы списка
+            const items = Array.from(list.querySelectorAll('.user-item'));
+            if (items.length < 2) return;
+
+            // 2. Сортируем по значению data-time (самые большие числа/новые даты — вверх)
+            items.sort((a, b) => {
+                const timeA = Number(a.getAttribute('data-time')) || 0;
+                const timeB = Number(b.getAttribute('data-time')) || 0;
+                return timeB - timeA;
+            });
+
+            // 3. ПРЕМИУМ: Анимация перемещения (как в Telegram)
             const oldPositions = new Map();
             items.forEach(item => {
                 oldPositions.set(item.id, item.getBoundingClientRect().top);
             });
 
-            items.sort((a, b) => {
-                const timeA = parseInt(a.getAttribute('data-time') || 0);
-                const timeB = parseInt(b.getAttribute('data-time') || 0);
-                return timeB - timeA;
-            });
-
+            // Переставляем элементы в DOM в новом порядке
             items.forEach(item => list.appendChild(item));
 
+            // Вычисляем смещение и запускаем плавный переход
             items.forEach(item => {
                 const oldTop = oldPositions.get(item.id);
-                if (oldTop !== undefined) {
-                    const newTop = item.getBoundingClientRect().top;
-                    const delta = oldTop - newTop;
+                const newTop = item.getBoundingClientRect().top;
+                const delta = oldTop - newTop;
 
-                    if (delta !== 0) {
-                        item.style.transform = `translateY(${delta}px)`;
-                        item.style.transition = 'none';
-
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                item.style.transform = '';
-                                item.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
-                                setTimeout(() => { item.style.transition = ''; }, 400);
-                            });
-                        });
-                    }
+                if (delta !== 0) {
+                    item.style.transition = 'none';
+                    item.style.transform = `translateY(${delta}px)`;
+                    requestAnimationFrame(() => {
+                        item.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+                        item.style.transform = '';
+                    });
                 }
             });
         }
