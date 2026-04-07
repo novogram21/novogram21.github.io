@@ -8206,22 +8206,34 @@
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
                         console.log("🚀 [WebRTC] P2P СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
-                        isConnected = true; wasCallConnected = true;
+                        isConnected = true;
+                        wasCallConnected = true;
+
                         document.getElementById('callStatusText').style.display = 'none';
                         document.getElementById('callTimer').style.display = 'block';
-                        stopAllTones(); startTimer(); startPing();
+
+                        stopAllTones();
+                        startTimer();
+                        startPing();
+
+                        // --- КРИТИЧЕСКИЙ ФИКС ДЛЯ iOS ---
+                        // Как только соединение установилось, ждем 500мс (чтобы WebKit успокоился)
+                        // и насильно переключаем звук на нужный динамик через твой Swift-плагин.
+                        setTimeout(() => {
+                            console.log("🛠️ [iOS Fix] Принудительное применение аудио-маршрута после установки соединения");
+                            if (typeof applyAudioRoute === 'function') {
+                                applyAudioRoute();
+                            }
+                        }, 500);
+                        // -------------------------------
                     }
                 }
                 else if (pc.iceConnectionState === 'failed') {
-                    // Только FAILED является окончательной смертью соединения
-                    console.warn("❌ [WebRTC] ICE соединение failed (Все маршруты недоступны).");
+                    console.warn("❌ [WebRTC] ICE соединение failed.");
                     endCall(false);
                 }
                 else if (pc.iceConnectionState === 'disconnected') {
-                    // Disconnected часто бывает временным (например, при переключении с Wi-Fi на LTE
-                    // или при переходе с заблокированного UDP на резервный TCP TURN).
-                    // МЫ НЕ СБРАСЫВАЕМ ЗВОНОК ЗДЕСЬ! Ждем, пока он перейдет в connected или failed.
-                    console.warn("⚠️ [WebRTC] ICE временно disconnected. Ждем восстановления маршрута...");
+                    console.warn("⚠️ [WebRTC] ICE временно disconnected. Ждем...");
                 }
             };
 
@@ -12157,14 +12169,11 @@
         }
 
         
-        // Наша функция жесткого нативного переключения
         async function applyAudioRoute() {
-            // Проверяем, что мы на iOS и плагин успешно инициализирован
             if (window.Capacitor && window.Capacitor.getPlatform() === 'ios' && AudioRouter) {
                 try {
-                    // Передаем true, если хотим громкую связь, и false, если в ухо
+
                     await AudioRouter.setSpeaker({ isSpeaker: !isEarpiece });
-                    console.log("🔊 Нативное переключение сработало!");
                 } catch (e) {
                     console.error("🔊 Ошибка нативного переключения:", e);
                 }
