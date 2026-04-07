@@ -8425,24 +8425,15 @@
 
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-                let dummyAdded = false;
-                if (!requestVideo) {
-                    const dummyTrack = window.createDummyVideoTrack();
-                    if (dummyTrack) {
-                        localStream.addTrack(dummyTrack);
-                        dummyAdded = true;
-                    }
-                }
-
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
-                // ПРЕМИУМ ФИКС: Проверяем, жив ли еще звонок, прежде чем пихать туда медиа
                 if (pc) {
                     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-                    // Магия для iPhone: если пустого кадра нет, но нам нужен канал для камеры в будущем
-                    if (!requestVideo && !dummyAdded) {
+                    // ПРЕМИУМ ФИКС: Резервируем видеоканал без фейкового трека!
+                    // Это позволит iOS не блокировать ушной динамик.
+                    if (!requestVideo) {
                         pc.addTransceiver('video', { direction: 'sendrecv', streams: [localStream] });
                     }
                 }
@@ -8458,7 +8449,7 @@
 
             } catch (e) {
                 console.error("🚨 Ошибка медиа:", e);
-                throw e; // Пробрасываем ошибку дальше
+                throw e;
             }
         }
 
@@ -8893,13 +8884,8 @@
                     localStream.removeTrack(currentTrack);
                 }
 
-                const dummyTrack = window.createDummyVideoTrack();
-                if (dummyTrack) {
-                    localStream.addTrack(dummyTrack);
-                    await videoSender.replaceTrack(dummyTrack);
-                } else {
-                    await videoSender.replaceTrack(null);
-                }
+                // Просто отключаем трек. Никаких фейковых видео!
+                await videoSender.replaceTrack(null);
 
                 document.getElementById('localVideo').srcObject = localStream;
 
@@ -8913,7 +8899,23 @@
         }
 
 
+        // Бронебойный переключатель звука (работает и в Safari, и в Capacitor)
+        function applyAudioRoute(isEar) {
+            // 1. Нативный Web API (работает в iOS 15+)
+            if (navigator.audioSession) {
+                try {
+                    navigator.audioSession.type = 'play-and-record';
+                    navigator.audioSession.setMode(isEar ? 'voice-chat' : 'video-chat');
+                } catch (e) { console.error("AudioSession Error:", e); }
+            }
 
+            // 2. Плагин Cordova/Capacitor
+            if (window.AudioToggle) {
+                try {
+                    window.AudioToggle.setAudioMode(isEar ? window.AudioToggle.EARPIECE : window.AudioToggle.SPEAKER);
+                } catch (e) { console.error("AudioToggle Error:", e); }
+            }
+        }
 
         function updateCamBtnUI(enabled) {
             const btn = document.getElementById('btnCam');
@@ -12115,14 +12117,7 @@
                 btn.classList.add('muted-state');
             }
 
-            // --- ПРЕМИУМ ФИКС ЗВУКА ДЛЯ iOS (Capacitor) ---
-            if (window.AudioToggle) {
-                window.AudioToggle.setAudioMode(window.AudioToggle.EARPIECE);
-            } else if (navigator.audioSession) {
-                // Фоллбэк для браузера
-                navigator.audioSession.type = 'play-and-record';
-                navigator.audioSession.setMode('voice-chat');
-            }
+            applyAudioRoute(true); // Направляем звук в ухо
         }
 
         // 1. Проверка среды при старте звонка
@@ -12143,13 +12138,7 @@
                 btn.classList.add('muted-state');
             }
 
-            // --- ПРЕМИУМ ФИКС ЗВУКА ДЛЯ iOS (Capacitor) ---
-            if (window.AudioToggle) {
-                window.AudioToggle.setAudioMode(window.AudioToggle.EARPIECE);
-            } else if (navigator.audioSession) {
-                navigator.audioSession.type = 'play-and-record';
-                navigator.audioSession.setMode('voice-chat');
-            }
+            applyAudioRoute(true); // Направляем звук в ухо
         }
 
         // 2. Функция переключения
@@ -12161,25 +12150,17 @@
             const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
 
             if (isEarpiece) {
-                // РЕЖИМ: В УХО
                 btn.innerHTML = iconEar;
                 btn.classList.add('muted-state');
-
-                if (window.AudioToggle) {
-                    window.AudioToggle.setAudioMode(window.AudioToggle.EARPIECE);
-                } else if (navigator.audioSession) {
-                    navigator.audioSession.setMode('voice-chat');
-                }
+                applyAudioRoute(true); // Звук в ухо
             } else {
-                // РЕЖИМ: ГРОМКАЯ СВЯЗЬ
                 btn.innerHTML = iconLoud;
                 btn.classList.remove('muted-state');
+                applyAudioRoute(false); // Звук на внешний динамик
+            }
 
-                if (window.AudioToggle) {
-                    window.AudioToggle.setAudioMode(window.AudioToggle.SPEAKER);
-                } else if (navigator.audioSession) {
-                    navigator.audioSession.setMode('video-chat');
-                }
+            if (window.mauiInterop) {
+                window.mauiInterop.postMessage(isEarpiece ? "audio_ear" : "audio_loud");
             }
         }
 
