@@ -7279,9 +7279,11 @@
 
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added' && !isChatInitialLoad) {
-                            // Проверяем, наше ли это сообщение. Если не наше - фиксируем как "новое входящее"
+                            // Проверяем, наше ли это сообщение
                             if (change.doc.data().from !== currentUser.uid) {
-                                hasRealNewMessages = true;
+                                hasRealNewMessages = true; // Чужое сообщение
+                            } else {
+                                hasMyNewMessages = true; // <--- ВОТ ЭТОГО НЕ ХВАТАЛО! Теперь скрипт знает, что мы написали текст.
                             }
                         }
                         if (change.type === 'removed') {
