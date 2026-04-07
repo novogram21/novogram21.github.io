@@ -9705,28 +9705,29 @@
         const sendBtn = document.getElementById('sendBtn');
         const voiceBtn = document.querySelector('.voice-btn');
 
+        // Переменная для запоминания позиции пользователя до выезда клавиатуры
+        let wasAtBottomBeforeKeyboard = true;
+
         msgInput.addEventListener('focus', () => {
             if (currentMsgList) {
-                // Задержка 300мс нужна, чтобы iOS/Android физически успели выдвинуть клавиатуру
-                setTimeout(() => {
-                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
-                }, 300);
+                // Запоминаем, находился ли скролл в самом низу ДО того, как вылезла клавиатура (с погрешностью 150px)
+                wasAtBottomBeforeKeyboard = Math.abs(currentMsgList.scrollHeight - currentMsgList.scrollTop - currentMsgList.clientHeight) <= 150;
             }
         });
 
         // 2. Самый надежный современный метод: отслеживаем изменение видимой области (VisualViewport API)
-        // Срабатывает в ту же миллисекунду, когда клавиатура меняет размер экрана
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
-                // Скроллим только если мы в чате и поле ввода активно
-                if (currentMsgList && document.activeElement === msgInput) {
+                // Скроллим вниз ТОЛЬКО если до открытия клавиатуры мы были в самом низу.
+                // Если юзер читал историю выше — оставляем его там!
+                if (currentMsgList && document.activeElement === msgInput && wasAtBottomBeforeKeyboard) {
                     currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
                 }
             });
         } else {
             // Запасной вариант для старых браузеров
             window.addEventListener('resize', () => {
-                if (currentMsgList && document.activeElement === msgInput) {
+                if (currentMsgList && document.activeElement === msgInput && wasAtBottomBeforeKeyboard) {
                     currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
                 }
             });
