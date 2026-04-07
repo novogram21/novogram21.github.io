@@ -6260,7 +6260,16 @@
                 // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: СНАЧАЛА ЗАГРУЖАЕМ ПРОФИЛЬ И ПРЯЧЕМ ОКНО,
                 // И ТОЛЬКО ПОТОМ ДЕЛАЕМ HARD RESET СЕТИ В loadData()! 🔥
                 db.collection('users').doc(u.uid).get().then(doc => {
-                    if (doc.exists) {
+                    // Восстанавливаем кнопку (на всякий случай)
+                    const btn = document.querySelector('#stepEmail button');
+                    if (btn) {
+                        btn.innerText = "Далее";
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                    }
+
+                    // Если документ есть И регистрация завершена (есть username)
+                    if (doc.exists && doc.data().username) {
                         const d = doc.data();
                         d.email = u.email;
                         localStorage.setItem('user_profile_cache', JSON.stringify(d));
@@ -6270,26 +6279,15 @@
                             myAvatarSmall.innerHTML = `<img src="${d.avatar}" alt="avatar">`;
                         }
 
-                        // Прячем экран авторизации, если регистрация завершена (есть username)
-                        if (d.username) {
-                            document.getElementById('authScreen').classList.add('hidden');
-                            document.getElementById('profileEmail').innerText = u.email;
-                        } else {
-                            document.getElementById('stepEmail').style.display = 'none';
-                            document.getElementById('stepName').style.display = 'block';
-                            document.getElementById('stepUsername').style.display = 'none';
-                            document.getElementById('authScreen').classList.remove('hidden');
-                        }
+                        document.getElementById('authScreen').classList.add('hidden');
+                        document.getElementById('profileEmail').innerText = u.email;
+                    } else {
+                        // Если документа НЕТ (задержка базы) ИЛИ юзернейм пустой — кидаем на 2-й шаг
+                        document.getElementById('stepEmail').style.display = 'none';
+                        document.getElementById('stepName').style.display = 'block';
+                        document.getElementById('stepUsername').style.display = 'none';
+                        document.getElementById('authScreen').classList.remove('hidden');
                     }
-
-                    // Восстанавливаем кнопку (на всякий случай)
-                    const btn = document.querySelector('#stepEmail button');
-                    if (btn) {
-                        btn.innerText = "Далее";
-                        btn.disabled = false;
-                        btn.style.opacity = "1";
-                    }
-
 
                     managePresence(u.uid);
                     listenToAllStatuses();
