@@ -7352,14 +7352,14 @@
                                     if (typeof window.TitleNotifier !== 'undefined') TitleNotifier.onNewMessage();
                                 } catch (e) { }
                             }
-                        }
+                        } // <-- конец if (isNewMsg)
 
                         div.setAttribute('data-datestr', dateStr);
                         div.setAttribute('data-rawdate', rawDate);
                         div.setAttribute('data-ts', tsMillis); // ТАЙМСТЕМП ДЛЯ СКАНЕРА
 
                         const newHtml = buildMessageHTML(m, msgId, msgType);
-                        
+
                         if (div.getAttribute('data-raw-html') !== newHtml) {
                             div.innerHTML = newHtml;
                             div.setAttribute('data-raw-html', newHtml);
@@ -7374,42 +7374,42 @@
                             div.classList.add('is-unread');
                             window.chatObserver.observe(div);
                         }
-                    });
+                    }); // <-- конец allDocs.forEach
 
                     updateDateSeparators();
                     updateScrollBadge();
 
-                    if (list.classList.contains('is-loading')) {
-                        list.classList.remove('is-loading');
-                        if (savedScroll !== null) {
-                            list.scrollTop = parseInt(savedScroll, 10);
-                        } else {
-                            smartScrollToBottom(list, true, true);
+                    // --- МАГИЯ СКРОЛЛА (ИСПРАВЛЕННАЯ) ---
+                    // Увеличим задержку до 100мс, чтобы поле ввода успело сжаться, а браузер 100% отрендерил всё
+                    setTimeout(() => {
+                        if (list.classList.contains('is-loading')) {
+                            list.classList.remove('is-loading');
+                            if (savedScroll !== null) {
+                                list.scrollTop = parseInt(savedScroll, 10);
+                            } else {
+                                smartScrollToBottom(list, true, true);
+                            }
+
+                            setTimeout(() => {
+                                window.isChatJustOpened = false;
+                                markCurrentChatRead();
+                            }, 300);
+
+                        } else if (!isChatInitialLoad) {
+                            if (hasMyNewMessages) {
+                                // ПРЕМИУМ ТЕЛЕГРАМ: мы отправляем -> чат ПЛАВНО (instant = false) выталкивает сообщение наверх
+                                smartScrollToBottom(list, true, false);
+                                markCurrentChatRead();
+                            } else if (hasRealNewMessages) {
+                                // Чужое сообщение тоже выезжает плавно, если мы читали самый низ
+                                smartScrollToBottom(list, false, false);
+                                markCurrentChatRead();
+                            }
                         }
-
-                        setTimeout(() => {
-                            window.isChatJustOpened = false;
-                            markCurrentChatRead();
-                        }, 300);
-
-                    } else if (!isChatInitialLoad) {
-                        if (hasMyNewMessages) {
-                            // ПРЕМИУМ: Если отправили мы -> скроллим МГНОВЕННО (instant = true). 
-                            // Контейнер чата моментально "прыгнет" в самый низ, освободив место, 
-                            // а само сообщение красиво всплывет анимацией из пустоты.
-                            smartScrollToBottom(list, true, true);
-                            markCurrentChatRead();
-                        } else if (hasRealNewMessages) {
-                            // Если прислали нам -> скроллим ПЛАВНО (чтобы глаз успел заметить новое)
-                            smartScrollToBottom(list, false, false);
-                            markCurrentChatRead();
-
-                        }
-
-                    }
+                    }, 100);
 
                     isChatInitialLoad = false;
-                });
+                }); // <-- конец onSnapshot
         }
 
 
@@ -12699,15 +12699,25 @@
         function smartScrollToBottom(list, force = false, instant = false) {
             if (!list) return;
 
-            // Проверяем, находится ли пользователь у самого низа (запас 150px для надежности)
-            const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= 150;
+            // Увеличим зону "захвата" низа до 300px, чтобы скролл не срывался при быстрой печати
+            const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= 300;
 
-            // Скроллим ТОЛЬКО если нас заставили (force) или мы и так внизу
             if (force || isAtBottom) {
-                list.scrollTo({
-                    top: list.scrollHeight + 5000, // С большим запасом
-                    behavior: instant ? 'auto' : 'smooth'
-                });
+                if (instant) {
+                    // Железобетонный метод для моментального скролла во всех браузерах
+                    list.scrollTop = list.scrollHeight + 5000;
+                } else {
+                    // Плавный скролл (Telegram style)
+                    try {
+                        list.scrollTo({
+                            top: list.scrollHeight + 5000,
+                            behavior: 'smooth'
+                        });
+                    } catch (e) {
+                        // Фолбэк, если браузер старый и не понял плавность
+                        list.scrollTop = list.scrollHeight + 5000;
+                    }
+                }
             }
         }
 
