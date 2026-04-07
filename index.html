@@ -5895,19 +5895,26 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
         function beep(freq, duration, vol = 0.05) {
-            initAudio();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.frequency.value = freq;
-            osc.type = 'sine';
-            gain.gain.value = vol;
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            setTimeout(() => {
-                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.04);
-                osc.stop(audioCtx.currentTime + 0.05);
-            }, duration);
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.value = vol;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                setTimeout(() => {
+                    try {
+                        if (audioCtx && audioCtx.state !== 'closed') {
+                            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.04);
+                            osc.stop(audioCtx.currentTime + 0.05);
+                        }
+                    } catch (e) { } // Глушим любую ошибку отсчета времени
+                }, duration);
+            } catch (e) { }
         }
         function playConnectingTone() {
             stopAllTones();
@@ -5936,15 +5943,17 @@
             osc.stop(audioCtx.currentTime + 0.4);
         }
         function stopAllTones() {
-            if (toneTimer) { clearInterval(toneTimer); toneTimer = null; }
-
-            // 🔥 ЖЕСТКИЙ ФИКС ДЛЯ iOS:
-            // Если оставить контекст активным, iOS будет думать, что играет музыка.
-            if (audioCtx) {
-                audioCtx.close().then(() => {
-                    audioCtx = null; // Полностью обнуляем, чтобы создать заново для нового звонка
-                    console.log("AudioContext закрыт для освобождения динамика");
-                });
+            try {
+                if (toneTimer) { clearInterval(toneTimer); toneTimer = null; }
+                if (audioCtx && audioCtx.state !== 'closed') {
+                    audioCtx.close().then(() => {
+                        audioCtx = null;
+                    }).catch(e => console.warn("AudioContext error", e));
+                } else {
+                    audioCtx = null;
+                }
+            } catch (e) {
+                console.error("Ошибка остановки звука", e);
             }
         }
         function formatLastSeen(timestamp) {
@@ -8708,28 +8717,40 @@
 
             try {
                 console.log("📥 [CALLEE] Создаем WebRTC подключение...");
-                setupPeerConnection(); // СНАЧАЛА создаем объект звонка (pc)
+                setupPeerConnection();
 
-                // 🔥 ГЛАВНЫЙ ФИКС iOS: Запрашиваем микрофон МГНОВЕННО после нажатия кнопки!
                 console.log("📥 [CALLEE] Запрашиваем свои медиа устройства...");
-                await getMedia(false); // ЗАТЕМ получаем медиа и кладем их в pc
+                await getMedia(false);
 
-                // А вот теперь спокойно идем в Firebase
-                console.log("📥 [CALLEE] Читаем сессию из Firebase...");
-                const sessionSnap = await sessionRef.once('value');
-                const callData = sessionSnap.val();
+                updateCallStatus("Соединение...");
 
+                // Флаг, чтобы не дублировать ответ
+                let hasAnswered = false;
+
+                // Подписываемся на базу и ЖДЕМ появления Offer
                 sessionRef.on('value', async snap => {
-                    const data = snap.val();
-                    if (!data) return;
-                    if (data.status === 'ended') {
-                        console.log("📥 [CALLEE] Собеседник повесил трубку.");
+                    const callData = snap.val();
+                    if (!callData) return;
+
+                    // Если собеседник сбросил
+                    if (callData.status === 'ended' || callData.status === 'rejected') {
+                        console.log("📥 [CALLEE] Звонок завершен собеседником.");
                         endCall(false, true);
                         return;
                     }
-                    if (data.renegotiate && !amICaller) {
+
+                    // Устанавливаем имя звонящего, как только оно появилось
+                    const callerId = callData.caller;
+                    if (callerId && !currentFriendId) {
+                        currentFriendId = callerId;
+                        const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
+                        document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
+                    }
+
+                    // Обновление видео-потока в процессе разговора
+                    if (callData.renegotiate && !amICaller && hasAnswered) {
                         console.log("🔄 Обновляем видео-поток...");
-                        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                        await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
                         pc.getTransceivers().forEach(t => {
                             if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
                                 t.direction = 'sendrecv';
@@ -8739,36 +8760,40 @@
                         await pc.setLocalDescription(answer);
                         sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
                     }
-                });
 
-                sessionRef.child('offerCandidates').on('child_added', snap => {
-                    addCandidateSafely(snap.val());
-                });
+                    // 🔥 ЕСЛИ ПРИШЕЛ OFFER И МЫ ЕЩЕ НЕ ОТВЕТИЛИ
+                    if (callData.offer && !hasAnswered) {
+                        hasAnswered = true; // Блокируем повторный вход
 
-                console.log("📥 [CALLEE] Применяем RemoteDescription (Offer)...");
-                await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-                await flushCandidateQueue();
+                        sessionRef.child('offerCandidates').on('child_added', childSnap => {
+                            addCandidateSafely(childSnap.val());
+                        });
 
-                pc.getTransceivers().forEach(t => {
-                    if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
-                        t.direction = 'sendrecv';
+                        console.log("📥 [CALLEE] Применяем RemoteDescription (Offer)...");
+                        await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                        await flushCandidateQueue();
+
+                        pc.getTransceivers().forEach(t => {
+                            if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
+                                t.direction = 'sendrecv';
+                            }
+                        });
+
+                        console.log("📥 [CALLEE] Генерируем Answer...");
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+
+                        console.log("📥 [CALLEE] Отправляем Answer в Firebase...");
+                        await sessionRef.update({
+                            answer: { type: answer.type, sdp: answer.sdp },
+                            status: 'connected'
+                        });
+
+                        updateCallStatus("Обмен шифрованием...");
                     }
                 });
 
-                console.log("📥 [CALLEE] Генерируем Answer...");
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-
-                console.log("📥 [CALLEE] Отправляем Answer в Firebase...");
-                await sessionRef.update({
-                    answer: { type: answer.type, sdp: answer.sdp },
-                    status: 'connected'
-                });
-
-                updateCallStatus("Обмен шифрованием...");
-
             } catch (e) {
-                alert("Ошибка ответа: " + e.message);
                 console.error("❌ Ошибка при ответе:", e);
                 endCall(true);
             }
@@ -9134,19 +9159,19 @@
             }
         }
         function endCall(isInitiator = true, isRemote = false) {
-            // Выключаем датчик при завершении звонка
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("disable_proximity");
             }
 
-            // 1. Блок логики: Уведомления и чат
             try {
                 const ringtone = document.getElementById('ringtone');
                 if (ringtone) {
                     ringtone.pause();
                     ringtone.currentTime = 0;
                 }
-                stopAllTones();
+
+                // Безопасная остановка гудков
+                try { stopAllTones(); } catch (e) { }
 
                 const widget = document.getElementById('activeCallWidget');
                 if (widget) widget.style.display = 'none';
@@ -9163,28 +9188,14 @@
                             }
                         } else {
                             sendMsg(`missed|00:00`, false, 'call');
-                            if (currentFriendId) {
-                                db.collection('users').doc(currentFriendId).get().then(doc => {
-                                    // ПРОВЕРКА: существует ли вообще sendTelegramNotification
-                                    if (doc.exists && doc.data().tgChatId && typeof sendTelegramNotification === 'function') {
-                                        sendTelegramNotification(doc.data().tgChatId, `❌ *Пропущенный звонок*\nОт: ${currentUser.email}`);
-                                    }
-                                }).catch(() => { });
-                            }
                         }
                     }
                 }
-            } catch (e) {
-                console.error("Ошибка логики чата при сбросе:", e);
-            }
 
-            // 2. Блок интерфейса: Гарантированное закрытие звонка
-            try {
                 if (pc) { pc.close(); pc = null; }
                 if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
                 if (callTimerInt) clearInterval(callTimerInt);
                 if (pingInterval) clearInterval(pingInterval);
-
 
                 if (currentCallId) {
                     const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
@@ -9197,22 +9208,12 @@
                     }
                 }
 
-                // Сбрасываем флаги немедленно, блокируя дублирование
-                amICaller = false;
-                isConnected = false;
-                wasCallConnected = false;
-                currentCallId = null;
-                candidateQueue = [];
-                callStartTime = 0;
-
-                // Останавливаем невидимый аудио-плеер
                 const remoteAudio = document.getElementById('remoteAudio');
                 if (remoteAudio) {
                     remoteAudio.pause();
                     remoteAudio.srcObject = null;
                 }
 
-                // ---> НАЧАЛО ИСПРАВЛЕНИЯ: ЖЕСТКАЯ ОЧИСТКА ВИДЕОПЛЕЕРОВ <---
                 const localVid = document.getElementById('localVideo');
                 if (localVid) {
                     localVid.pause();
@@ -9223,10 +9224,9 @@
                 if (remoteVid) {
                     remoteVid.pause();
                     remoteVid.removeAttribute('src');
-                    remoteVid.load(); // Сбрасываем кэш плеера (критически важно для iPhone)
+                    remoteVid.load();
                     remoteVid.srcObject = null;
                 }
-                // ---> КОНЕЦ ИСПРАВЛЕНИЯ <---
 
                 const statusText = document.getElementById('callStatusText');
                 if (statusText) {
@@ -9239,7 +9239,7 @@
                 const timerEl = document.getElementById('callTimer');
                 if (timerEl) timerEl.style.display = 'none';
 
-                try { playEndTone(); } catch (err) { console.log("Звук сброса заблокирован"); }
+                try { playEndTone(); } catch (err) { }
 
                 const screen = document.getElementById('callScreen');
                 if (screen) screen.style.pointerEvents = 'none';
@@ -9247,25 +9247,37 @@
                 const popup = document.getElementById('incomingPopup');
                 if (popup) popup.style.display = 'none';
 
+            } catch (e) {
+                console.error("Критическая ошибка UI при сбросе:", e);
+            } finally {
+                // ЖЕЛЕЗОБЕТОННОЕ СКРЫТИЕ ЭКРАНА В ЛЮБОМ СЛУЧАЕ
                 setTimeout(() => {
+                    const screen = document.getElementById('callScreen');
                     if (screen) {
                         screen.style.display = 'none';
-                        screen.style.pointerEvents = 'auto'; // Возвращаем кликабельность
+                        screen.style.pointerEvents = 'auto';
                     }
+
+                    const timerEl = document.getElementById('callTimer');
                     if (timerEl) timerEl.innerText = "00:00";
 
                     const pingEl = document.getElementById('callPing');
                     if (pingEl) pingEl.innerText = "Ping: -";
 
+                    const statusText = document.getElementById('callStatusText');
                     if (statusText) {
                         statusText.style.color = "#ccc";
                         statusText.style.fontWeight = "normal";
                     }
+
+                    // Сброс флагов
+                    amICaller = false;
+                    isConnected = false;
+                    wasCallConnected = false;
+                    currentCallId = null;
+                    candidateQueue = [];
+                    callStartTime = 0;
                 }, 1500);
-            } catch (e) {
-                console.error("Критическая ошибка UI при сбросе:", e);
-                const screenFallback = document.getElementById('callScreen');
-                if (screenFallback) screenFallback.style.display = 'none';
             }
         }
         function saveTgId() {
