@@ -39,21 +39,17 @@
             color: #eee;
             margin: 0;
             display: flex;
-            /* --- ПРАВИЛЬНАЯ ФИКСАЦИЯ ДЛЯ iOS PWA --- */
-            position: relative;
+            box-sizing: border-box;
+            padding-bottom: env(safe-area-inset-bottom);
+            /* --- ПРЕМИУМ ФИКС ДЛЯ iOS КЛАВИАТУРЫ --- */
+            position: fixed !important; /* Жестко прибиваем к экрану (было relative) */
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            height: 100dvh;
-            padding-bottom: env(safe-area-inset-bottom);
-            box-sizing: border-box; /* чтобы padding не ломал height */
             width: 100%;
-            /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
-            /* Подстраховка для Safari */
-            min-height: -webkit-fill-available;
+            height: 100%; /* Убрали глючный 100dvh */
             overflow: hidden;
             overscroll-behavior-y: none;
+            touch-action: none; /* Запрещаем резиновый скролл всего приложения (bouncing) */
         }
 
             /* Фикс чёрной полосы под Home Indicator на iPhone в PWA */
@@ -9734,21 +9730,26 @@
             }
         });
 
-        // 2. Самый надежный современный метод: отслеживаем изменение видимой области (VisualViewport API)
+        // 2. Самый надежный современный метод: отслеживаем изменение видимой области
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
-                // Скроллим вниз ТОЛЬКО если до открытия клавиатуры мы были в самом низу.
-                // Если юзер читал историю выше — оставляем его там!
+                // ПРЕМИУМ ФИКС: Жестко подгоняем высоту body под оставшееся место (без клавиатуры)
+                document.body.style.height = window.visualViewport.height + 'px';
+
+                // На всякий случай сбрасываем системный фантомный скролл iOS
+                window.scrollTo(0, 0);
+
+                // Скроллим диалог вниз
                 if (currentMsgList && document.activeElement === msgInput && wasAtBottomBeforeKeyboard) {
-                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                    setTimeout(() => {
+                        currentMsgList.scrollTop = currentMsgList.scrollHeight + 5000;
+                    }, 50);
                 }
             });
-        } else {
-            // Запасной вариант для старых браузеров
-            window.addEventListener('resize', () => {
-                if (currentMsgList && document.activeElement === msgInput && wasAtBottomBeforeKeyboard) {
-                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
-                }
+
+            // Блокируем случайные подергивания страницы на iOS при скролле
+            window.visualViewport.addEventListener('scroll', () => {
+                window.scrollTo(0, 0);
             });
         }
 
@@ -12815,14 +12816,36 @@
             }
         });
 
-        // Автоматически определяем, что мы внутри мобильного приложения (WebView)
+        // Автоматически определяем, что мы внутри мобильного приложения
         document.addEventListener("DOMContentLoaded", () => {
-            // window.chrome.webview - это для MAUI Blazor, 'wv' - стандартная метка Android WebView
-            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv');
+            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv') || window.Capacitor;
 
             if (isApp) {
                 document.body.classList.add('is-app');
-                console.log("📱 Включен режим мобильного приложения (WebView оптимизации)");
+                console.log("📱 Включен режим мобильного приложения");
+            }
+
+            // --- ПРЕМИУМ ФИКС КЛАВИАТУРЫ ДЛЯ iOS ---
+            // 1. Проверяем, что запущен Capacitor
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+
+                // 2. Узнаем платформу ('ios', 'android' или 'web')
+                const platform = window.Capacitor.getPlatform();
+
+                // 3. Если это iOS и плагин клавиатуры успешно подключен
+                if (platform === 'ios' && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard) {
+                    const Keyboard = window.Capacitor.Plugins.Keyboard;
+
+                    // Убиваем серую полоску с "Готово" и стрелочками
+                    Keyboard.setAccessoryBarVisible({ isVisible: false })
+                        .catch(err => console.log("Capacitor Keyboard: Ошибка скрытия Accessory Bar", err));
+
+                    // Отключаем нативный сдвиг WebView (чтобы наш CSS "position: fixed" и JS работали идеально)
+                    Keyboard.setScroll({ isDisabled: true })
+                        .catch(err => console.log("Capacitor Keyboard: Ошибка отключения скролла", err));
+
+                    console.log("🍏 iOS Keyboard: Аксессуар-бар скрыт, скролл заблокирован.");
+                }
             }
         });
 
