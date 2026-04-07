@@ -7274,7 +7274,8 @@
                     const batch = db.batch();
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
-                    let hasRealNewMessages = false; // Отслеживаем новые СМС
+                    let hasRealNewMessages = false;
+                    let hasMyNewMessages = false; // <-- Добавили отслеживание своих сообщений
 
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added' && !isChatInitialLoad) {
@@ -7378,7 +7379,6 @@
                     updateDateSeparators();
                     updateScrollBadge();
 
-                    // --- МАГИЯ СКРОЛЛА ---
                     if (list.classList.contains('is-loading')) {
                         list.classList.remove('is-loading');
                         if (savedScroll !== null) {
@@ -7389,12 +7389,23 @@
 
                         setTimeout(() => {
                             window.isChatJustOpened = false;
-                            markCurrentChatRead(); // <--- ДОБАВИТЬ ЭТО
+                            markCurrentChatRead();
                         }, 300);
 
-                    } else if (!isChatInitialLoad && hasRealNewMessages) {
-                        smartScrollToBottom(list, false, false);
-                        markCurrentChatRead(); // <--- И ДОБАВИТЬ ЭТО
+                    } else if (!isChatInitialLoad) {
+                        if (hasMyNewMessages) {
+                            // ПРЕМИУМ: Если отправили мы -> скроллим МГНОВЕННО (instant = true). 
+                            // Контейнер чата моментально "прыгнет" в самый низ, освободив место, 
+                            // а само сообщение красиво всплывет анимацией из пустоты.
+                            smartScrollToBottom(list, true, true);
+                            markCurrentChatRead();
+                        } else if (hasRealNewMessages) {
+                            // Если прислали нам -> скроллим ПЛАВНО (чтобы глаз успел заметить новое)
+                            smartScrollToBottom(list, false, false);
+                            markCurrentChatRead();
+
+                        }
+
                     }
 
                     isChatInitialLoad = false;
@@ -7734,14 +7745,13 @@
             window.myReadTs = 0;
         }
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
+        // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
         function sendMsg(txt, isSys = false, type = 'text') {
             const inputEl = document.getElementById('msgInput');
             const t = txt || inputEl.value.trim();
             if (!t) return;
 
-            // ========================================================
-            // --- НОВОЕ: СБРОС СТАТУСА "ПЕЧАТАЕТ" ---
-            // Сбрасываем таймер и статус в базе моментально при отправке
+            // СБРОС СТАТУСА "ПЕЧАТАЕТ"
             if (typeof typingTimeout !== 'undefined' && typingTimeout) {
                 clearTimeout(typingTimeout);
             }
@@ -7754,23 +7764,22 @@
                 typingRef.onDisconnect().cancel();
             }
 
-
-            // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
+            // ЛОГИКА РЕДАКТИРОВАНИЯ
             if (isEditingMode && editMessageId) {
                 db.collection('chats').doc(currentChatId).collection('msgs').doc(editMessageId).update({
                     txt: encryptText(t, currentChatId),
-                    edited: true // Метка, что сообщение изменено
+                    edited: true
                 }).then(() => {
                     cancelReplyOrEdit();
                 });
-                return; // Выходим, не создаем новое
+                return;
             }
 
-            // --- ОБЫЧНАЯ ОТПРАВКА ---
+            // ОБЫЧНАЯ ОТПРАВКА
             const encryptedText = encryptText(t, currentChatId);
 
             const msgData = {
-                txt: encryptedText, // В базу летит шифр
+                txt: encryptedText,
                 from: currentUser.uid,
                 to: currentFriendId,
                 sys: isSys,
@@ -7779,44 +7788,33 @@
                 ts: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            // Если есть ответ на сообщение
             if (replyMessageData) {
                 msgData.replyTo = {
                     id: replyMessageData.id,
                     name: replyMessageData.name,
                     text: replyMessageData.text
                 };
-                cancelReplyOrEdit(); // Сбрасываем ответ после отправки
+                cancelReplyOrEdit();
             }
 
-            db.collection('chats').doc(currentChatId).collection('msgs').add(msgData).then(() => {
-                // Подстраховочный скролл после того, как сообщение появилось в базе
-                if (currentMsgList) {
-                    setTimeout(() => {
-                        currentMsgList.scrollTo({ top: currentMsgList.scrollHeight + 500, behavior: 'smooth' });
-                    }, 50);
-                }
-            });
+            // Просто отправляем в базу. Больше никаких .then() со скроллами!
+            db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
 
             if (!txt) {
                 inputEl.value = '';
                 inputEl.style.height = '40px';
                 checkInputState();
                 inputEl.focus();
-
-                // Мы сами отправили текст, 100% тянем вниз
-                if (t && currentMsgList) {
-                    smartScrollToBottom(currentMsgList, true, false);
-                }
+                // Убрали smartScrollToBottom отсюда
             }
-            // УВЕДОМЛЕНИЯ (БЕЗОПАСНО ЧЕРЕЗ СЕРВЕР)
+
+            // УВЕДОМЛЕНИЯ
             if (!isSys && currentFriendId) {
                 sendNotificationSecure(currentFriendId, t, type, type === 'call');
                 if (type === 'text') {
                     checkAndTriggerBot(currentFriendId, t, currentChatId);
                 }
             }
-
         }
 
         window.processNativeAction = async function (action, chatId, text) {
