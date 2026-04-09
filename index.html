@@ -10,7 +10,6 @@
     <meta name="theme-color" content="#1f1f1f">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
     <title>Novogram</title>
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <style>
@@ -40,17 +39,21 @@
             color: #eee;
             margin: 0;
             display: flex;
-            box-sizing: border-box;
-            padding-bottom: env(safe-area-inset-bottom);
-            /* --- ПРЕМИУМ ФИКС ДЛЯ iOS КЛАВИАТУРЫ --- */
-            position: fixed !important; /* Жестко прибиваем к экрану (было relative) */
+            /* --- ПРАВИЛЬНАЯ ФИКСАЦИЯ ДЛЯ iOS PWA --- */
+            position: relative;
             top: 0;
             left: 0;
+            right: 0;
+            bottom: 0;
+            height: 100dvh;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box; /* чтобы padding не ломал height */
             width: 100%;
-            height: 100%; /* Убрали глючный 100dvh */
+            /* УБРАТЬ: height: 100dvh; - в PWA он работает криво */
+            /* Подстраховка для Safari */
+            min-height: -webkit-fill-available;
             overflow: hidden;
             overscroll-behavior-y: none;
-            touch-action: none; /* Запрещаем резиновый скролл всего приложения (bouncing) */
         }
 
             /* Фикс чёрной полосы под Home Indicator на iPhone в PWA */
@@ -87,7 +90,7 @@
         /* Само сообщение */
         .msg {
             transition: transform 0.2s ease, filter 0.3s ease, brightness 0.3s ease;
-            -webkit-touch-callout: none;
+            -webkit-touch-callout: none; 
             -webkit-user-select: none;
             user-select: none;
         }
@@ -4310,26 +4313,26 @@
         @keyframes msgInMe {
             0% {
                 opacity: 0;
-                transform: scale(0.5); /* Убрали translateY, теперь оно не летит снизу */
-                transform-origin: bottom right; /* Вырастает из "хвостика" сообщения */
+                transform: translateY(20px) scale(0.8);
+                transform-origin: right bottom;
             }
 
             100% {
                 opacity: 1;
-                transform: scale(1);
+                transform: translateY(0) scale(1);
             }
         }
 
         @keyframes msgInOther {
             0% {
                 opacity: 0;
-                transform: scale(0.5);
-                transform-origin: bottom left;
+                transform: translateY(20px) scale(0.8);
+                transform-origin: left bottom;
             }
 
             100% {
                 opacity: 1;
-                transform: scale(1);
+                transform: translateY(0) scale(1);
             }
         }
 
@@ -4742,6 +4745,16 @@
                     transform: scale(1.25);
                     background: rgba(255,255,255,0.05);
                 }
+
+
+
+
+
+
+
+
+
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -4985,7 +4998,6 @@
                     </div>
                 </div>
                 <input type="file" id="editAvatarInput" hidden accept="image/*" onchange="handleEditAvatarSelect(this)">
-
             </div>
 
             <div class="premium-section-title">Личные данные</div>
@@ -5336,7 +5348,7 @@
                     <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
                 </button>
 
-                <button id="sendBtn" class="main-action-btn btn-send hidden" onpointerdown="handleSendClick(event)">
+                <button id="sendBtn" class="main-action-btn btn-send hidden" onclick="sendMsg()">
                     <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:white; margin-left: 2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
                 </button>
 
@@ -5371,16 +5383,16 @@
         </div>
 
         <div class="premium-call-controls">
-            <button onclick="toggleScreen()" id="btnScr" class="premium-btn" style="display: none;">
+            <button onclick="toggleScreen()" id="btnScr" class="premium-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
             </button>
 
-            <button onclick="toggleCamera()" id="btnCam" class="premium-btn muted-state">
-                <svg id="iconCamOn" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-                <svg id="iconCamOff" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+            <button onclick="toggleCamera()" id="btnCam" class="premium-btn">
+                <svg id="iconCamOn" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                <svg id="iconCamOff" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
             </button>
 
-            <button onclick="switchCamera()" id="btnFlip" class="premium-btn" style="display: none;">
+            <button onclick="switchCamera()" id="btnFlip" class="premium-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" /></svg>
             </button>
 
@@ -5389,7 +5401,7 @@
                 <svg id="iconMicOff" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
             </button>
 
-            <button onclick="toggleSpeaker()" id="btnSpeaker" class="premium-btn">
+            <button onclick="toggleSpeaker()" id="btnSpeaker" class="premium-btn" style="display:none;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
             </button>
 
@@ -5498,14 +5510,6 @@
         const APP_SECRET_KEY = "JH54jnbdfkjs297615109dxc1kDmnsg_df1jksHnh1Lhsc";
         const TURN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfoDAYY2otmNxEQ6tsrWLekLwthAPxnYDIW6HRUrA263qQgAYDDHPeQq7-Km_PcpI/exec";
 
-        // Фикс аудио-сессии для iOS (Capacitor/WebView)
-        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-            if (navigator.audioSession) {
-                // Устанавливаем режим "play-and-record", который открывает доступ к разговорному динамику
-                navigator.audioSession.type = 'play-and-record';
-            }
-        }
-
         const APP_START_TIME = Date.now();
 
         function playNotificationSound(type) {
@@ -5580,7 +5584,8 @@
 
         let sessionKeys = {}; // Кэш ключей в памяти
 
-        async function fetchChatKey(chatId, retries = 3) {
+        async function fetchChatKey(chatId) {
+            // Если ключ уже в оперативной памяти, всё равно пнем интерфейс обновиться
             if (sessionKeys[chatId]) {
                 window.dispatchEvent(new CustomEvent('keyReady_' + chatId));
                 return sessionKeys[chatId];
@@ -5589,53 +5594,40 @@
             const localKey = localStorage.getItem('chatKey_' + chatId);
             if (localKey) {
                 sessionKeys[chatId] = localKey;
+                // 🔥 ИСПРАВЛЕНИЕ: Отправляем сигнал интерфейсу, что ключ загружен из кэша!
+                // Теперь сообщения мгновенно расшифруются и точки пропадут.
                 setTimeout(() => {
                     window.dispatchEvent(new CustomEvent('keyReady_' + chatId));
                 }, 50);
                 return localKey;
             }
 
-            for (let i = 0; i < retries; i++) {
-                try {
-                    // Создаем таймаут на 5 секунд для каждого запроса
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+            try {
+                const response = await fetch(KEY_PROVIDER_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        chatId: chatId,
+                        userId: currentUser.uid
+                    })
+                });
 
-                    const response = await fetch(KEY_PROVIDER_URL, {
-                        method: 'POST',
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({
-                            chatId: chatId,
-                            userId: currentUser.uid
-                        }),
-                        signal: controller.signal
-                    });
+                const textResult = await response.text();
+                const data = JSON.parse(textResult);
 
-                    clearTimeout(timeoutId);
+                if (data.status === "success" && data.key) {
+                    sessionKeys[chatId] = data.key;
+                    localStorage.setItem('chatKey_' + chatId, data.key);
 
-                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                    // --- НОВОЕ: ТРИГГЕР ОБНОВЛЕНИЯ ---
+                    window.dispatchEvent(new CustomEvent('keyReady_' + chatId));
 
-                    const textResult = await response.text();
-                    const data = JSON.parse(textResult);
-
-                    if (data.status === "success" && data.key) {
-                        sessionKeys[chatId] = data.key;
-                        localStorage.setItem('chatKey_' + chatId, data.key);
-                        window.dispatchEvent(new CustomEvent('keyReady_' + chatId));
-                        return data.key;
-                    } else {
-                        throw new Error("Неверный формат ответа от скрипта");
-                    }
-                } catch (e) {
-                    console.warn(`[КЛЮЧИ] Попытка ${i + 1} провалилась:`, e.message);
-                    // Если это последняя попытка - сдаемся
-                    if (i === retries - 1) {
-                        console.error("[КЛЮЧИ] Не удалось получить ключ после всех попыток.");
-                        return null;
-                    }
-                    // Ждем перед следующей попыткой (экспоненциальная задержка: 1с, 2с)
-                    await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+                    return data.key;
+                } else {
+                    return null;
                 }
+            } catch (e) {
+                return null;
             }
         }
 
@@ -5826,13 +5818,13 @@
             const actionIcon = (chatExists || isBot) ? '💬' : '➕';
 
             div.innerHTML = `
-                                                    ${avatarHtml}
-                                                    <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
-                                                        <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
-                                                        <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
-                                                    </div>
-                                                    <div class="search-action" style="color:#007bff; font-size:20px;">${actionIcon}</div>
-                                                `;
+                                        ${avatarHtml}
+                                        <div class="search-info" style="flex:1; overflow:hidden; margin-left: 10px;">
+                                            <div class="search-name" style="font-weight:bold; color:white; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullName}</div>
+                                            <div class="search-sub" style="font-size:13px; color:#888;">${user.username ? '@' + user.username : 'ID пользователя'}</div>
+                                        </div>
+                                        <div class="search-action" style="color:#007bff; font-size:20px;">${actionIcon}</div>
+                                    `;
 
             div.onclick = async () => {
                 if (chatExists) {
@@ -5864,19 +5856,7 @@
         }
 
 
-        function handleSendClick(e) {
-            const inp = document.getElementById('msgInput');
 
-            // Если клавиатура сейчас открыта (поле в фокусе)
-            if (document.activeElement === inp) {
-                // e.preventDefault() предотвращает переход фокуса на кнопку.
-                // Благодаря этому клавиатура на iOS не получает сигнал к закрытию.
-                e.preventDefault();
-            }
-
-            // Вызываем твою стандартную функцию отправки
-            sendMsg();
-        }
 
 
         // Новая функция отправки заявки по ID (а не email)
@@ -5904,26 +5884,19 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
         function beep(freq, duration, vol = 0.05) {
-            try {
-                initAudio();
-                if (!audioCtx) return;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.frequency.value = freq;
-                osc.type = 'sine';
-                gain.gain.value = vol;
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                setTimeout(() => {
-                    try {
-                        if (audioCtx && audioCtx.state !== 'closed') {
-                            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.04);
-                            osc.stop(audioCtx.currentTime + 0.05);
-                        }
-                    } catch (e) { } // Глушим любую ошибку отсчета времени
-                }, duration);
-            } catch (e) { }
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            gain.gain.value = vol;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            setTimeout(() => {
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.04);
+                osc.stop(audioCtx.currentTime + 0.05);
+            }, duration);
         }
         function playConnectingTone() {
             stopAllTones();
@@ -5952,18 +5925,7 @@
             osc.stop(audioCtx.currentTime + 0.4);
         }
         function stopAllTones() {
-            try {
-                if (toneTimer) { clearInterval(toneTimer); toneTimer = null; }
-                if (audioCtx && audioCtx.state !== 'closed') {
-                    audioCtx.close().then(() => {
-                        audioCtx = null;
-                    }).catch(e => console.warn("AudioContext error", e));
-                } else {
-                    audioCtx = null;
-                }
-            } catch (e) {
-                console.error("Ошибка остановки звука", e);
-            }
+            if (toneTimer) { clearInterval(toneTimer); toneTimer = null; }
         }
         function formatLastSeen(timestamp) {
             if (!timestamp) return "был давно";
@@ -6644,16 +6606,16 @@
                         // Аватарка (заглушка или можно подгрузить реальную)
                         const avatar = '<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>';
                         div.innerHTML = `
-                                                                                                ${avatar}
-                                                                                                <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
-                                                                                                ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
-                                                                                                <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
-                                                                                                </div>
-                                                                                                <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
-                                                                                                <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
-                                                                                                <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
-                                                                                                </div>
-                                                                                                `;
+                                                                                    ${avatar}
+                                                                                    <div class="user-name" style="grid-row: 1/span 2; align-self:center;">
+                                                                                    ${data.fromUsername ? '@' + data.fromUsername : 'Пользователь'}
+                                                                                    <div style="font-size:12px; color:#888; font-weight:normal;">Хочет добавить вас в друзья</div>
+                                                                                    </div>
+                                                                                    <div style="grid-column:3; grid-row:1/span 2; display:flex; gap:10px;">
+                                                                                    <button onclick="accept('${doc.id}', '${data.from}', '${data.fromEmail}')" style="background:#28a745; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✓</button>
+                                                                                    <button onclick="reject('${doc.id}')" style="background:#dc3545; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer;">✕</button>
+                                                                                    </div>
+                                                                                    `;
                         list.appendChild(div);
                     });
                 });
@@ -6958,19 +6920,19 @@
                 : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
 
             return `
-                                                                                                ${avatarHtml}
-                                                                                                <div class="user-name">${fName}</div>
-                                                                                                <div class="last-msg-row">
-                                                                                                <span class="last-msg" id="last-${chatId}">...</span>
-                                                                                                </div>
-                                                                                                <div class="meta-column">
-                                                                                                <span class="last-msg-date" id="date-${chatId}"></span>
-                                                                                                <div class="meta-bottom-row">
-                                                                                                <span id="status-${chatId}" class="list-ticks"></span>
-                                                                                                <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                                                                                </div>
-                                                                                                </div>
-                                                                                                `;
+                                                                                    ${avatarHtml}
+                                                                                    <div class="user-name">${fName}</div>
+                                                                                    <div class="last-msg-row">
+                                                                                    <span class="last-msg" id="last-${chatId}">...</span>
+                                                                                    </div>
+                                                                                    <div class="meta-column">
+                                                                                    <span class="last-msg-date" id="date-${chatId}"></span>
+                                                                                    <div class="meta-bottom-row">
+                                                                                    <span id="status-${chatId}" class="list-ticks"></span>
+                                                                                    <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                                                    </div>
+                                                                                    </div>
+                                                                                    `;
         }
 
         function loadData() {
@@ -7077,9 +7039,6 @@
                             targetList.innerHTML = '';
                         }
 
-
-
-
                         let div = document.getElementById('u-' + fid);
                         const isNew = !div;
 
@@ -7088,47 +7047,34 @@
                             div.className = 'user-item';
                             div.id = 'u-' + fid;
                             div.onclick = () => openChat(fid, fName, fNick);
-                            div.setAttribute('data-time', createdTime);
+                        }
 
-                            const avatarHtml = fAvatar
-                                ? `<img src="${fAvatar}" class="user-item-avatar">`
-                                : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93">${isBot ? '🤖' : '<svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}</div>`;
+                        div.setAttribute('data-time', createdTime);
 
-                            div.innerHTML = `
-                                ${avatarHtml}
-                                <div class="user-name">${fName}</div>
-                                <div class="last-msg-row">
-                                    <span class="last-msg" id="last-${chatId}">...</span>
-                                </div>
-                                <div class="meta-column">
-                                    <span class="last-msg-date" id="date-${chatId}"></span>
-                                    <div class="meta-bottom-row">
-                                        <span id="status-${chatId}" class="list-ticks"></span>
-                                        <div class="badge-count hidden" id="badge-${chatId}">0</div>
-                                    </div>
-                                </div>
-                            `;
+                        const avatarHtml = fAvatar
+                            ? `<img src="${fAvatar}" class="user-item-avatar">`
+                            : `<div class="user-item-avatar" style="background:#21232b;display:flex;align-items:center;justify-content:center;color:#8e8e93">${isBot ? '🤖' : '<svg viewBox="0 0 24 24" width="55%" height="55%" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}</div>`;
 
-                            targetList.appendChild(div); // Добавляем строго в нужную папку
-                            startMessageListener(chatId, fid, createdTime); // Запускаем слушатель сообщений
+                        div.innerHTML = `
+                                                    ${avatarHtml}
+                                                    <div class="user-name">${fName}</div>
+                                                    <div class="last-msg-row">
+                                                        <span class="last-msg" id="last-${chatId}">...</span>
+                                                    </div>
+                                                    <div class="meta-column">
+                                                        <span class="last-msg-date" id="date-${chatId}"></span>
+                                                        <div class="meta-bottom-row">
+                                                            <span id="status-${chatId}" class="list-ticks"></span>
+                                                            <div class="badge-count hidden" id="badge-${chatId}">0</div>
+                                                        </div>
+                                                    </div>
+                                                `;
+
+                        if (isNew) {
+                            targetList.appendChild(div); // Добавляем строго в нужную папку!
+                            startMessageListener(chatId, fid, createdTime);
                         } else {
-                            // ПРЕМИУМ ФИКС: Если карточка уже есть, обновляем ТОЛЬКО имя и аватарку.
-                            // Мы БОЛЬШЕ НЕ ПЕРЕЗАПИСЫВАЕМ div.innerHTML целиком, чтобы не стереть последнее сообщение!
-                            const nameEl = div.querySelector('.user-name');
-                            if (nameEl && nameEl.innerText !== fName) nameEl.innerText = fName;
-
-                            const avatarEl = div.querySelector('.user-item-avatar');
-                            if (avatarEl) {
-                                if (fAvatar && !avatarEl.src) {
-                                    avatarEl.outerHTML = `<img src="${fAvatar}" class="user-item-avatar">`;
-                                } else if (fAvatar && avatarEl.src !== fAvatar) {
-                                    avatarEl.src = fAvatar;
-                                }
-                            }
-
-                            div.setAttribute('data-time', createdTime);
-
-                            // Переносим в нужную папку, если сменился статус (например, юзер стал ботом)
+                            // Если карточка уже была, но оказалась не в той папке — переносим её
                             if (div.parentElement !== targetList) {
                                 targetList.appendChild(div);
                             }
@@ -7299,16 +7245,13 @@
                     const batch = db.batch();
                     let needCommit = false;
                     const isWindowActive = document.hasFocus() && document.visibilityState === 'visible';
-                    let hasRealNewMessages = false;
-                    let hasMyNewMessages = false; // <-- Добавили отслеживание своих сообщений
+                    let hasRealNewMessages = false; // Отслеживаем новые СМС
 
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added' && !isChatInitialLoad) {
-                            // Проверяем, наше ли это сообщение
+                            // Проверяем, наше ли это сообщение. Если не наше - фиксируем как "новое входящее"
                             if (change.doc.data().from !== currentUser.uid) {
-                                hasRealNewMessages = true; // Чужое сообщение
-                            } else {
-                                hasMyNewMessages = true; // <--- ВОТ ЭТОГО НЕ ХВАТАЛО! Теперь скрипт знает, что мы написали текст.
+                                hasRealNewMessages = true;
                             }
                         }
                         if (change.type === 'removed') {
@@ -7379,18 +7322,14 @@
                                     if (typeof window.TitleNotifier !== 'undefined') TitleNotifier.onNewMessage();
                                 } catch (e) { }
                             }
-                        } // <-- конец if (isNewMsg)
+                        }
 
                         div.setAttribute('data-datestr', dateStr);
                         div.setAttribute('data-rawdate', rawDate);
                         div.setAttribute('data-ts', tsMillis); // ТАЙМСТЕМП ДЛЯ СКАНЕРА
 
                         const newHtml = buildMessageHTML(m, msgId, msgType);
-
-                        if (div.getAttribute('data-raw-html') !== newHtml) {
-                            div.innerHTML = newHtml;
-                            div.setAttribute('data-raw-html', newHtml);
-                        }
+                        if (div.innerHTML !== newHtml) div.innerHTML = newHtml;
 
                         if (typeof isAutoTranslate !== 'undefined' && isAutoTranslate && m.from !== currentUser.uid && msgType === 'text' && !m.sys) {
                             appendTranslation(div, m.txt, msgId);
@@ -7401,42 +7340,32 @@
                             div.classList.add('is-unread');
                             window.chatObserver.observe(div);
                         }
-                    }); // <-- конец allDocs.forEach
+                    });
 
                     updateDateSeparators();
                     updateScrollBadge();
 
-                    // --- МАГИЯ СКРОЛЛА (ИСПРАВЛЕННАЯ) ---
-                    // Увеличим задержку до 100мс, чтобы поле ввода успело сжаться, а браузер 100% отрендерил всё
-                    setTimeout(() => {
-                        if (list.classList.contains('is-loading')) {
-                            list.classList.remove('is-loading');
-                            if (savedScroll !== null) {
-                                list.scrollTop = parseInt(savedScroll, 10);
-                            } else {
-                                smartScrollToBottom(list, true, true);
-                            }
-
-                            setTimeout(() => {
-                                window.isChatJustOpened = false;
-                                markCurrentChatRead();
-                            }, 300);
-
-                        } else if (!isChatInitialLoad) {
-                            if (hasMyNewMessages) {
-                                // ПРЕМИУМ ТЕЛЕГРАМ: мы отправляем -> чат ПЛАВНО (instant = false) выталкивает сообщение наверх
-                                smartScrollToBottom(list, true, false);
-                                markCurrentChatRead();
-                            } else if (hasRealNewMessages) {
-                                // Чужое сообщение тоже выезжает плавно, если мы читали самый низ
-                                smartScrollToBottom(list, false, false);
-                                markCurrentChatRead();
-                            }
+                    // --- МАГИЯ СКРОЛЛА ---
+                    if (list.classList.contains('is-loading')) {
+                        list.classList.remove('is-loading');
+                        if (savedScroll !== null) {
+                            list.scrollTop = parseInt(savedScroll, 10);
+                        } else {
+                            smartScrollToBottom(list, true, true);
                         }
-                    }, 100);
+
+                        setTimeout(() => {
+                            window.isChatJustOpened = false;
+                            markCurrentChatRead(); // <--- ДОБАВИТЬ ЭТО
+                        }, 300);
+
+                    } else if (!isChatInitialLoad && hasRealNewMessages) {
+                        smartScrollToBottom(list, false, false);
+                        markCurrentChatRead(); // <--- И ДОБАВИТЬ ЭТО
+                    }
 
                     isChatInitialLoad = false;
-                }); // <-- конец onSnapshot
+                });
         }
 
 
@@ -7520,20 +7449,20 @@
             let metaHtml = '';
             if (!m.sys && msgType !== 'call') {
                 metaHtml = `
-                                    <span class="msg-meta">
-                                        ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
-                                        <span class="msg-time">${timeStr}</span>
-                                        ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
-                                    </span>`;
+                        <span class="msg-meta">
+                            ${m.edited ? '<span style="font-size: 11px; color: rgba(255,255,255,0.8); margin-right: 5px;">изм.</span>' : ''}
+                            <span class="msg-time">${timeStr}</span>
+                            ${m.from === currentUser.uid ? `<span class="msg-ticks">${ticksHtml}</span>` : ''}
+                        </span>`;
             }
 
             // 5. Цитата (Reply)
             if (m.replyTo) {
                 contentHtml += `
-                                    <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
-                                        <div class="msg-reply-name">${m.replyTo.name}</div>
-                                        <div class="msg-reply-text">${m.replyTo.text}</div>
-                                    </div>`;
+                        <div class="msg-reply-quote" onclick="scrollToMsg('${m.replyTo.id}')">
+                            <div class="msg-reply-name">${m.replyTo.name}</div>
+                            <div class="msg-reply-text">${m.replyTo.text}</div>
+                        </div>`;
             }
 
             // 6. Основной контент (Текст, Картинка или Звонок)
@@ -7580,23 +7509,22 @@
                 }
 
                 contentHtml += `
-                                    <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
-                                        <div class="call-icon-wrapper">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                                        </div>
-                                        <div class="call-info">
-                                            <div class="call-title">${titleText}</div>
-                                            <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
-                                        </div>
-                                    </div>`;
+                        <div class="chat-call-card" onclick="startCall(); event.stopPropagation();" title="Перезвонить">
+                            <div class="call-icon-wrapper">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            </div>
+                            <div class="call-info">
+                                <div class="call-title">${titleText}</div>
+                                <div class="call-time" style="color: ${arrowColor === '#ff595a' ? '#ff595a' : '#aaa'};">${arrowHtml}${timeStr}${durationDisplay}</div>
+                            </div>
+                        </div>`;
             } else {
                 let formattedText = m.txt.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" class="chat-link" style="color:#ffffff;text-decoration:underline;">$1</a>');
                 let finalContent = formattedText;
 
-                // Убрали эффект побуквенного появления, чтобы текст рендерился сразу
-                // if (typeof isChatInitialLoad !== 'undefined' && !isChatInitialLoad && !m.sys && msgType === 'text' && !m.txt.includes('http')) {
-                //     finalContent = applyPremiumTextEffect(m.txt);
-                // }
+                if (typeof isChatInitialLoad !== 'undefined' && !isChatInitialLoad && !m.sys && msgType === 'text' && !m.txt.includes('http')) {
+                    finalContent = applyPremiumTextEffect(m.txt);
+                }
 
                 const safeHtml = (typeof DOMPurify !== 'undefined')
                     ? DOMPurify.sanitize(finalContent, { ALLOWED_TAGS: ['a', 'span'], ALLOWED_ATTR: ['href', 'style', 'class'] })
@@ -7644,10 +7572,10 @@
                         : `<span style="font-size: 16px; margin: 0 2px;">${emojiId}</span>`;
 
                     reactionsHtml += `
-                                        <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
-                                            ${reactionContent}
-                                            ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
-                                        </div>`;
+                            <div class="${classStr}" onclick="event.stopPropagation(); toggleReactionDirect('${msgId}', '${emojiId}')">
+                                ${reactionContent}
+                                ${count > 1 ? `<span class="reaction-count">${count}</span>` : ''}
+                            </div>`;
                 });
                 reactionsHtml += '</div>';
 
@@ -7772,13 +7700,14 @@
             window.myReadTs = 0;
         }
         // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
-        // Обновленная функция отправки (принимает тип: 'text', 'image', 'file')
         function sendMsg(txt, isSys = false, type = 'text') {
             const inputEl = document.getElementById('msgInput');
             const t = txt || inputEl.value.trim();
             if (!t) return;
 
-            // СБРОС СТАТУСА "ПЕЧАТАЕТ"
+            // ========================================================
+            // --- НОВОЕ: СБРОС СТАТУСА "ПЕЧАТАЕТ" ---
+            // Сбрасываем таймер и статус в базе моментально при отправке
             if (typeof typingTimeout !== 'undefined' && typingTimeout) {
                 clearTimeout(typingTimeout);
             }
@@ -7791,22 +7720,23 @@
                 typingRef.onDisconnect().cancel();
             }
 
-            // ЛОГИКА РЕДАКТИРОВАНИЯ
+
+            // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
             if (isEditingMode && editMessageId) {
                 db.collection('chats').doc(currentChatId).collection('msgs').doc(editMessageId).update({
                     txt: encryptText(t, currentChatId),
-                    edited: true
+                    edited: true // Метка, что сообщение изменено
                 }).then(() => {
                     cancelReplyOrEdit();
                 });
-                return;
+                return; // Выходим, не создаем новое
             }
 
-            // ОБЫЧНАЯ ОТПРАВКА
+            // --- ОБЫЧНАЯ ОТПРАВКА ---
             const encryptedText = encryptText(t, currentChatId);
 
             const msgData = {
-                txt: encryptedText,
+                txt: encryptedText, // В базу летит шифр
                 from: currentUser.uid,
                 to: currentFriendId,
                 sys: isSys,
@@ -7815,32 +7745,44 @@
                 ts: firebase.firestore.FieldValue.serverTimestamp()
             };
 
+            // Если есть ответ на сообщение
             if (replyMessageData) {
                 msgData.replyTo = {
                     id: replyMessageData.id,
                     name: replyMessageData.name,
                     text: replyMessageData.text
                 };
-                cancelReplyOrEdit();
+                cancelReplyOrEdit(); // Сбрасываем ответ после отправки
             }
 
-            // Просто отправляем в базу. Больше никаких .then() со скроллами!
-            db.collection('chats').doc(currentChatId).collection('msgs').add(msgData);
+            db.collection('chats').doc(currentChatId).collection('msgs').add(msgData).then(() => {
+                // Подстраховочный скролл после того, как сообщение появилось в базе
+                if (currentMsgList) {
+                    setTimeout(() => {
+                        currentMsgList.scrollTo({ top: currentMsgList.scrollHeight + 500, behavior: 'smooth' });
+                    }, 50);
+                }
+            });
 
             if (!txt) {
                 inputEl.value = '';
                 inputEl.style.height = '40px';
                 checkInputState();
-                
-            }
+                inputEl.focus();
 
-            // УВЕДОМЛЕНИЯ
+                // Мы сами отправили текст, 100% тянем вниз
+                if (t && currentMsgList) {
+                    smartScrollToBottom(currentMsgList, true, false);
+                }
+            }
+            // УВЕДОМЛЕНИЯ (БЕЗОПАСНО ЧЕРЕЗ СЕРВЕР)
             if (!isSys && currentFriendId) {
                 sendNotificationSecure(currentFriendId, t, type, type === 'call');
                 if (type === 'text') {
                     checkAndTriggerBot(currentFriendId, t, currentChatId);
                 }
             }
+
         }
 
         window.processNativeAction = async function (action, chatId, text) {
@@ -8183,18 +8125,11 @@
         }
         function setupPeerConnection() {
             candidateQueue = [];
-            const configWithRelay = {
-                ...dynamicIceServers,
-                iceTransportPolicy: 'relay'
-            };
-            console.log("🛠️ [WebRTC] Реальный конфиг серверов при старте:", JSON.stringify(dynamicIceServers));
+            console.log("🛠️ Создаем RTCPeerConnection...");
             pc = new RTCPeerConnection(dynamicIceServers);
 
-            pc.onsignalingstatechange = () => {
-                console.log("🚦 [WebRTC] Состояние сигнализации:", pc.signalingState);
-            };
 
-            // Слушаем сигнал переключения видео от друга (твой код)
+            // 🔥 НОВЫЙ БЛОК: Слушаем сигнал переключения видео от друга
             if (currentCallId && currentFriendId) {
                 rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentFriendId}`).on('value', snap => {
                     if (snap.val()) {
@@ -8202,94 +8137,72 @@
                         setTimeout(() => {
                             const remoteVid = document.getElementById('remoteVideo');
                             if (remoteVid && remoteVid.srcObject) {
+                                // Жесткий пинок плеера (Трюк для iPhone и Chrome)
                                 const stream = remoteVid.srcObject;
                                 remoteVid.srcObject = null;
                                 remoteVid.srcObject = stream;
                                 remoteVid.play().catch(e => console.log("Ошибка автоплея:", e));
                             }
-                        }, 400);
+                        }, 400); // 400мс задержки, чтобы кадры успели долететь по сети
                     }
                 });
             }
 
             pc.oniceconnectionstatechange = () => {
                 console.log("📡 [ICE State]:", pc.iceConnectionState);
-
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     if (!isConnected) {
-                        console.log("🚀 [WebRTC] P2P СОЕДИНЕНИЕ УСТАНОВЛЕНО!");
-                        isConnected = true;
-                        wasCallConnected = true;
-
+                        isConnected = true; wasCallConnected = true;
                         document.getElementById('callStatusText').style.display = 'none';
                         document.getElementById('callTimer').style.display = 'block';
-
-                        stopAllTones();
-                        startTimer();
-                        startPing();
-
-                        // --- КРИТИЧЕСКИЙ ФИКС ДЛЯ iOS ---
-                        // Как только соединение установилось, ждем 500мс (чтобы WebKit успокоился)
-                        // и насильно переключаем звук на нужный динамик через твой Swift-плагин.
-                        setTimeout(() => {
-                            console.log("🛠️ [iOS Fix] Принудительное применение аудио-маршрута после установки соединения");
-                            if (typeof applyAudioRoute === 'function') {
-                                applyAudioRoute();
-                            }
-                        }, 500);
-                        // -------------------------------
+                        stopAllTones(); startTimer(); startPing();
                     }
                 }
-                else if (pc.iceConnectionState === 'failed') {
-                    console.warn("❌ [WebRTC] ICE соединение failed.");
+                else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
                     endCall(false);
-                }
-                else if (pc.iceConnectionState === 'disconnected') {
-                    console.warn("⚠️ [WebRTC] ICE временно disconnected. Ждем...");
                 }
             };
 
             pc.ontrack = e => {
-                console.log("🎥 [WebRTC] Получен медиа-трек:", e.track.kind);
-
+                console.log("🎥 Получен поток:", e.track.kind);
                 if (e.track.kind === 'audio') {
-                    // 1. Создаем или находим чистый аудио-элемент
                     let remoteAudio = document.getElementById('remoteAudio');
                     if (!remoteAudio) {
                         remoteAudio = document.createElement('audio');
                         remoteAudio.id = 'remoteAudio';
                         remoteAudio.autoplay = true;
-                        // ВАЖНО для iOS: playsinline и отсутствие контроллов
-                        remoteAudio.setAttribute('playsinline', 'true');
+                        remoteAudio.playsInline = true;
+                        remoteAudio.style.display = 'none';
                         document.body.appendChild(remoteAudio);
                     }
-                    // Пускаем звук ТОЛЬКО сюда
-                    remoteAudio.srcObject = new MediaStream([e.track]);
+                    if (!remoteAudio.srcObject) remoteAudio.srcObject = new MediaStream();
+                    remoteAudio.srcObject.addTrack(e.track);
                     remoteAudio.play().catch(err => console.log("Ошибка аудио:", err));
-
-                } else if (e.track.kind === 'video') {
+                }
+                else if (e.track.kind === 'video') {
                     const remoteVid = document.getElementById('remoteVideo');
-
-                    // 2. КРИТИЧЕСКИЙ ФИКС ДЛЯ iOS:
-                    // Видео-элемент должен быть ВСЕГДА заглушен (muted),
-                    // иначе iOS пустит звук через основной динамик как "кино".
-                    remoteVid.muted = true;
-                    remoteVid.setAttribute('playsinline', 'true');
-
                     if (!remoteVid.srcObject) remoteVid.srcObject = new MediaStream();
-                    remoteVid.srcObject.addTrack(e.track);
-                    remoteVid.play().catch(err => console.log("Ошибка видео:", err));
+
+                    if (!remoteVid.srcObject.getTracks().includes(e.track)) {
+                        remoteVid.srcObject.addTrack(e.track);
+                    }
+
+                    e.track.onunmute = () => {
+                        const stream = remoteVid.srcObject;
+                        remoteVid.srcObject = null;
+                        remoteVid.srcObject = stream;
+                        remoteVid.play().catch(err => console.log("Ошибка автозапуска:", err));
+                    };
+
+                    remoteVid.play().catch(err => console.log("Ошибка старта видео:", err));
                 }
             };
 
             pc.onicecandidate = e => {
                 if (e.candidate && currentCallId) {
-                    console.log(`[ICE] 📤 Отправляем локального кандидата в Firebase...`);
                     const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
                     const path = amICaller ? 'offerCandidates' : 'answerCandidates';
                     sessionRef.child(path).push(e.candidate.toJSON());
-                } else if (!e.candidate) {
-                    console.log("[ICE] 🏁 Сбор локальных кандидатов завершен (null).");
                 }
             };
         }
@@ -8368,26 +8281,25 @@
         async function addCandidateSafely(candidate) {
             if (!pc) return;
             try {
-                console.log(`[ICE] 📥 Получен кандидат от собеседника:`, candidate.candidate);
                 if (pc.remoteDescription && pc.remoteDescription.type) {
                     await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                    console.log(`[ICE] ✅ Кандидат успешно добавлен в PC!`);
+                    console.log(`📥 [Кандидат ДОБАВЛЕН]: тип=${candidate.type}, IP=${candidate.address}`);
                 } else {
-                    console.log("[ICE] ⏳ RemoteDescription еще не установлен, кидаем кандидата в очередь...");
+                    console.log("⏳ [Кандидат В ОЧЕРЕДИ] Ждем RemoteDescription...");
                     candidateQueue.push(candidate);
                 }
             } catch (e) {
-                console.error("[ICE] ❌ Ошибка добавления кандидата:", e);
+                console.error("❌ Ошибка добавления ICE-кандидата:", e);
             }
         }
         async function flushCandidateQueue() {
             if (!pc) return;
-            console.log(`[ICE] 🔄 Добавляем ${candidateQueue.length} кандидатов из очереди...`);
+            console.log(`🔄 [Очередь] Добавляем ${candidateQueue.length} кандидатов из очереди...`);
             for (const cand of candidateQueue) {
                 try {
                     await pc.addIceCandidate(new RTCIceCandidate(cand));
-                    console.log(`[ICE] ✅ Кандидат из очереди ДОБАВЛЕН`);
-                } catch (e) { console.error("[ICE] ❌ Ошибка кандидата из очереди:", e); }
+                    console.log(`📥 [Кандидат из очереди ДОБАВЛЕН]: тип=${cand.type}`);
+                } catch (e) { console.error("Ошибка кандидата из очереди", e); }
             }
             candidateQueue = [];
         }
@@ -8449,18 +8361,16 @@
 
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
+                // 🔥 ГЕНИАЛЬНЫЙ ТРЮК: Если видео не просили, генерируем пустой черный кадр
+                if (!requestVideo) {
+                    localStream.addTrack(window.createDummyVideoTrack());
+                }
+
                 document.getElementById('localVideo').srcObject = localStream;
                 document.getElementById('localVideo').muted = true;
 
-                if (pc) {
-                    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
-                    // ПРЕМИУМ ФИКС: Резервируем видеоканал без фейкового трека!
-                    // Это позволит iOS не блокировать ушной динамик.
-                    if (!requestVideo) {
-                        pc.addTransceiver('video', { direction: 'sendrecv', streams: [localStream] });
-                    }
-                }
+                // Добавляем ВСЕ треки в PeerConnection
+                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
                 if (!requestVideo) {
                     updateCamBtnUI(false);
@@ -8481,31 +8391,11 @@
         // Запасной конфиг с ПРЯМЫМИ IP-АДРЕСАМИ (чтобы обойти ошибку DNS -105 на мобильном интернете)
         let dynamicIceServers = {
             iceServers: [
-                // Пробиваем UDP через разные конторы (не только Google)
-                { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun.yandex.ru:3478" },
-                { urls: "stun:stun.cloudflare.com:3478" },
-
-                // Обычный TURN (UDP/TCP смешанный)
-                {
-                    urls: "turn:global.relay.metered.ca:443",
-                    username: "ae2c0c3b821722b03a252928",
-                    credential: "TVZk6SgD8cbvbQlB"
-                },
-                // Форсируем TURN работать строго по TCP (обходим блок UDP)
-                {
-                    urls: "turn:global.relay.metered.ca:443?transport=tcp",
-                    username: "ae2c0c3b821722b03a252928",
-                    credential: "TVZk6SgD8cbvbQlB"
-                },
-                // Форсируем TURN притворяться обычным HTTPS-сайтом (TLS) - идеальная маскировка от DPI
-                {
-                    urls: "turns:global.relay.metered.ca:443?transport=tcp",
-                    username: "ae2c0c3b821722b03a252928",
-                    credential: "TVZk6SgD8cbvbQlB"
-                }
-            ],
-            iceCandidatePoolSize: 10
+                // Прямые IP-адреса серверов Google (им не нужен DNS-поиск)
+                { urls: 'stun:142.250.82.127:19302' },
+                { urls: 'stun:74.125.137.127:19302' },
+                { urls: "turn:global.relay.metered.ca:80", username: "ae2c0c3b821722b03a252928", credential: "TVZk6SgD8cbvbQlB" }
+            ]
         };
 
         // Функция загрузки серверов с защитой от "Hard Reset"
@@ -8552,96 +8442,106 @@
         async function switchCamera() {
             if (!pc || !localStream) return;
 
-            // Находим сендер так же безопасно
-            let sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-            if (!sender) {
-                const t = pc.getTransceivers().find(tr => tr.receiver && tr.receiver.track && tr.receiver.track.kind === 'video');
-                if (t) sender = t.sender;
-            }
+            // 1. Находим отправителя видео (Sender)
+            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
             if (!sender) return;
 
+            // Если был шаринг экрана — выключаем его правильно
             if (sender.track && sender.track.label && sender.track.label.toLowerCase().includes('screen')) {
                 stopScreen(sender);
             }
 
+            // 2. Находим старый видео-трек
             const oldVideoTrack = localStream.getVideoTracks()[0];
+
+            // Запоминаем состояние (включено видео или выключено кнопкой)
             const wasEnabled = oldVideoTrack ? oldVideoTrack.enabled : true;
+
+            // 3. Определяем следующую камеру
             const nextFacing = (currentFacingMode === 'user') ? 'environment' : 'user';
 
+            // 4. ВАЖНО: Останавливаем ТОЛЬКО видео. Аудио не трогаем!
             if (oldVideoTrack) oldVideoTrack.stop();
 
+            // 5. Получаем новый видео-поток (audio: false, так как микрофон у нас уже есть)
             let newStream;
             try {
                 newStream = await getStreamForFacing(nextFacing, false);
             } catch (e) {
+                console.error(e);
                 alert("Не удалось переключить камеру");
                 return;
             }
 
             const newVideoTrack = newStream.getVideoTracks()[0];
-            newVideoTrack.enabled = wasEnabled;
+            newVideoTrack.enabled = wasEnabled; // Восстанавливаем состояние (если было выключено)
 
+            // 6. Заменяем видео-трек в соединении (собеседник увидит новую камеру)
             try {
                 await sender.replaceTrack(newVideoTrack);
             } catch (e) {
                 console.error("Ошибка замены трека:", e);
             }
 
-            const audioTrack = localStream.getAudioTracks()[0];
-            localStream = new MediaStream();
+            // 7. Пересобираем локальный поток: БЕРЕМ СТАРЫЙ АУДИО + НОВОЕ ВИДЕО
+            const audioTrack = localStream.getAudioTracks()[0]; // Живой аудио-трек
+            localStream = new MediaStream(); // Новый объект потока
 
             if (audioTrack) {
-                localStream.addTrack(audioTrack);
+                localStream.addTrack(audioTrack); // Возвращаем живой микрофон
             }
-            localStream.addTrack(newVideoTrack);
+            localStream.addTrack(newVideoTrack);  // Добавляем новую камеру
 
+            // 8. Обновляем <video> элемент на экране
             const videoEl = document.getElementById('localVideo');
             videoEl.srcObject = localStream;
-            videoEl.muted = true;
+            videoEl.muted = true; // Себя мы не слышим
 
+            // 9. Обновляем переменные
             currentFacingMode = nextFacing;
             setLocalMirror(currentFacingMode);
         }
         async function startCall(isVideoCall = false) {
             if (!currentFriendId || !currentUser) return;
             if (currentCallId || pc) return;
+            updateCallControlsVisibility();
 
-            updateCallControlsVisibility(isVideoCall);
-
-            console.log("📞 [CALLER] Начинаем исходящий звонок...");
             amICaller = true;
             isConnected = false;
             wasCallConnected = false;
 
+            // --- ЛОГИКА ЗВУКА И ДАТЧИКА (PREMIUM UX) ---
             isEarpiece = !isVideoCall;
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage(isVideoCall ? "audio_loud" : "audio_ear");
-                window.mauiInterop.postMessage(isVideoCall ? "disable_proximity" : "enable_proximity");
+                if (isVideoCall) {
+                    window.mauiInterop.postMessage("disable_proximity"); // Выключаем датчик для видео
+                } else {
+                    window.mauiInterop.postMessage("enable_proximity");  // Включаем датчик для аудио
+                }
             }
 
             const sessionTs = Date.now();
             currentCallId = [currentUser.uid, currentFriendId].sort().join('_') + '_' + sessionTs;
+
             const callRef = rtdb.ref('incoming_calls/' + currentFriendId);
             const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
 
+            // Показываем экран звонка
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
 
+            // Устанавливаем имя собеседника
             const friendData = usersCache[currentFriendId] || {};
             document.getElementById('callCallerName').innerText = getDisplayName(currentFriendId, friendData);
 
-            updateCallStatus("Подключение камеры/микрофона...");
+            updateCallStatus("Соединение...");
             playConnectingTone();
 
             try {
-                console.log("📞 [CALLER] Создаем WebRTC подключение...");
-                setupPeerConnection(); // СНАЧАЛА создаем объект звонка (pc)
+                setupPeerConnection();
 
-                // 🔥 ГЛАВНЫЙ ФИКС iOS: Запрашиваем медиа ДО любых сетевых запросов (Firebase)!
-                console.log("📞 [CALLER] Запрашиваем камеру/микрофон...");
-                await getMedia(isVideoCall); // ЗАТЕМ получаем медиа и кладем их в pc
-
-                console.log("📞 [CALLER] Создаем сессию в Firebase...");
+                // Сначала создаем каркас сессии ДО генерации кандидатов!
                 await sessionRef.set({
                     caller: currentUser.uid,
                     callerName: usersCache[currentUser.uid]?.name || "Пользователь",
@@ -8650,20 +8550,23 @@
                     isVideoCall: isVideoCall
                 });
 
+                // Слушаем кандидатов от того, кто примет звонок
                 sessionRef.child('answerCandidates').on('child_added', snap => {
                     addCandidateSafely(snap.val());
                 });
 
-                console.log("📞 [CALLER] Создаем Offer...");
+                // ЗАХВАТ МЕДИА
+                await getMedia(isVideoCall);
+
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                console.log("📞 [CALLER] Отправляем Offer в Firebase...");
+                // Добавляем offer через UPDATE, чтобы не стереть уже улетевших кандидатов
                 await sessionRef.update({
                     offer: { type: offer.type, sdp: offer.sdp }
                 });
 
-                console.log("📞 [CALLER] Дергаем телефон друга...");
+                // Уведомляем собеседника о входящем
                 await callRef.set({
                     sessionId: currentCallId,
                     caller: currentUser.uid,
@@ -8674,36 +8577,33 @@
                 });
 
                 updateCallStatus("Звонок...");
-                let hasReceivedAnswer = false;
+
+                let hasReceivedAnswer = false; // 🔥 ТОТ САМЫЙ ЗАМОК ОТ БАГОВ
 
                 sessionRef.on('value', async snap => {
                     const data = snap.val();
                     if (!data) return;
 
                     if (data.status === 'rejected') {
-                        console.log("📞 [CALLER] Звонок отклонен!");
                         updateCallStatus("Занято");
                         setTimeout(() => endCall(false, true), 1500);
                     } else if (data.status === 'ended') {
-                        console.log("📞 [CALLER] Звонок завершен собеседником.");
                         endCall(false, true);
                     }
 
-                    // ПРОВЕРЯЕМ ANSWER
-                    if (pc && data.answer && !hasReceivedAnswer) {
-                        console.log("📞 [CALLER] Увидел Answer в базе! Текущий signalingState:", pc.signalingState);
-                        if (pc.signalingState === 'have-local-offer') {
-                            hasReceivedAnswer = true;
-                            console.log("📞 [CALLER] ✅ Применяем RemoteDescription (Answer)...");
-                            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                            await flushCandidateQueue();
-                        }
+                    // 🔥 СТРОГАЯ ПРОВЕРКА СОСТОЯНИЯ
+                    if (pc && data.answer && !hasReceivedAnswer && pc.signalingState === 'have-local-offer') {
+                        hasReceivedAnswer = true; // Защелкиваем замок! Второй раз код сюда не зайдет.
+
+                        console.log("✅ Ответ получен, соединяем...");
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                        await flushCandidateQueue();
                     }
+                    
                 });
 
             } catch (err) {
-                alert("Ошибка звонка: " + err.message);
-                console.error("❌ Ошибка начала звонка:", err);
+                console.error("Ошибка начала звонка:", err);
                 endCall(true);
             }
         }
@@ -8724,23 +8624,19 @@
 
         async function answerCall() {
             if (isConnected || pc) return;
-            console.log("📥 [CALLEE] Отвечаем на входящий звонок...");
-
             document.getElementById('ringtone').pause();
             document.getElementById('incomingPopup').style.display = 'none';
             document.getElementById('callScreen').style.display = 'flex';
             document.getElementById('callScreen').style.pointerEvents = 'auto';
             forceEarpiece();
             isEarpiece = true;
-
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("audio_ear");
-                window.mauiInterop.postMessage("enable_proximity");
+                window.mauiInterop.postMessage("enable_proximity"); // Включаем датчик
             }
 
-            updateCallStatus("Включаем микрофон...");
-            updateCallControlsVisibility(false);
-            
+            updateCallStatus("Соединение...");
+            updateCallControlsVisibility();
             initAudioMode();
             if (!currentCallId) return;
 
@@ -8752,85 +8648,79 @@
             rtdb.ref('incoming_calls/' + currentUser.uid).remove();
 
             try {
-                console.log("📥 [CALLEE] Создаем WebRTC подключение...");
+                const sessionSnap = await sessionRef.once('value');
+                const callData = sessionSnap.val();
+
+                if (!callData || !callData.offer) {
+                    updateCallStatus("Звонок отменен");
+                    setTimeout(() => endCall(false), 2000);
+                    return;
+                }
+                const callerId = callData.caller;
+                currentFriendId = callerId; // Важно: скрипт должен знать, с кем мы говорим
+                const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
+                document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
                 setupPeerConnection();
 
-                console.log("📥 [CALLEE] Запрашиваем свои медиа устройства...");
-                await getMedia(false);
-
-                updateCallStatus("Соединение...");
-
-                // Флаг, чтобы не дублировать ответ
-                let hasAnswered = false;
-
-                // Подписываемся на базу и ЖДЕМ появления Offer
+                // --- ВОТ ТУТ ЛОГИКА ПЕРЕСОГЛАСОВАНИЯ (Renegotiation) ---
                 sessionRef.on('value', async snap => {
-                    const callData = snap.val();
-                    if (!callData) return;
+                    const data = snap.val();
+                    if (!data) return;
 
-                    // Если собеседник сбросил
-                    if (callData.status === 'ended' || callData.status === 'rejected') {
-                        console.log("📥 [CALLEE] Звонок завершен собеседником.");
+                    if (data.status === 'ended') {
                         endCall(false, true);
                         return;
                     }
 
-                    // Устанавливаем имя звонящего, как только оно появилось
-                    const callerId = callData.caller;
-                    if (callerId && !currentFriendId) {
-                        currentFriendId = callerId;
-                        const callerData = usersCache[callerId] || (callData.callerName ? { name: callData.callerName } : {});
-                        document.getElementById('callCallerName').innerText = getDisplayName(callerId, callerData);
-                    }
+                    // Если пришел сигнал на обновление потока
+                    if (data.renegotiate && !amICaller) {
+                        console.log("🔄 Обновляем видео-поток по просьбе собеседника...");
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
 
-                    // Обновление видео-потока в процессе разговора
-                    if (callData.renegotiate && !amICaller && hasAnswered) {
-                        console.log("🔄 Обновляем видео-поток...");
-                        await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                        // --- ИСПРАВЛЕНИЕ: Держим канал открытым при пересогласовании ---
                         pc.getTransceivers().forEach(t => {
                             if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
                                 t.direction = 'sendrecv';
                             }
                         });
+                        // ----------------------------------------------------------------
+
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
                         sessionRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
                     }
-
-                    // 🔥 ЕСЛИ ПРИШЕЛ OFFER И МЫ ЕЩЕ НЕ ОТВЕТИЛИ
-                    if (callData.offer && !hasAnswered) {
-                        hasAnswered = true; // Блокируем повторный вход
-
-                        sessionRef.child('offerCandidates').on('child_added', childSnap => {
-                            addCandidateSafely(childSnap.val());
-                        });
-
-                        console.log("📥 [CALLEE] Применяем RemoteDescription (Offer)...");
-                        await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-                        await flushCandidateQueue();
-
-                        pc.getTransceivers().forEach(t => {
-                            if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
-                                t.direction = 'sendrecv';
-                            }
-                        });
-
-                        console.log("📥 [CALLEE] Генерируем Answer...");
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-
-                        console.log("📥 [CALLEE] Отправляем Answer в Firebase...");
-                        await sessionRef.update({
-                            answer: { type: answer.type, sdp: answer.sdp },
-                            status: 'connected'
-                        });
-
-                        updateCallStatus("Обмен шифрованием...");
-                    }
                 });
 
+                sessionRef.child('offerCandidates').on('child_added', snap => {
+                    addCandidateSafely(snap.val());
+                });
+
+                await getMedia(false);
+
+                await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                await flushCandidateQueue();
+
+                // --- ИСПРАВЛЕНИЕ (ГЛАВНОЕ): Принудительно открываем канал отправки видео ---
+                // Иначе браузер, видя выключенную камеру, заблокирует отправку видео (recvonly)
+                pc.getTransceivers().forEach(t => {
+                    if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') {
+                        t.direction = 'sendrecv';
+                    }
+                });
+                // ---------------------------------------------------------------------------
+
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                await sessionRef.update({
+                    answer: { type: answer.type, sdp: answer.sdp },
+                    status: 'connected'
+                });
+
+                updateCallStatus("Обмен шифрованием..."); // Тот, кто берет трубку, тоже видит этот статус
+
             } catch (e) {
-                console.error("❌ Ошибка при ответе:", e);
+                console.error("Ошибка при ответе:", e);
                 endCall(true);
             }
         }
@@ -8856,14 +8746,12 @@
         async function toggleCamera() {
             if (!pc) return;
 
-            let videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-            if (!videoSender) {
-                const transceiver = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'video');
-                if (transceiver) videoSender = transceiver.sender;
-            }
+            const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
             if (!videoSender) return;
 
             const currentTrack = localStream.getVideoTracks()[0];
+
+            // 🔥 ЖЕЛЕЗОБЕТОННЫЙ ФИКС: Проверяем, горит ли сама кнопка камеры!
             const btnCam = document.getElementById('btnCam');
             const isCameraOn = !btnCam.classList.contains('muted-state');
 
@@ -8883,20 +8771,13 @@
                     localStream.addTrack(newTrack);
                     document.getElementById('localVideo').srcObject = localStream;
 
-                    await videoSender.replaceTrack(newTrack);
+                    await videoSender.replaceTrack(newTrack); // Подменяем черный кадр на лицо
 
                     if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
                     if (window.mauiInterop) window.mauiInterop.postMessage("disable_proximity");
 
                     updateCamBtnUI(true);
                     setLocalMirror(currentFacingMode);
-
-                    // ПРЕМИУМ ФИКС: Меняем кнопки и включаем громкую связь автоматически
-                    updateCallControlsVisibility(true);
-                    if (isEarpiece) {
-                        toggleSpeaker(); // Переключаем звук на громкую
-                    }
-
                 } catch (e) {
                     console.error("Ошибка камеры:", e);
                     showToast("Не удалось запустить камеру");
@@ -8908,22 +8789,16 @@
                     localStream.removeTrack(currentTrack);
                 }
 
+                // Возвращаем черный квадрат
                 const dummyTrack = window.createDummyVideoTrack();
-                if (dummyTrack) {
-                    localStream.addTrack(dummyTrack);
-                    await videoSender.replaceTrack(dummyTrack);
-                } else {
-                    await videoSender.replaceTrack(null);
-                }
-
+                localStream.addTrack(dummyTrack);
                 document.getElementById('localVideo').srcObject = localStream;
+
+                await videoSender.replaceTrack(dummyTrack);
 
                 if (currentCallId && currentUser) rtdb.ref(`call_sessions/${currentCallId}/video_update_${currentUser.uid}`).set(Date.now());
 
                 updateCamBtnUI(false);
-
-                // ПРЕМИУМ ФИКС: Возвращаем кнопку динамика, прячем переворот
-                updateCallControlsVisibility(false);
             }
         }
 
@@ -9025,14 +8900,10 @@
                 localStream.removeTrack(currentTrack);
             }
 
-            if (dummyTrack) {
-                localStream.addTrack(dummyTrack);
-                if (sender) sender.replaceTrack(dummyTrack);
-            } else {
-                if (sender) sender.replaceTrack(null);
-            }
-
+            localStream.addTrack(dummyTrack);
             document.getElementById('localVideo').srcObject = localStream;
+
+            if (sender) sender.replaceTrack(dummyTrack);
 
             const btn = document.getElementById('btnScr');
             if (btn) btn.classList.remove('btn-screen-on');
@@ -9114,7 +8985,7 @@
                 profileStatusEl.style.color = '#8e8e93';
             } else {
                 // Логика для обычных пользователей
-                profileStatusEl.innerText = 'Соединение...'; // <-- Изменили "загрузка..." на "Соединение..."
+                profileStatusEl.innerText = 'загрузка...';
                 profileStatusEl.style.color = '#8e8e93';
 
                 rtdb.ref(`status/${currentFriendId}`).once('value', snap => {
@@ -9203,19 +9074,19 @@
             }
         }
         function endCall(isInitiator = true, isRemote = false) {
+            // Выключаем датчик при завершении звонка
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("disable_proximity");
             }
 
+            // 1. Блок логики: Уведомления и чат
             try {
                 const ringtone = document.getElementById('ringtone');
                 if (ringtone) {
                     ringtone.pause();
                     ringtone.currentTime = 0;
                 }
-
-                // Безопасная остановка гудков
-                try { stopAllTones(); } catch (e) { }
+                stopAllTones();
 
                 const widget = document.getElementById('activeCallWidget');
                 if (widget) widget.style.display = 'none';
@@ -9232,14 +9103,28 @@
                             }
                         } else {
                             sendMsg(`missed|00:00`, false, 'call');
+                            if (currentFriendId) {
+                                db.collection('users').doc(currentFriendId).get().then(doc => {
+                                    // ПРОВЕРКА: существует ли вообще sendTelegramNotification
+                                    if (doc.exists && doc.data().tgChatId && typeof sendTelegramNotification === 'function') {
+                                        sendTelegramNotification(doc.data().tgChatId, `❌ *Пропущенный звонок*\nОт: ${currentUser.email}`);
+                                    }
+                                }).catch(() => { });
+                            }
                         }
                     }
                 }
+            } catch (e) {
+                console.error("Ошибка логики чата при сбросе:", e);
+            }
 
+            // 2. Блок интерфейса: Гарантированное закрытие звонка
+            try {
                 if (pc) { pc.close(); pc = null; }
                 if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
                 if (callTimerInt) clearInterval(callTimerInt);
                 if (pingInterval) clearInterval(pingInterval);
+
 
                 if (currentCallId) {
                     const sessionRef = rtdb.ref('call_sessions/' + currentCallId);
@@ -9252,12 +9137,22 @@
                     }
                 }
 
+                // Сбрасываем флаги немедленно, блокируя дублирование
+                amICaller = false;
+                isConnected = false;
+                wasCallConnected = false;
+                currentCallId = null;
+                candidateQueue = [];
+                callStartTime = 0;
+
+                // Останавливаем невидимый аудио-плеер
                 const remoteAudio = document.getElementById('remoteAudio');
                 if (remoteAudio) {
                     remoteAudio.pause();
                     remoteAudio.srcObject = null;
                 }
 
+                // ---> НАЧАЛО ИСПРАВЛЕНИЯ: ЖЕСТКАЯ ОЧИСТКА ВИДЕОПЛЕЕРОВ <---
                 const localVid = document.getElementById('localVideo');
                 if (localVid) {
                     localVid.pause();
@@ -9268,9 +9163,10 @@
                 if (remoteVid) {
                     remoteVid.pause();
                     remoteVid.removeAttribute('src');
-                    remoteVid.load();
+                    remoteVid.load(); // Сбрасываем кэш плеера (критически важно для iPhone)
                     remoteVid.srcObject = null;
                 }
+                // ---> КОНЕЦ ИСПРАВЛЕНИЯ <---
 
                 const statusText = document.getElementById('callStatusText');
                 if (statusText) {
@@ -9283,7 +9179,7 @@
                 const timerEl = document.getElementById('callTimer');
                 if (timerEl) timerEl.style.display = 'none';
 
-                try { playEndTone(); } catch (err) { }
+                try { playEndTone(); } catch (err) { console.log("Звук сброса заблокирован"); }
 
                 const screen = document.getElementById('callScreen');
                 if (screen) screen.style.pointerEvents = 'none';
@@ -9291,37 +9187,25 @@
                 const popup = document.getElementById('incomingPopup');
                 if (popup) popup.style.display = 'none';
 
-            } catch (e) {
-                console.error("Критическая ошибка UI при сбросе:", e);
-            } finally {
-                // ЖЕЛЕЗОБЕТОННОЕ СКРЫТИЕ ЭКРАНА В ЛЮБОМ СЛУЧАЕ
                 setTimeout(() => {
-                    const screen = document.getElementById('callScreen');
                     if (screen) {
                         screen.style.display = 'none';
-                        screen.style.pointerEvents = 'auto';
+                        screen.style.pointerEvents = 'auto'; // Возвращаем кликабельность
                     }
-
-                    const timerEl = document.getElementById('callTimer');
                     if (timerEl) timerEl.innerText = "00:00";
 
                     const pingEl = document.getElementById('callPing');
                     if (pingEl) pingEl.innerText = "Ping: -";
 
-                    const statusText = document.getElementById('callStatusText');
                     if (statusText) {
                         statusText.style.color = "#ccc";
                         statusText.style.fontWeight = "normal";
                     }
-
-                    // Сброс флагов
-                    amICaller = false;
-                    isConnected = false;
-                    wasCallConnected = false;
-                    currentCallId = null;
-                    candidateQueue = [];
-                    callStartTime = 0;
                 }, 1500);
+            } catch (e) {
+                console.error("Критическая ошибка UI при сбросе:", e);
+                const screenFallback = document.getElementById('callScreen');
+                if (screenFallback) screenFallback.style.display = 'none';
             }
         }
         function saveTgId() {
@@ -9732,7 +9616,7 @@
 
                 // 5. БЕЗОПАСНО ЗАКРЫТЬ ЧАТ (БЕЗ выкидывания с сайта)
                 if (currentChatId) {
-                    // Мы НЕ используем closeChat() -> history.back() для ПК,
+                    // Мы НЕ используем closeChat() -> history.back() для ПК, 
                     // чтобы браузер случайно не выбросил нас на предыдущий сайт!
                     // Вместо этого просто прячем окна и зачищаем адресную строку.
                     performCloseUI();
@@ -9745,36 +9629,30 @@
         const sendBtn = document.getElementById('sendBtn');
         const voiceBtn = document.querySelector('.voice-btn');
 
-        // Переменная для запоминания позиции пользователя до выезда клавиатуры
-        let wasAtBottomBeforeKeyboard = true;
-
         msgInput.addEventListener('focus', () => {
             if (currentMsgList) {
-                // Запоминаем, находился ли скролл в самом низу ДО того, как вылезла клавиатура (с погрешностью 150px)
-                wasAtBottomBeforeKeyboard = Math.abs(currentMsgList.scrollHeight - currentMsgList.scrollTop - currentMsgList.clientHeight) <= 150;
+                // Задержка 300мс нужна, чтобы iOS/Android физически успели выдвинуть клавиатуру
+                setTimeout(() => {
+                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                }, 300);
             }
         });
 
-        // 2. Самый надежный современный метод: отслеживаем изменение видимой области
+        // 2. Самый надежный современный метод: отслеживаем изменение видимой области (VisualViewport API)
+        // Срабатывает в ту же миллисекунду, когда клавиатура меняет размер экрана
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
-                // ПРЕМИУМ ФИКС: Жестко подгоняем высоту body под оставшееся место (без клавиатуры)
-                document.body.style.height = window.visualViewport.height + 'px';
-
-                // На всякий случай сбрасываем системный фантомный скролл iOS
-                window.scrollTo(0, 0);
-
-                // Скроллим диалог вниз
-                if (currentMsgList && document.activeElement === msgInput && wasAtBottomBeforeKeyboard) {
-                    setTimeout(() => {
-                        currentMsgList.scrollTop = currentMsgList.scrollHeight + 5000;
-                    }, 50);
+                // Скроллим только если мы в чате и поле ввода активно
+                if (currentMsgList && document.activeElement === msgInput) {
+                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
                 }
             });
-
-            // Блокируем случайные подергивания страницы на iOS при скролле
-            window.visualViewport.addEventListener('scroll', () => {
-                window.scrollTo(0, 0);
+        } else {
+            // Запасной вариант для старых браузеров
+            window.addEventListener('resize', () => {
+                if (currentMsgList && document.activeElement === msgInput) {
+                    currentMsgList.scrollTop = currentMsgList.scrollHeight + 500;
+                }
             });
         }
 
@@ -9786,7 +9664,7 @@
         const localVidEl = document.getElementById('localVideo');
         const pipEl = document.getElementById('localPip');              // новый id
         const gridEl = document.querySelector('.video-grid');
-        const controlsEl = document.querySelector('.premium-call-controls');
+        const controlsEl = document.querySelector('.controls');
         const resizeHandleEl = pipEl.querySelector('.pip-resize-handle');
         const PIP_STORAGE_KEY = 'pipState_v3';
         let pipRatio = 2 / 3;      // width/height, дефолт как у тебя 140x210
@@ -9985,34 +9863,34 @@
                 console.log("Orientation check:", settings.width, settings.height);
             }
         }
-        function updateCallControlsVisibility(isVideoActive = false) {
+        function updateCallControlsVisibility() {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv');
 
             const btnScr = document.getElementById('btnScr');
             const btnSpeaker = document.getElementById('btnSpeaker');
             const btnFlip = document.getElementById('btnFlip');
 
             if (!isMobile) {
-                // НА ПК: Показываем "Экран", прячем "Динамик" и "Смену камеры"
+                // 1. НА КОМПЬЮТЕРЕ: Показываем "Экран", прячем "Динамик" и "Смену камеры"
                 if (btnScr) btnScr.style.display = 'flex';
                 if (btnSpeaker) btnSpeaker.style.display = 'none';
                 if (btnFlip) btnFlip.style.display = 'none';
-            } else {
-                // НА ТЕЛЕФОНЕ: Кнопка экрана выключена
+            } else if (isMobile && isApp) {
+                // 2. В МОБИЛЬНОМ ПРИЛОЖЕНИИ (MAUI): Прячем "Экран", показываем "Динамик" и "Камеру"
                 if (btnScr) btnScr.style.display = 'none';
-
-                // Если видео включено -> показываем смену камеры, прячем динамик
-                if (isVideoActive) {
-                    if (btnSpeaker) btnSpeaker.style.display = 'none';
-                    if (btnFlip) btnFlip.style.display = 'flex';
-                } else {
-                    // Если видео выключено -> показываем динамик, прячем смену камеры
-                    if (btnSpeaker) btnSpeaker.style.display = 'flex';
-                    if (btnFlip) btnFlip.style.display = 'none';
-                }
+                if (btnSpeaker) btnSpeaker.style.display = 'flex';
+                if (btnFlip) btnFlip.style.display = 'flex';
+            } else {
+                // 3. В МОБИЛЬНОМ БРАУЗЕРЕ (Safari/Chrome): Прячем "Экран" и "Динамик", оставляем только "Камеру"
+                if (btnScr) btnScr.style.display = 'none';
+                if (btnSpeaker) btnSpeaker.style.display = 'none';
+                if (btnFlip) btnFlip.style.display = 'flex';
             }
         }
-    
+    </script>
+    <!-- OneSignal Push Logic (Вставь это в самый низ перед </body>) -->
+    <script>
         // Функция для красивого открытия чата с задержкой (Элитарный UX)
         // Функция для красивого открытия чата с задержкой (Элитарный UX)
         window.triggerPendingNotificationChat = function () {
@@ -10222,16 +10100,14 @@
                     // 1. Сбрасываем старый, если был
                     if (chatStatusUnsub) chatStatusUnsub();
 
-                    // 2. Ставим статус: если это бот, то пишем "бот", иначе "Соединение..."
+                    // 2. Ставим статус: если это бот, то пишем "бот", иначе время захода
                     const statusEl = document.getElementById('chatStatus');
                     if (statusEl) {
                         if (userData.isBot === true) {
                             statusEl.innerText = 'бот';
                             statusEl.style.color = '#8e8e93'; // Спокойный серый цвет
                         } else {
-                            // ПРЕМИУМ: Сначала пишем "Соединение...", пока сеть не отдаст реальный онлайн
-                            statusEl.innerText = 'Соединение...';
-                            statusEl.style.color = '#8e8e93';
+                            statusEl.innerText = userData.lastSeen ? formatLastSeen(userData.lastSeen) : 'загрузка...';
                         }
                     }
 
@@ -10412,17 +10288,17 @@
 
             // UI прогресс-бара (используется и для фото, и для файлов)
             const progressHtml = `
-                                    <div class="upload-progress-container">
-                                        <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
-                                            <svg class="upload-progress-svg" viewBox="0 0 50 50">
-                                                <circle class="upload-progress-circle-bg" cx="25" cy="25" r="21.5"></circle>
-                                                <circle class="upload-progress-circle-value" id="progress-val-${tempId}" cx="25" cy="25" r="21.5"></circle>
-                                            </svg>
-                                            <svg class="upload-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </div>
-                                        <div class="upload-progress-text" id="progress-txt-${tempId}">0.0 / ${totalMb} МБ</div>
-                                    </div>
-                                `;
+                        <div class="upload-progress-container">
+                            <div class="upload-progress-circle" onclick="cancelUpload('${tempId}')" title="Отменить">
+                                <svg class="upload-progress-svg" viewBox="0 0 50 50">
+                                    <circle class="upload-progress-circle-bg" cx="25" cy="25" r="21.5"></circle>
+                                    <circle class="upload-progress-circle-value" id="progress-val-${tempId}" cx="25" cy="25" r="21.5"></circle>
+                                </svg>
+                                <svg class="upload-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </div>
+                            <div class="upload-progress-text" id="progress-txt-${tempId}">0.0 / ${totalMb} МБ</div>
+                        </div>
+                    `;
 
             // Если это картинка
             if (file.type.startsWith('image/')) {
@@ -10430,22 +10306,22 @@
                 const url = URL.createObjectURL(file);
 
                 contentHtml = `
-                                        <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
-                                        ${progressHtml}
-                                    `;
+                            <img src="${url}" class="chat-media-img loading-overlay" onload="scrollToBottom()" style="filter: blur(4px) brightness(0.6);">
+                            ${progressHtml}
+                        `;
             }
             // Если это документ
             else {
                 div.className = 'msg msg-me';
                 contentHtml = `
-                                        <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
-                                            <div class="file-icon" style="opacity: 0.2;">📄</div>
-                                            <div class="file-info" style="opacity: 0.2;">
-                                                <div class="file-name">${file.name}</div>
-                                                <div class="file-action">Загрузка...</div>
-                                            </div>
-                                            ${progressHtml}
-                                        </div>`;
+                            <div class="chat-file-card" style="opacity: 0.6; position: relative; overflow: hidden;">
+                                <div class="file-icon" style="opacity: 0.2;">📄</div>
+                                <div class="file-info" style="opacity: 0.2;">
+                                    <div class="file-name">${file.name}</div>
+                                    <div class="file-action">Загрузка...</div>
+                                </div>
+                                ${progressHtml}
+                            </div>`;
             }
 
             div.innerHTML = contentHtml;
@@ -10486,24 +10362,20 @@
             showToast("Отправка отменена");
         };
 
+        // --- МОСТ ДЛЯ ANDROID-ПРИЛОЖЕНИЯ ---
         function triggerNativeGallery() {
             if (!currentChatId) {
                 showToast("Сначала выберите чат");
                 return;
             }
-
-            // Если Android-версия работает на MAUI
             if (window.mauiInterop) {
                 window.mauiInterop.postMessage("open_gallery");
-            }
-            // Для Web-версии и iOS-приложения на Capacitor
-            else {
+            } else if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage("open_gallery");
+            } else {
+                // Если мы сидим с обычного браузера на ПК, нажимаем на скрытый инпут
                 const hiddenInput = document.getElementById('hiddenFileInput');
-                if (hiddenInput) {
-                    hiddenInput.click(); // Capacitor перехватит это и откроет iOS-галерею
-                } else {
-                    showToast("Ошибка интерфейса: загрузка недоступна");
-                }
+                if (hiddenInput) hiddenInput.click();
             }
         }
 
@@ -11604,9 +11476,7 @@
             if (!currentChatId || !currentUser || document.visibilityState !== 'visible') return;
 
             let maxSeenTs = 0;
-            let changed = false;
-            const batch = db.batch(); // Создаем пакетный запрос
-            let updatesCount = 0;
+            let changed = false; // <-- ДОБАВЛЯЕМ ФЛАГ
 
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -11617,28 +11487,22 @@
 
                     window.chatObserver.unobserve(el);
                     el.classList.remove('is-unread');
-                    changed = true;
+                    changed = true; // <-- ОТМЕЧАЕМ, ЧТО МЫ ПРОЧИТАЛИ СООБЩЕНИЕ
 
                     const msgId = el.id.replace('msg-', '');
                     if (msgId) {
-                        // Добавляем обновление в пакет, вместо мгновенной отправки
-                        const msgRef = db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId);
-                        batch.update(msgRef, { read: true });
-                        updatesCount++;
+                        db.collection('chats').doc(currentChatId).collection('msgs').doc(msgId)
+                            .update({ read: true }).catch(() => { });
                     }
                 }
             });
-
-            // Отправляем все прочитанные сообщения ОДНИМ запросом
-            if (updatesCount > 0) {
-                batch.commit().catch(e => console.log("Ошибка обновления статуса:", e));
-            }
 
             if (maxSeenTs > window.myReadTs) {
                 window.myReadTs = maxSeenTs;
                 rtdb.ref(`chat_reads/${currentChatId}/${currentUser.uid}`).set(maxSeenTs);
             }
 
+            // <-- ВЫЗЫВАЕМ ОБНОВЛЕНИЕ БЕЙДЖА (списываем цифры при прочтении)
             if (changed) updateScrollBadge();
         }, {
             root: null,
@@ -11963,14 +11827,14 @@
                     div.className = 'search-msg-item';
                     div.id = 'search-item-' + index;
                     div.innerHTML = `
-                                                                                                            <div class="search-msg-content">
-                                                                                                                <div class="search-msg-header">
-                                                                                                                    <span class="search-msg-name">${res.name}</span>
-                                                                                                                    <span class="search-msg-time">${res.time}</span>
-                                                                                                                </div>
-                                                                                                                <div class="search-msg-text">${res.text}</div>
-                                                                                                            </div>
-                                                                                                        `;
+                                                                                                <div class="search-msg-content">
+                                                                                                    <div class="search-msg-header">
+                                                                                                        <span class="search-msg-name">${res.name}</span>
+                                                                                                        <span class="search-msg-time">${res.time}</span>
+                                                                                                    </div>
+                                                                                                    <div class="search-msg-text">${res.text}</div>
+                                                                                                </div>
+                                                                                            `;
                     div.onclick = () => {
                         chatSearchCurrentIndex = index;
                         jumpToMessageAndCloseDropdown();
@@ -12123,14 +11987,19 @@
         function initAudioMode() {
             isEarpiece = true;
             const btn = document.getElementById('btnSpeaker');
+            const iconEar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+
             if (btn) {
-                // Устанавливаем иконку ушного динамика
-                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
-                btn.classList.add('muted-state');
+                btn.innerHTML = iconEar;
+                btn.classList.add('muted-state'); // Белый фон (означает, что динамик приложен к уху)
             }
 
-            // Вызываем нативное переключение после небольшой задержки, чтобы WebRTC успел инициализироваться
-            setTimeout(applyAudioRoute, 1000);
+            // Шлем команду в C# переключить на ухо при старте звонка
+            if (window.mauiInterop && window.mauiInterop.postMessage) {
+                window.mauiInterop.postMessage("audio_ear");
+            } else if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage("audio_ear");
+            }
         }
 
         // 1. Проверка среды при старте звонка
@@ -12150,9 +12019,11 @@
                 btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
                 btn.classList.add('muted-state');
             }
-            applyAudioRoute();
+            if (window.mauiInterop) window.mauiInterop.postMessage("audio_ear");
+            else if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage("audio_ear");
         }
 
+        // 2. Функция переключения
         function toggleSpeaker() {
             isEarpiece = !isEarpiece;
             const btn = document.getElementById('btnSpeaker');
@@ -12163,35 +12034,19 @@
             if (isEarpiece) {
                 btn.innerHTML = iconEar;
                 btn.classList.add('muted-state');
+
+                if (window.mauiInterop) {
+                    window.mauiInterop.postMessage("audio_ear");
+                    window.mauiInterop.postMessage("enable_proximity"); // Вернули к уху - включили датчик
+                }
             } else {
                 btn.innerHTML = iconLoud;
                 btn.classList.remove('muted-state');
-            }
 
-            applyAudioRoute();
-        }
-
-        
-
-        let AudioRouter = null;
-
-        // Безопасно инициализируем плагин, ТОЛЬКО если Capacitor существует
-        if (window.Capacitor && window.Capacitor.registerPlugin) {
-            AudioRouter = window.Capacitor.registerPlugin('AudioRouter');
-        }
-
-        
-        async function applyAudioRoute() {
-            if (window.Capacitor && window.Capacitor.getPlatform() === 'ios' && AudioRouter) {
-                try {
-
-                    await AudioRouter.setSpeaker({ isSpeaker: !isEarpiece });
-                } catch (e) {
-                    console.error("🔊 Ошибка нативного переключения:", e);
+                if (window.mauiInterop) {
+                    window.mauiInterop.postMessage("audio_loud");
+                    window.mauiInterop.postMessage("disable_proximity"); // Громкая связь - выключили датчик
                 }
-            } else {
-                // Для браузера или Android можно оставить заглушку
-                console.log("🔊 Переключение звука (Web/Android)");
             }
         }
 
@@ -12407,12 +12262,8 @@
             swipeStartX = touch.clientX;
             swipeStartY = touch.clientY;
 
-            // Определяем, что мы находимся именно внутри нативного iOS-приложения (Capacitor)
-            const isNativeIOSApp = (/Mac|iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) && (window.Capacitor || (window.webkit && window.webkit.messageHandlers));
-
-            // Отключаем наш скриптовый свайп у края экрана ДЛЯ ВСЕХ, КРОМЕ iOS-приложения.
-            // (оставляем веб-версии и Android как было, чтобы не ломать их поведение)
-            if (swipeStartX < 40 && !isNativeIOSApp) {
+            // Если свайп от самого левого края экрана (жест "Назад" в iOS), отключаем скрипт
+            if (swipeStartX < 40) {
                 swipeTarget = null;
                 isBackSwiping = false;
                 isSwipeHorizontal = false;
@@ -12488,19 +12339,14 @@
                     const isIOS = /Mac|iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
                     if (deltaX > 0) {
-                        const isNativeIOSApp = isIOS && (window.Capacitor || (window.webkit && window.webkit.messageHandlers));
-
-                        // Блокируем свайп ТОЛЬКО для веб-версии iOS (Safari), чтобы не конфликтовать с её историей
-                        if (isIOS && !isNativeIOSApp) {
+                        if (isIOS) {
                             isSwipeHorizontal = false;
                             isBackSwiping = false;
                         } else {
-                            // Разрешаем красивый JS-свайп для Android и нативного iOS-приложения
                             isBackSwiping = true;
                             swipeTarget = null;
                         }
-                    }
-                    else if (deltaX < 0 && swipeTarget) {
+                    } else if (deltaX < 0 && swipeTarget) {
                         isBackSwiping = false;
                     } else {
                         isSwipeHorizontal = false;
@@ -12754,25 +12600,15 @@
         function smartScrollToBottom(list, force = false, instant = false) {
             if (!list) return;
 
-            // Увеличим зону "захвата" низа до 300px, чтобы скролл не срывался при быстрой печати
-            const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= 300;
+            // Проверяем, находится ли пользователь у самого низа (запас 150px для надежности)
+            const isAtBottom = Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) <= 150;
 
+            // Скроллим ТОЛЬКО если нас заставили (force) или мы и так внизу
             if (force || isAtBottom) {
-                if (instant) {
-                    // Железобетонный метод для моментального скролла во всех браузерах
-                    list.scrollTop = list.scrollHeight + 5000;
-                } else {
-                    // Плавный скролл (Telegram style)
-                    try {
-                        list.scrollTo({
-                            top: list.scrollHeight + 5000,
-                            behavior: 'smooth'
-                        });
-                    } catch (e) {
-                        // Фолбэк, если браузер старый и не понял плавность
-                        list.scrollTop = list.scrollHeight + 5000;
-                    }
-                }
+                list.scrollTo({
+                    top: list.scrollHeight + 5000, // С большим запасом
+                    behavior: instant ? 'auto' : 'smooth'
+                });
             }
         }
 
@@ -12848,36 +12684,14 @@
             }
         });
 
-        // Автоматически определяем, что мы внутри мобильного приложения
+        // Автоматически определяем, что мы внутри мобильного приложения (WebView)
         document.addEventListener("DOMContentLoaded", () => {
-            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv') || window.Capacitor;
+            // window.chrome.webview - это для MAUI Blazor, 'wv' - стандартная метка Android WebView
+            const isApp = (window.chrome && window.chrome.webview) || navigator.userAgent.includes('wv');
 
             if (isApp) {
                 document.body.classList.add('is-app');
-                console.log("📱 Включен режим мобильного приложения");
-            }
-
-            // --- ПРЕМИУМ ФИКС КЛАВИАТУРЫ ДЛЯ iOS ---
-            // 1. Проверяем, что запущен Capacitor
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-
-                // 2. Узнаем платформу ('ios', 'android' или 'web')
-                const platform = window.Capacitor.getPlatform();
-
-                // 3. Если это iOS и плагин клавиатуры успешно подключен
-                if (platform === 'ios' && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard) {
-                    const Keyboard = window.Capacitor.Plugins.Keyboard;
-
-                    // Убиваем серую полоску с "Готово" и стрелочками
-                    Keyboard.setAccessoryBarVisible({ isVisible: false })
-                        .catch(err => console.log("Capacitor Keyboard: Ошибка скрытия Accessory Bar", err));
-
-                    // Отключаем нативный сдвиг WebView (чтобы наш CSS "position: fixed" и JS работали идеально)
-                    Keyboard.setScroll({ isDisabled: true })
-                        .catch(err => console.log("Capacitor Keyboard: Ошибка отключения скролла", err));
-
-                    console.log("🍏 iOS Keyboard: Аксессуар-бар скрыт, скролл заблокирован.");
-                }
+                console.log("📱 Включен режим мобильного приложения (WebView оптимизации)");
             }
         });
 
@@ -12944,7 +12758,7 @@
                 // 4. ДВОЙНОЕ НАЖАТИЕ НАЗАД ДЛЯ ВЫХОДА (ТОЛЬКО ДЛЯ ТЕЛЕФОНОВ / MAUI)
                 if (!isExitReady) {
                     isExitReady = true;
-
+                    showToast("Нажмите еще раз для выхода");
                     // Создаем временный шаг-буфер, чтобы спасти от закрытия при первом тапе
                     history.pushState({ page: 'home' }, null, window.location.pathname + window.location.search);
 
@@ -13244,30 +13058,20 @@
 
             const listener = statusRef.on('value', (snap) => {
                 const data = snap.val();
-                const uData = usersCache[friendId] || {};
-                const statusEl = document.getElementById('chatStatus');
-                const profileStatusEl = document.getElementById('friendProfileStatus');
+                if (!data) return;
 
+                const uData = usersCache[friendId] || {};
                 if (uData.isBot === true) {
-                    if (statusEl) {
-                        statusEl.innerText = 'бот';
-                        statusEl.style.color = '#8e8e93';
+                    const el = document.getElementById('chatStatus');
+                    if (el) {
+                        el.innerText = 'бот';
+                        el.style.color = '#8e8e93';
                     }
                     return; // Выходим из функции, дальше не идем
                 }
 
-                // ФИКС: Если данных в RTDB еще нет, достаем старые из кэша (чтобы не висело "Соединение...")
-                if (!data) {
-                    if (statusEl && !statusEl.querySelector('.typing-text')) {
-                        statusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen) : 'был(а) недавно';
-                        statusEl.style.color = '#888';
-                    }
-                    if (profileStatusEl) {
-                        profileStatusEl.innerText = uData.lastSeen ? formatLastSeen(uData.lastSeen, true) : 'был(а) недавно';
-                        profileStatusEl.style.color = '#888';
-                    }
-                    return;
-                }
+                const statusEl = document.getElementById('chatStatus');
+                const profileStatusEl = document.getElementById('friendProfileStatus');
 
                 if (data.state === 'online') {
                     // Пользователь онлайн
@@ -13355,26 +13159,26 @@
                 container.innerHTML = '';
                 if (snap.empty) {
                     container.innerHTML = `
-                                                            <div style="text-align:center; margin-top: 60px;">
-                                                                <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
-                                                                <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
-                                                                <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer; margin-top: 15px;">Создать бота</button>
-                                                            </div>`;
+                                                <div style="text-align:center; margin-top: 60px;">
+                                                    <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
+                                                    <h3 style="color:white; margin-bottom: 5px;">У вас пока нет ботов</h3>
+                                                    <button onclick="openBotEditor(null)" style="background:#736AF0; color:white; border:none; padding:12px 25px; border-radius:20px; font-weight:bold; font-size:15px; cursor:pointer; margin-top: 15px;">Создать бота</button>
+                                                </div>`;
                     return;
                 }
                 snap.forEach(doc => {
                     const bot = doc.data();
                     container.innerHTML += `
-                                                            <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
-                                                                <div class="premium-item" onclick="openBotEditor('${doc.id}', '${bot.botToken}')" style="border:none;">
-                                                                    <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
-                                                                    <div class="premium-item-content">
-                                                                        <div class="premium-item-value">${bot.name}</div>
-                                                                        <div class="premium-item-label">@${bot.username}</div>
-                                                                    </div>
-                                                                    <div style="color: #736AF0; font-size:14px; font-weight:bold;">Токен</div>
-                                                                </div>
-                                                            </div>`;
+                                                <div class="premium-section" style="margin: 0 0 15px 0; background: #1c1c1e;">
+                                                    <div class="premium-item" onclick="openBotEditor('${doc.id}', '${bot.botToken}')" style="border:none;">
+                                                        <div class="premium-item-icon" style="background:#2b2d31; font-size:20px;">🤖</div>
+                                                        <div class="premium-item-content">
+                                                            <div class="premium-item-value">${bot.name}</div>
+                                                            <div class="premium-item-label">@${bot.username}</div>
+                                                        </div>
+                                                        <div style="color: #736AF0; font-size:14px; font-weight:bold;">Токен</div>
+                                                    </div>
+                                                </div>`;
                 });
             } catch (e) { }
         }
@@ -14330,22 +14134,14 @@
         };
         // Генерирует пустой черный кадр для поддержки видео-канала
         window.createDummyVideoTrack = function () {
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = 2; // Уменьшили размер для экономии ресурсов
-                canvas.height = 2;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Строгая проверка: если движок поддерживает захват, делаем его
-                if (typeof canvas.captureStream === 'function') {
-                    return canvas.captureStream(1).getVideoTracks()[0];
-                }
-            } catch (e) {
-                console.warn("Dummy track не поддерживается");
-            }
-            return null; // На iPhone просто возвращаем null
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // 1 FPS, чтобы вообще не тратить интернет, пока камера выключена
+            return canvas.captureStream(1).getVideoTracks()[0];
         };
 
 
@@ -14535,7 +14331,5 @@
             </div>
         </div>
     </div>
-    <input type="file" id="hiddenFileInput" style="display: none;" accept="*/*" onchange="uploadFile(this)">
-
 </body>
 </html>
